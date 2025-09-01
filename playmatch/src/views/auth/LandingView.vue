@@ -18,7 +18,7 @@ import { ref } from 'vue'
           <v-col cols="12" md="6">
             <v-card
               class="mx-auto pt-10 text-center"
-              max-width="500"
+              max-width="600"
               elevation="10"
               style="
                 background-color: rgba(255, 255, 255, 0.88);
@@ -48,13 +48,19 @@ import { ref } from 'vue'
                   block
                   color="primary"
                   size="large"
-                  @click="$router.push('/role-selection')"
+                  @click="$router.push('/register')"
                 >
                   Get Started
                   <v-icon right>mdi-arrow-right</v-icon>
                 </v-btn>
 
-                <v-btn outlined block color="primary" size="large" :to="{ path: '/login' }">
+                <v-btn
+                  outlined
+                  block
+                  color="rgba(255, 255, 255, 0.88)"
+                  size="large"
+                  :to="{ path: '/login' }"
+                >
                   Already have an account? <span class="text-primary">Sign In</span>
                 </v-btn>
               </div>
