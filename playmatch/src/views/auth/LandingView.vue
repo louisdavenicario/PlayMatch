@@ -48,7 +48,7 @@ import { ref } from 'vue'
                   block
                   color="primary"
                   size="large"
-                  @click="$router.push('/register')"
+                  @click="$router.push('/user')"
                 >
                   Get Started
                   <v-icon right>mdi-arrow-right</v-icon>
@@ -59,7 +59,7 @@ import { ref } from 'vue'
                   block
                   color="rgba(255, 255, 255, 0.88)"
                   size="large"
-                  :to="{ path: '/login' }"
+                  :to="{ path: '/user' }"
                 >
                   Already have an account? <span class="text-primary">Sign In</span>
                 </v-btn>
