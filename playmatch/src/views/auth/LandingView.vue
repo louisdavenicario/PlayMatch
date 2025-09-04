@@ -1,5 +1,4 @@
 <script setup>
-import { ref } from 'vue'
 </script>
 
 <template>
@@ -36,7 +35,7 @@ import { ref } from 'vue'
               ></v-img>
 
               <!-- Title -->
-              <h1 class="text-h4 font-weight-bold mb-2">Playmatch</h1>
+              <h1 class="text-h4 font-weight-bold mb-2">PlayMatch</h1>
               <p class="text-body-1 text-grey mb-6">
                 Book sports facilities or register your facilities
               </p>
@@ -59,7 +58,7 @@ import { ref } from 'vue'
                   block
                   color="rgba(255, 255, 255, 0.88)"
                   size="large"
-                  :to="{ path: '/user' }"
+                  :to="{ path: '/signin' }"
                 >
                   Already have an account? <span class="text-primary">Sign In</span>
                 </v-btn>
