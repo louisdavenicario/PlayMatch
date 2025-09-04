@@ -1,33 +1,31 @@
 <script setup>
-import { ref } from 'vue'
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
 
-const selectedRole = ref('')
+const selectedRole = ref('');
+const router = useRouter();
 
 function continueAction() {
-  if (!selectedRole.value) return
+  if (!selectedRole.value) return;
 
-  // Example: Navigate based on role
   if (selectedRole.value === 'customer') {
-    // go to customer login
-    window.location.href = '/login/customer'
+    // Correctly navigate to the customer registration page using Vue Router
+    router.push('/customer-registration');
   } else if (selectedRole.value === 'owner') {
-    // go to owner login
-    window.location.href = '/login/owner'
+    // Navigate to the owner registration page
+    router.push('/owner-registration');
   }
 }
 </script>
 
 <template>
   <v-container class="py-10">
-    <!-- Header -->
     <div class="text-center mb-8">
       <h2 class="text-h4 font-weight-bold mb-2">Choose Your Role</h2>
       <p class="text-medium-emphasis">
         Are you a customer looking to book facilities or a facility owner?
       </p>
     </div>
-
-    <!-- Role Options -->
     <v-row justify="center" class="mb-8">
       <v-col cols="12" md="6" class="mb-4">
         <v-card
@@ -53,7 +51,6 @@ function continueAction() {
           </v-row>
         </v-card>
       </v-col>
-
       <v-col cols="12" md="6" class="mb-4">
         <v-card
           :elevation="selectedRole === 'owner' ? 6 : 2"
@@ -79,8 +76,6 @@ function continueAction() {
         </v-card>
       </v-col>
     </v-row>
-
-    <!-- Benefits -->
     <v-card class="mb-8" variant="outlined">
       <v-card-text>
         <h4 class="font-weight-medium mb-3">
@@ -92,7 +87,6 @@ function continueAction() {
                 : 'Benefits:'
           }}
         </h4>
-
         <div v-if="selectedRole === 'customer'">
           <div class="d-flex align-center mb-2">
             <v-icon size="18" color="green" class="mr-2">mdi-check-circle</v-icon>
@@ -107,7 +101,6 @@ function continueAction() {
             <span>Rate and review facilities</span>
           </div>
         </div>
-
         <div v-else-if="selectedRole === 'owner'">
           <div class="d-flex align-center mb-2">
             <v-icon size="18" color="blue" class="mr-2">mdi-check-circle</v-icon>
@@ -122,12 +115,9 @@ function continueAction() {
             <span>Analytics and business insights</span>
           </div>
         </div>
-
         <div v-else class="text-medium-emphasis font-italic">Select a role to see benefits</div>
       </v-card-text>
     </v-card>
-
-    <!-- Continue Button -->
     <v-btn block color="primary" size="large" :disabled="!selectedRole" @click="continueAction">
       Continue as
       {{
