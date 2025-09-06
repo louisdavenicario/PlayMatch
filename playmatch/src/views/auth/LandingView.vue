@@ -47,7 +47,7 @@
                   block
                   color="primary"
                   size="large"
-                  @click="$router.push('/user')"
+                  @click="$router.push('/choose-role')"
                 >
                   Get Started
                   <v-icon right>mdi-arrow-right</v-icon>

@@ -88,7 +88,7 @@
           </v-form>
 
           <div class="text-center text-body-2">
-            Don't have an account? <span class="text-primary font-weight-bold" @click="$router.push('/user')">Register here</span>
+            Don't have an account? <span class="text-primary font-weight-bold" @click="$router.push('/choose-role')">Register here</span>
           </div>
         </v-card>
       </v-col>

@@ -84,7 +84,7 @@ const validateAndSubmit = async () => {
                                 border-radius: 20px;
                             "
                         >
-                            <v-btn icon @click="router.push({ name: 'user' })" class="mb-4">
+                            <v-btn icon @click="router.push({ name: 'choose-role' })" class="mb-4">
                                 <v-icon>mdi-arrow-left</v-icon>
                             </v-btn>
                             <v-card-title class="text-h5 text-center font-weight-bold">Create Customer Account</v-card-title>

@@ -2,10 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 
 // Views
 import LandingView from '@/views/auth/LandingView.vue'
-import UserView from '@/views/auth/UserView.vue'
-import LoginView from '@/views/auth/LoginView.vue'
 import SigninView from '@/views/auth/SigninView.vue'
-import CustomerregistrationView from '@/views/auth/CustomerregistrationView.vue'
+import Customer_registrationView from '@/views/auth/Customer_registrationView.vue'
+import Choose_roleView from '@/views/auth/Choose_roleView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -16,14 +15,9 @@ const router = createRouter({
       component: LandingView,
     },
     {
-      path: '/user',
-      name: 'user',
-      component: UserView,
-    },
-    {
-      path: '/login',
-      name: 'login',
-      component: LoginView,
+      path: '/choose-role',
+      name: 'choose-role',
+      component: Choose_roleView,
     },
     {
       path: '/signin',
@@ -33,7 +27,7 @@ const router = createRouter({
     {
       path: '/customer-registration',
       name: 'customer-registration',
-      component: CustomerregistrationView,
+      component: Customer_registrationView,
     },
   ],
 })
