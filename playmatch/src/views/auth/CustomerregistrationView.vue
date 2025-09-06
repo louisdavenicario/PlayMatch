@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router'; // Import the useRouter function
 
 // Get the router instance
@@ -21,17 +21,19 @@ const formData = ref({
 
 const form = ref(null);
 
+// State to track if the password field is focused
+const passwordFocused = ref(false);
+
+// Computed properties to check the validity of each rule
+const hasMinLength = computed(() => (formData.value.password?.length || 0) >= 8);
+const hasUppercase = computed(() => /[A-Z]/.test(formData.value.password));
+const hasLowercase = computed(() => /[a-z]/.test(formData.value.password));
+const hasSymbol = computed(() => /[!@#$%^&*()]/.test(formData.value.password));
+
 const requiredRule = [v => !!v || 'This field is required'];
 const emailRules = [
     v => !!v || 'Email is required',
     v => /.+@.+\..+/.test(v) || 'E-mail must be valid',
-];
-const passwordRules = [
-    v => !!v || 'Password is required',
-    v => (v && v.length >= 8) || 'Must be at least 8 characters',
-    v => /[A-Z]/.test(v) || 'Must contain an uppercase letter',
-    v => /[a-z]/.test(v) || 'Must contain a lowercase letter',
-    v => /[!@#$%^&*()]/.test(v) || 'Must contain a symbol !@#$%^&*()',
 ];
 const confirmPasswordRule = [
     v => !!v || 'Confirm Password is required',
@@ -115,8 +117,32 @@ const validateAndSubmit = async () => {
                                                     :rules="passwordRules"
                                                     :append-inner-icon="showPassword ? 'mdi-eye-off' : 'mdi-eye'"
                                                     @click:append-inner="showPassword = !showPassword"
+                                                    @focus="passwordFocused = true"
+                                                    @blur="passwordFocused = false"
                                                     variant="outlined"
                                                 ></v-text-field>
+                                                <!-- Dynamic password validation list -->
+                                                <div v-if="formData.password || passwordFocused" class="password-rules">
+                                                    <p class="text-caption font-weight-bold">Password must contain:</p>
+                                                    <ul>
+                                                        <li :class="{ 'text-green-darken-2': hasMinLength, 'text-red-darken-2': !hasMinLength }">
+                                                            <v-icon :color="hasMinLength ? 'green' : 'red'">{{ hasMinLength ? 'mdi-check-circle' : 'mdi-circle' }}</v-icon>
+                                                            At least 8 characters
+                                                        </li>
+                                                        <li :class="{ 'text-green-darken-2': hasUppercase, 'text-red-darken-2': !hasUppercase }">
+                                                            <v-icon :color="hasUppercase ? 'green' : 'red'">{{ hasUppercase ? 'mdi-check-circle' : 'mdi-circle' }}</v-icon>
+                                                            One uppercase letter
+                                                        </li>
+                                                        <li :class="{ 'text-green-darken-2': hasLowercase, 'text-red-darken-2': !hasLowercase }">
+                                                            <v-icon :color="hasLowercase ? 'green' : 'red'">{{ hasLowercase ? 'mdi-check-circle' : 'mdi-circle' }}</v-icon>
+                                                            One lowercase letter
+                                                        </li>
+                                                        <li :class="{ 'text-green-darken-2': hasSymbol, 'text-red-darken-2': !hasSymbol }">
+                                                            <v-icon :color="hasSymbol ? 'green' : 'red'">{{ hasSymbol ? 'mdi-check-circle' : 'mdi-circle' }}</v-icon>
+                                                            One symbol (e.g., !@#$%)
+                                                        </li>
+                                                    </ul>
+                                                </div>
                                             </v-col>
                                             <v-col cols="12" sm="6">
                                                 <v-text-field
@@ -188,3 +214,29 @@ const validateAndSubmit = async () => {
         </v-main>
     </v-app>
 </template>
+
+<style scoped>
+.password-rules {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.password-rules ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.password-rules li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.password-rules .v-icon {
+  font-size: 1rem;
+}
+</style>
