@@ -8,18 +8,20 @@ const router = useRouter();
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
 
-// State to control the visibility of the success dialog
-const showSuccessDialog = ref(false);
-
 const formData = ref({
-    fullName: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
-    phone: '',
+    facilityName: '',
+    facilityType: '',
     address: '',
-    city: '',
-    zipCode: '',
+    amenities: '',
+    briefDescription: '',
+    price: '',
+    openingTime: null,
+    closingTime: null,
+    facilityPhotos: null, // For file uploads
 });
 
 const form = ref(null);
@@ -27,25 +29,20 @@ const form = ref(null);
 // State to track if the password field is focused
 const passwordFocused = ref(false);
 
-// Password validation rules from the attached image
+// State for the success dialog
+const showSuccessDialog = ref(false);
+
+const requiredRule = [v => !!v || 'This field is required'];
+const emailRules = [
+    v => !!v || 'Email is required',
+    v => /.+@.+\..+/.test(v) || 'E-mail must be valid',
+];
 const passwordRules = [
     v => !!v || 'Password is required',
     v => (v && v.length >= 8) || 'Must be at least 8 characters',
     v => /[A-Z]/.test(v) || 'Must contain an uppercase letter',
     v => /[a-z]/.test(v) || 'Must contain a lowercase letter',
     v => /[!@#$%^&*()]/.test(v) || 'Must contain a symbol (!@#$%^&*())',
-];
-
-// Computed properties to check the validity of each rule
-const hasMinLength = computed(() => (formData.value.password?.length || 0) >= 8);
-const hasUppercase = computed(() => /[A-Z]/.test(formData.value.password));
-const hasLowercase = computed(() => /[a-z]/.test(formData.value.password));
-const hasSymbol = computed(() => /[!@#$%^&*()]/.test(formData.value.password));
-
-const requiredRule = [v => !!v || 'This field is required'];
-const emailRules = [
-    v => !!v || 'Email is required',
-    v => /.+@.+\..+/.test(v) || 'E-mail must be valid',
 ];
 const confirmPasswordRule = [
     v => !!v || 'Confirm Password is required',
@@ -55,10 +52,12 @@ const phoneRules = [
     v => !!v || 'Phone number is required',
     v => /^\d{11}$/.test(v) || 'Phone number must be 11 digits',
 ];
-const zipCodeRules = [
-    v => !!v || 'Zip code is required',
-    v => /^\d{4,5}$/.test(v) || 'Zip code must be 4-5 digits',
-];
+
+// Computed properties for dynamic password validation list
+const hasMinLength = computed(() => (formData.value.password?.length || 0) >= 8);
+const hasUppercase = computed(() => /[A-Z]/.test(formData.value.password));
+const hasLowercase = computed(() => /[a-z]/.test(formData.value.password));
+const hasSymbol = computed(() => /[!@#$%^&*()]/.test(formData.value.password));
 
 const validateAndSubmit = async () => {
     // Validate all form fields
@@ -74,7 +73,6 @@ const goToSignIn = () => {
     showSuccessDialog.value = false;
     router.push({ name: 'signin' });
 };
-
 </script>
 
 <template>
@@ -105,25 +103,26 @@ const goToSignIn = () => {
                             <v-btn icon @click="router.push({ name: 'choose-role' })" class="mb-4">
                                 <v-icon>mdi-arrow-left</v-icon>
                             </v-btn>
-                            <v-card-title class="text-h5 text-center font-weight-bold">Create Customer Account</v-card-title>
+                            <v-card-title class="text-h5 text-center font-weight-bold">Owner Registration</v-card-title>
                             <v-form ref="form" @submit.prevent="validateAndSubmit">
                                 <v-card-text>
+                                    <!-- Account Information -->
                                     <v-list-item class="mb-4">
-                                        <v-list-item-title class="font-weight-bold">Personal Information</v-list-item-title>
+                                        <v-list-item-title class="font-weight-bold">Account Information</v-list-item-title>
                                         <v-row>
-                                            <v-col cols="12" sm="6">
-                                                <v-text-field
-                                                    v-model="formData.fullName"
-                                                    label="Full Name"
-                                                    :rules="requiredRule"
-                                                    variant="outlined"
-                                                ></v-text-field>
-                                            </v-col>
-                                            <v-col cols="12" sm="6">
+                                            <v-col cols="12">
                                                 <v-text-field
                                                     v-model="formData.email"
                                                     label="Email Address"
                                                     :rules="emailRules"
+                                                    variant="outlined"
+                                                ></v-text-field>
+                                            </v-col>
+                                            <v-col cols="12">
+                                                <v-text-field
+                                                    v-model="formData.phone"
+                                                    label="Phone Number"
+                                                    :rules="phoneRules"
                                                     variant="outlined"
                                                 ></v-text-field>
                                             </v-col>
@@ -175,18 +174,29 @@ const goToSignIn = () => {
                                             </v-col>
                                         </v-row>
                                     </v-list-item>
+
+                                    <!-- Facility Details -->
                                     <v-list-item class="mb-4">
-                                        <v-list-item-title class="font-weight-bold">Contact Information</v-list-item-title>
+                                        <v-list-item-title class="font-weight-bold">Facility Details</v-list-item-title>
                                         <v-row>
                                             <v-col cols="12" sm="6">
                                                 <v-text-field
-                                                    v-model="formData.phone"
-                                                    label="Phone Number"
-                                                    :rules="phoneRules"
+                                                    v-model="formData.facilityName"
+                                                    label="Facility Name"
+                                                    :rules="requiredRule"
                                                     variant="outlined"
                                                 ></v-text-field>
                                             </v-col>
                                             <v-col cols="12" sm="6">
+                                                <v-text-field
+                                                    v-model="formData.facilityType"
+                                                    label="Facility Type"
+                                                    placeholder="e.g. basketball, badminton, or..."
+                                                    :rules="requiredRule"
+                                                    variant="outlined"
+                                                ></v-text-field>
+                                            </v-col>
+                                            <v-col cols="12">
                                                 <v-text-field
                                                     v-model="formData.address"
                                                     label="Address"
@@ -194,23 +204,68 @@ const goToSignIn = () => {
                                                     variant="outlined"
                                                 ></v-text-field>
                                             </v-col>
-                                            <v-col cols="12" sm="6">
+                                            <v-col cols="12">
                                                 <v-text-field
-                                                    v-model="formData.city"
-                                                    label="City"
+                                                    v-model="formData.amenities"
+                                                    label="Amenities"
+                                                    placeholder="What amenities do you offer?"
+                                                    variant="outlined"
+                                                ></v-text-field>
+                                            </v-col>
+                                            <v-col cols="12">
+                                                <v-textarea
+                                                    v-model="formData.briefDescription"
+                                                    label="Brief Description"
+                                                    placeholder="Brief description of your facility..."
+                                                    :rules="requiredRule"
+                                                    variant="outlined"
+                                                ></v-textarea>
+                                            </v-col>
+                                        </v-row>
+                                    </v-list-item>
+
+                                    <!-- Operating Hours & Price -->
+                                    <v-list-item class="mb-4">
+                                        <v-list-item-title class="font-weight-bold">Operating Hours & Price</v-list-item-title>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-text-field
+                                                    v-model="formData.price"
+                                                    label="Price per Hour"
+                                                    type="number"
                                                     :rules="requiredRule"
                                                     variant="outlined"
                                                 ></v-text-field>
                                             </v-col>
                                             <v-col cols="12" sm="6">
                                                 <v-text-field
-                                                    v-model="formData.zipCode"
-                                                    label="Zip Code"
-                                                    :rules="zipCodeRules"
+                                                    v-model="formData.openingTime"
+                                                    label="Opening Time"
+                                                    type="time"
+                                                    :rules="requiredRule"
+                                                    variant="outlined"
+                                                ></v-text-field>
+                                            </v-col>
+                                            <v-col cols="12" sm="6">
+                                                <v-text-field
+                                                    v-model="formData.closingTime"
+                                                    label="Closing Time"
+                                                    type="time"
+                                                    :rules="requiredRule"
                                                     variant="outlined"
                                                 ></v-text-field>
                                             </v-col>
                                         </v-row>
+                                    </v-list-item>
+
+                                    <!-- Facility Photos - Simple Placeholder -->
+                                    <v-list-item class="mb-4">
+                                        <v-list-item-title class="font-weight-bold">Facility Photos</v-list-item-title>
+                                        <div class="file-upload-container">
+                                            <v-icon size="48">mdi-cloud-upload-outline</v-icon>
+                                            <p>Click to upload or drag and drop</p>
+                                            <p class="text-caption text-grey-darken-1">SVG, PNG, JPG or GIF (MAX. 800x400px)</p>
+                                        </div>
                                     </v-list-item>
                                 </v-card-text>
                                 <v-card-actions class="justify-center">
@@ -231,12 +286,13 @@ const goToSignIn = () => {
                 </v-row>
             </div>
         </v-main>
-        <!-- Success Dialog -->
+
+        <!-- Registration Success Dialog -->
         <v-dialog v-model="showSuccessDialog" persistent max-width="400">
             <v-card class="text-center pa-4" style="border-radius: 20px;">
                 <v-card-title class="text-h5 text-green-darken-2">Registration Successful</v-card-title>
                 <v-card-text>
-                    Your account has been created successfully. Sign in to continue.
+                    Your facility has been successfully registered. Sign in to continue.
                 </v-card-text>
                 <v-card-actions class="justify-center">
                     <v-btn
@@ -256,27 +312,35 @@ const goToSignIn = () => {
 
 <style scoped>
 .password-rules {
-  margin-top: 10px;
-  padding: 10px;
-  border-radius: 8px;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 8px;
 }
 
 .password-rules ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
 .password-rules li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.8rem;
-  margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
 }
 
 .password-rules .v-icon {
-  font-size: 1rem;
+    font-size: 1rem;
+}
+
+.file-upload-container {
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    color: #888;
 }
 
 /* Submit button styles */
@@ -302,4 +366,5 @@ const goToSignIn = () => {
 .sign-in-button:active {
     transform: scale(0.98);
 }
+
 </style>

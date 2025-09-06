@@ -67,7 +67,7 @@
             <v-select
               label="Role"
               v-model="role"
-              :items="['User', 'Admin']"
+              :items="['Customer', 'Admin']"
               prepend-inner-icon="mdi-account-group"
               variant="outlined"
               density="compact"
