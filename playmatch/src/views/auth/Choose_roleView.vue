@@ -24,7 +24,7 @@ function continueAction() {
       class="rounded-xl pa-8"
       elevation="4"
       min-width="400"
-      max-width="600"
+      max-width="1000"
       color="white"
       style="border: 2px solid #2196F3;"
     >
