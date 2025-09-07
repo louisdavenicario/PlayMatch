@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.2",
     "vuetify": "^3.9.6"
   },
   "devDependencies": {
