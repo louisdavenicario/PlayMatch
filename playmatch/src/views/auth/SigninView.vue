@@ -3,7 +3,8 @@
     class="d-flex align-center justify-center"
     style="
       min-height: 100dvh;
-      background: linear-gradient(to bottom right, rgba(26, 101, 162, 0.6), rgba(119, 154, 229, 0.6)),
+      background:
+        linear-gradient(to bottom right, rgba(26, 101, 162, 0.6), rgba(119, 154, 229, 0.6)),
         url('/images/logo.jpg') center/cover no-repeat;
     "
   >
@@ -20,7 +21,6 @@
             border-radius: 20px;
           "
         >
-        
           <div class="d-flex align-center mb-4">
             <v-btn icon @click="$router.go(-1)" class="mr-2">
               <v-icon>mdi-arrow-left</v-icon>
@@ -31,10 +31,10 @@
 
           <div class="text-center">
             <v-img
-                class="mx-auto mb-6"
-                src="/images/logo.png"
-                width="100"
-                alt="Playmatch Logo"
+              class="mx-auto mb-6"
+              src="/images/logo.png"
+              width="100"
+              alt="Playmatch Logo"
             ></v-img>
             <h2 class="text-h5 font-weight-bold mb-2">PlayMatch</h2>
             <p class="text-subtitle-1 text-grey mb-6">Sign in to your account</p>
@@ -67,7 +67,7 @@
             <v-select
               label="Role"
               v-model="role"
-              :items="['Customer', 'Admin']"
+              :items="['Customer', 'Owner']"
               prepend-inner-icon="mdi-account-group"
               variant="outlined"
               density="compact"
@@ -75,20 +75,16 @@
               class="mb-4"
             ></v-select>
 
-            <v-btn
-              type="submit"
-              color="primary"
-              size="large"
-              block
-              rounded="lg"
-              class="my-4"
-            >
+            <v-btn type="submit" color="primary" size="large" block rounded="lg" class="my-4">
               Sign In
             </v-btn>
           </v-form>
 
           <div class="text-center text-body-2">
-            Don't have an account? <span class="text-primary font-weight-bold" @click="$router.push('/choose-role')">Register here</span>
+            Don't have an account?
+            <span class="text-primary font-weight-bold" @click="$router.push('/choose-role')"
+              >Register here</span
+            >
           </div>
         </v-card>
       </v-col>
@@ -97,15 +93,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const email = ref('');
-const password = ref('');
-const role = ref(null);
-const showPassword = ref(false);
+const email = ref('')
+const password = ref('')
+const role = ref(null)
+const showPassword = ref(false)
 
-const router = useRouter();
+const router = useRouter()
 
 const handleLogin = () => {
   // This is where we'll add the Firebase authentication logic later
@@ -113,10 +109,10 @@ const handleLogin = () => {
     email: email.value,
     password: password.value,
     role: role.value,
-  });
+  })
   // Navigate to a dashboard or home page after successful login
-  router.push('/dashboard');
-};
+  router.push('/dashboard')
+}
 </script>
 
 <style scoped>

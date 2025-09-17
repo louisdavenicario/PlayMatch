@@ -1,19 +1,19 @@
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const selectedRole = ref('');
-const router = useRouter();
+const selectedRole = ref('')
+const router = useRouter()
 
 function continueAction() {
-  if (!selectedRole.value) return;
+  if (!selectedRole.value) return
 
   if (selectedRole.value === 'customer') {
     // Correctly navigate to the customer registration page using Vue Router
-    router.push('/customer-registration');
+    router.push('/customer-registration')
   } else if (selectedRole.value === 'owner') {
     // Navigate to the owner registration page
-    router.push('/owner-registration');
+    router.push('/owner-registration')
   }
 }
 </script>
@@ -26,7 +26,7 @@ function continueAction() {
       min-width="400"
       max-width="1000"
       color="white"
-      style="border: 2px solid #2196F3;"
+      style="border: 2px solid #2196f3"
     >
       <v-btn icon @click="router.push({ name: 'home' })" class="mb-4">
         <v-icon>mdi-arrow-left</v-icon>
@@ -79,8 +79,10 @@ function continueAction() {
                 </v-avatar>
               </v-col>
               <v-col>
-                <h3 class="text-h6 font-weight-bold">Facility Owner</h3>
-                <p class="text-body-2 text-medium-emphasis">List and manage your sports facilities</p>
+                <h3 class="text-h6 font-weight-bold">Owner</h3>
+                <p class="text-body-2 text-medium-emphasis">
+                  List and manage your sports facilities
+                </p>
               </v-col>
               <v-col cols="auto" v-if="selectedRole === 'owner'">
                 <v-icon color="primary">mdi-check-circle</v-icon>
