@@ -80,12 +80,17 @@
             </v-btn>
           </v-form>
 
-          <div class="text-center text-body-2">
-            Don't have an account?
-            <span class="text-primary font-weight-bold" @click="$router.push('/choose-role')"
-              >Register here</span
-            >
-          </div>
+            <div class="text-center text-body">
+              Don't have an account?
+              <v-btn 
+                variant="text" 
+                color="primary"
+                class="font-weight-bold" 
+                @click="$router.push('/choose-role')"
+              >
+              Register here
+              </v-btn>
+            </div>
         </v-card>
       </v-col>
     </v-row>

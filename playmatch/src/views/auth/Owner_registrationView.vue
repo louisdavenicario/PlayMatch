@@ -322,7 +322,7 @@ const goToSignIn = () => {
 
                   <!-- Facility Photos with preview -->
                   <v-list-item class="mb-4">
-                    <v-list-item-title class="font-weight-bold">Facility Photos</v-list-item-title>
+                    <v-list-item-title class="font-weight-bold">Facility Photo</v-list-item-title>
 
                     <div
                       v-if="!previewUrl"
