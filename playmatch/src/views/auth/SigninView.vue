@@ -100,6 +100,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { supabase } from '@/supabaseClient'; // Make sure this path is correct
 
 const email = ref('')
 const password = ref('')
@@ -109,15 +110,22 @@ const showPassword = ref(false)
 const router = useRouter()
 
 const handleLogin = () => {
-  // This is where we'll add the Firebase authentication logic later
-  console.log('Login attempt:', {
-    email: email.value,
-    password: password.value,
-    role: role.value,
-  })
-  // Navigate to a dashboard or home page after successful login
-  router.push('/dashboard')
-}
+    // This is where you'll add the authentication logic later.
+    // For now, this is a placeholder.
+
+    // Check the selected role and navigate accordingly
+    if (role.value === 'Owner') {
+        // Navigate to the owner's dashboard
+        router.push('/owner-dashboard');
+    } else if (role.value === 'Customer') {
+        // Navigate to the customer's dashboard
+        router.push('/customer-dashboard');
+    } else {
+        // Handle cases where no role is selected or an invalid role.
+        console.log('Please select a valid role.');
+    }
+};
+
 </script>
 
 <style scoped>
