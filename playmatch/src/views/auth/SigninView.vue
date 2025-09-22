@@ -26,7 +26,6 @@
               <v-icon>mdi-arrow-left</v-icon>
             </v-btn>
             <div class="flex-grow-1"></div>
-            <!-- Empty div for spacing -->
           </div>
 
           <div class="text-center">
@@ -79,18 +78,21 @@
               Sign In
             </v-btn>
           </v-form>
+          <v-alert v-if="errorMessage" type="error" closable class="mt-4">
+            {{ errorMessage }}
+          </v-alert>
 
-            <div class="text-center text-body">
-              Don't have an account?
-              <v-btn 
-                variant="text" 
-                color="primary"
-                class="font-weight-bold" 
-                @click="$router.push('/choose-role')"
-              >
+          <div class="text-center text-body">
+            Don't have an account?
+            <v-btn
+              variant="text"
+              color="primary"
+              class="font-weight-bold"
+              @click="$router.push('/choose-role')"
+            >
               Register here
-              </v-btn>
-            </div>
+            </v-btn>
+          </div>
         </v-card>
       </v-col>
     </v-row>
@@ -100,32 +102,68 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { supabase } from '@/supabaseClient'; // Make sure this path is correct
+import { supabase } from '@/supabaseClient'
 
 const email = ref('')
 const password = ref('')
 const role = ref(null)
 const showPassword = ref(false)
+const errorMessage = ref(null) // State to store error messages
 
 const router = useRouter()
 
-const handleLogin = () => {
-    // This is where you'll add the authentication logic later.
-    // For now, this is a placeholder.
+const handleLogin = async () => {
+  errorMessage.value = null // Clear any previous errors
 
-    // Check the selected role and navigate accordingly
-    if (role.value === 'Owner') {
-        // Navigate to the owner's dashboard
-        router.push('/owner-dashboard');
-    } else if (role.value === 'Customer') {
-        // Navigate to the customer's dashboard
-        router.push('/customer-dashboard');
-    } else {
-        // Handle cases where no role is selected or an invalid role.
-        console.log('Please select a valid role.');
+  if (!email.value || !password.value || !role.value) {
+    errorMessage.value = 'Please fill in all fields.'
+    return
+  }
+
+  try {
+    const {
+      data: { user },
+      error: signInError,
+    } = await supabase.auth.signInWithPassword({
+      email: email.value,
+      password: password.value,
+    })
+
+    if (signInError) {
+      throw signInError
     }
-};
 
+    if (user) {
+      // Fetch the user's role from the 'profiles' table using their Supabase user ID
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      if (profileError) {
+        throw profileError
+      }
+
+      // Check if the selected role matches the role in the database
+      if (profile.role.toLowerCase() === role.value.toLowerCase()) {
+        if (role.value.toLowerCase() === 'owner') {
+          router.push('/owner-dashboard')
+        } else if (role.value.toLowerCase() === 'customer') {
+          router.push('/customer-dashboard')
+        }
+      } else {
+        // Mismatch between selected role and database role
+        errorMessage.value = `You are a registered as a ${profile.role}. Please log in with the correct role.`
+        // Sign out the user to prevent them from accessing unauthorized routes
+        await supabase.auth.signOut()
+      }
+    }
+  } catch (error) {
+    console.error('Login failed:', error)
+    errorMessage.value = error.message
+  }
+}
 </script>
 
 <style scoped>

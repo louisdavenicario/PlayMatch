@@ -1,22 +1,24 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router' // Import the useRouter function
+import { useRouter } from 'vue-router'
+import { supabase } from '@/supabaseClient'
 
 // Get the router instance
 const router = useRouter()
 
+// State management
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
-
-// State to control the visibility of the success dialog
 const showSuccessDialog = ref(false)
+const loading = ref(false)
+const errorMessage = ref(null)
 
 const formData = ref({
   fullName: '',
   email: '',
   password: '',
   confirmPassword: '',
-  phone: '',
+  phone_number: '',
   address: '',
   city: '',
   zipCode: '',
@@ -24,10 +26,9 @@ const formData = ref({
 
 const form = ref(null)
 
-// State to track if the password field is focused
 const passwordFocused = ref(false)
 
-// Password validation rules from the attached image
+// Validation Rules
 const passwordRules = [
   (v) => !!v || 'Password is required',
   (v) => (v && v.length >= 8) || 'Must be at least 8 characters',
@@ -36,7 +37,6 @@ const passwordRules = [
   (v) => /[!@#$%^&*()]/.test(v) || 'Must contain a symbol (!@#$%^&*())',
 ]
 
-// Computed properties to check the validity of each rule
 const hasMinLength = computed(() => (formData.value.password?.length || 0) >= 8)
 const hasUppercase = computed(() => /[A-Z]/.test(formData.value.password))
 const hasLowercase = computed(() => /[a-z]/.test(formData.value.password))
@@ -60,13 +60,59 @@ const zipCodeRules = [
   (v) => /^\d{4,5}$/.test(v) || 'Zip code must be 4-5 digits',
 ]
 
+// Supabase Sign-up and Data Storage Logic
 const validateAndSubmit = async () => {
-  // Validate all form fields
   const { valid } = await form.value.validate()
+  if (!valid) {
+    return
+  }
 
-  // The success dialog will only show if the form is valid
-  if (valid) {
-    showSuccessDialog.value = true
+  loading.value = true
+  errorMessage.value = null
+
+  try {
+    // 1. Sign up the user with email and password
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: formData.value.email,
+      password: formData.value.password,
+    })
+
+    if (signUpError) {
+      throw signUpError
+    }
+
+    // 2. Safely get the user object. This is the critical part.
+    const user = data.user || data.session?.user
+
+    // 3. Only attempt to insert the profile if the user object exists.
+    if (user) {
+      const { error: insertError } = await supabase.from('profiles').insert({
+        id: user.id, // This links the profile to the auth.users entry
+        full_name: formData.value.fullName,
+        phone_number: formData.value.phone_number,
+        address: formData.value.address,
+        city: formData.value.city,
+        zip_code: formData.value.zipCode,
+        role: 'customer',
+      })
+
+      if (insertError) {
+        throw insertError
+      }
+
+      showSuccessDialog.value = true
+    } else {
+      // If no user object is returned, it means email confirmation is required.
+      // The user record is created but not yet "fully" available with a session.
+      // Show a message to the user to check their email.
+      errorMessage.value =
+        'Please check your email to confirm your account and complete registration.'
+    }
+  } catch (error) {
+    console.error('Registration failed:', error.message)
+    errorMessage.value = error.message
+  } finally {
+    loading.value = false
   }
 }
 
@@ -142,7 +188,6 @@ const goToSignIn = () => {
                           @blur="passwordFocused = false"
                           variant="outlined"
                         ></v-text-field>
-                        <!-- Dynamic password validation list -->
                         <div v-if="formData.password || passwordFocused" class="password-rules">
                           <p class="text-caption font-weight-bold">Password must contain:</p>
                           <ul>
@@ -213,7 +258,7 @@ const goToSignIn = () => {
                     <v-row>
                       <v-col cols="12" sm="6">
                         <v-text-field
-                          v-model="formData.phone"
+                          v-model="formData.phone_number"
                           label="Phone Number"
                           :rules="phoneRules"
                           variant="outlined"
@@ -245,6 +290,9 @@ const goToSignIn = () => {
                       </v-col>
                     </v-row>
                   </v-list-item>
+                  <v-alert v-if="errorMessage" type="error" class="my-4" closable>
+                    {{ errorMessage }}
+                  </v-alert>
                 </v-card-text>
                 <v-card-actions class="justify-center">
                   <v-btn
@@ -254,6 +302,8 @@ const goToSignIn = () => {
                     rounded
                     block
                     class="submit-button"
+                    :loading="loading"
+                    :disabled="loading"
                   >
                     Submit
                   </v-btn>
@@ -264,7 +314,6 @@ const goToSignIn = () => {
         </v-row>
       </div>
     </v-main>
-    <!-- Success Dialog -->
     <v-dialog v-model="showSuccessDialog" persistent max-width="400">
       <v-card class="text-center pa-4" style="border-radius: 20px">
         <v-card-title class="text-h5 text-green-darken-2">Registration Successful</v-card-title>
@@ -287,13 +336,11 @@ const goToSignIn = () => {
   padding: 10px;
   border-radius: 8px;
 }
-
 .password-rules ul {
   list-style: none;
   padding: 0;
   margin: 0;
 }
-
 .password-rules li {
   display: flex;
   align-items: center;
@@ -301,31 +348,23 @@ const goToSignIn = () => {
   font-size: 0.8rem;
   margin-bottom: 4px;
 }
-
 .password-rules .v-icon {
   font-size: 1rem;
 }
-
-/* Submit button styles */
 .submit-button {
   transition: all 0.3s ease-in-out;
 }
-
 .submit-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
-
-/* Pop-up sign-in button styles */
 .sign-in-button {
   transition: all 0.2s ease-in-out;
 }
-
 .sign-in-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
-
 .sign-in-button:active {
   transform: scale(0.98);
 }
