@@ -11,18 +11,22 @@ const showConfirmPassword = ref(false);
 
 const formData = ref({
     email: '',
-    phone: '',
+    contact_number: '',
     password: '',
     confirmPassword: '',
-    facilityName: '',
-    facilityType: '',
+    full_name: '', // Added full_name to match the profiles table
     address: '',
+    city: '', // Added city to match the profiles table
+    zip_code: '', // Added zip_code to match the profiles table
+    phone_number: '', // Added phone_number to match the profiles table
+    facility_name: '',
+    facility_type: '',
     amenities: '',
-    briefDescription: '',
-    price: '',
-    openingTime: null,
-    closingTime: null,
-    facilityPhotos: null,
+    briefdescription: '',
+    price_per_hour: '',
+    open_time: null,
+    closing_time: null,
+    image_url: null,
 });
 
 const previewUrl = ref(null);
@@ -97,6 +101,7 @@ const validateAndSubmit = async () => {
     }
 
     try {
+        // Step 1: Sign up the user. This creates the user in the auth.users table.
         const { data: authData, error: authError } = await supabase.auth.signUp({
             email: formData.value.email,
             password: formData.value.password,
@@ -109,6 +114,25 @@ const validateAndSubmit = async () => {
         const newUserId = authData.user.id;
         console.log("New user created with ID:", newUserId);
 
+        // Step 2: Insert the user's profile data into the 'profiles' table.
+        // This is the CRITICAL new step that solves the foreign key error.
+        const { error: profileError } = await supabase
+            .from('profiles')
+            .insert({
+                id: newUserId,
+                full_name: formData.value.full_name, // Make sure your form has this field
+                role: 'owner',
+                address: formData.value.address,
+                city: formData.value.city,
+                zip_code: formData.value.zip_code,
+                phone_number: formData.value.contact_number, // Mapped to contact_number from form
+            });
+
+        if (profileError) {
+            throw profileError;
+        }
+        
+        // Handle photo upload
         let photoUrl = null;
         if (formData.value.facilityPhotos) {
             const file = formData.value.facilityPhotos;
@@ -127,17 +151,20 @@ const validateAndSubmit = async () => {
             }
         }
 
+        // Step 3: Insert the facility data into the 'facilities' table.
+        // This now works because the 'owner_id' exists in 'profiles'.
         const { error: facilityError } = await supabase.from('facilities').insert({
-            owner_id: newUserId,
-            name: formData.value.facilityName,
-            type: formData.value.facilityType,
-            location: formData.value.address,
+            owner_id: newUserId, // This correctly links the facility to the owner's profile
+            facility_name: formData.value.facility_name,
+            facility_type: formData.value.facility_type,
+            address: formData.value.address,
             amenities: formData.value.amenities,
-            description: formData.value.briefDescription,
-            price_per_hour: parseFloat(formData.value.price),
-            opening_time: formData.value.openingTime,
-            closing_time: formData.value.closingTime,
-            photo_url: photoUrl,
+            briefdescription: formData.value.briefdescription,
+            price_per_hour: parseFloat(formData.value.price_per_hour),
+            open_time: formData.value.open_time,
+            closing_time: formData.value.closing_time,
+            image_url: photoUrl,
+            contact_number: formData.value.contact_number,
         });
 
         if (facilityError) {
@@ -294,7 +321,7 @@ const goToSignIn = () => {
                                         <v-row>
                                             <v-col cols="12" sm="6">
                                                 <v-text-field
-                                                    v-model="formData.facilityName"
+                                                    v-model="formData.facility_name"
                                                     label="Facility Name"
                                                     :rules="requiredRule"
                                                     variant="outlined"
@@ -302,7 +329,7 @@ const goToSignIn = () => {
                                             </v-col>
                                             <v-col cols="12" sm="6">
                                                 <v-text-field
-                                                    v-model="formData.facilityType"
+                                                    v-model="formData.facility_type"
                                                     label="Facility Type"
                                                     placeholder="e.g. basketball, badminton, or..."
                                                     :rules="requiredRule"
@@ -327,7 +354,7 @@ const goToSignIn = () => {
                                             </v-col>
                                             <v-col cols="12">
                                                 <v-textarea
-                                                    v-model="formData.briefDescription"
+                                                    v-model="formData.briefdescription"
                                                     label="Brief Description"
                                                     placeholder="Brief description of your facility..."
                                                     :rules="requiredRule"
@@ -344,7 +371,7 @@ const goToSignIn = () => {
                                         <v-row>
                                             <v-col cols="12">
                                                 <v-text-field
-                                                    v-model="formData.price"
+                                                    v-model="formData.price_per_hour"
                                                     label="Price per Hour"
                                                     type="number"
                                                     :rules="requiredRule"
@@ -353,7 +380,7 @@ const goToSignIn = () => {
                                             </v-col>
                                             <v-col cols="12" sm="6">
                                                 <v-text-field
-                                                    v-model="formData.openingTime"
+                                                    v-model="formData.open_time"
                                                     label="Opening Time"
                                                     type="time"
                                                     :rules="requiredRule"
@@ -362,7 +389,7 @@ const goToSignIn = () => {
                                             </v-col>
                                             <v-col cols="12" sm="6">
                                                 <v-text-field
-                                                    v-model="formData.closingTime"
+                                                    v-model="formData.closing_time"
                                                     label="Closing Time"
                                                     type="time"
                                                     :rules="requiredRule"
@@ -448,7 +475,7 @@ const goToSignIn = () => {
             <v-card class="text-center pa-4" style="border-radius: 20px">
                 <v-card-title class="text-h5 text-green-darken-2">Registration Successful</v-card-title>
                 <v-card-text>
-                    Your facility has been successfully registered. Sign in to continue.
+                    Your facility has been successfully registered. Click signin button to continue.
                 </v-card-text>
                 <v-card-actions class="justify-center">
                     <v-btn color="primary" rounded block @click="goToSignIn" class="sign-in-button">
