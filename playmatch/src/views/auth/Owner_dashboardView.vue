@@ -3,7 +3,7 @@
 
     <aside class="sidebar bg-white shadow-xl flex flex-col p-6 space-y-4">
       <div class="flex items-center justify-between">
-        <h1 class="text-xl font-bold text-gray-800">Sports Center</h1>
+        <h1 class="text-xl font-bold text-gray-800">{{ facilityDetails?.facility_name || 'Facility Owner' }}</h1>
         <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">FO</div>
       </div>
       <nav class="flex-1 space-y-2 mt-8">
@@ -62,7 +62,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
           <div class="bg-white p-6 rounded-2xl shadow-lg">
             <div class="flex items-center justify-between">
-              <h3 class="text-2xl font-bold text-gray-800">My Facility</h3>
+              <h3 class="text-2xl font-bold text-gray-800">{{ facilityDetails?.facility_name || 'Facility Owner' }}</h3>
               <button @click="showEditModal = true" class="text-blue-500 hover:text-blue-700 transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18.75 14.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125v-9.75c0-.621.504-1.125 1.125-1.125h3.375" />
@@ -177,11 +177,11 @@
 
     <div v-if="showEditModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-xl">
-        <h3 class="text-2xl font-bold text-gray-800 mb-6">Edit Facility Details</h3>
+        <h3 class="text-2xl font-bold text-red-800 mb-6">Edit Facility Details</h3>
         <form @submit.prevent="saveFacilityDetails" class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-gray-700">Facility Name</label>
-            <input type="text" v-model="editedFacility.name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <input type="text" v-model="editedFacility.facility_name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">Amenities (comma-separated)</label>
@@ -193,11 +193,11 @@
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">Description</label>
-            <textarea v-model="editedFacility.description" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
+            <textarea v-model="editedFacility.briefdescription" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
           </div>
           <div>
             <label class="block text-sm font-medium text-gray-700">Address</label>
-            <input type="text" v-model="editedFacility.location" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+            <input type="text" v-model="editedFacility.address" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
           </div>
           <div class="flex justify-end space-x-4 mt-6">
             <button type="button" @click="showEditModal = false" class="px-4 py-2 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">Cancel</button>
@@ -230,11 +230,11 @@ const dashboardData = reactive({
 const facilityDetails = ref(null);
 const editedFacility = reactive({
     id: null,
-    name: '',
+    facility_name: '',
     amenities: '',
     price_per_hour: 0,
-    description: '',
-    location: ''
+    briefdescription: '',
+    address: ''
 });
 
 const recentBookings = ref([]);
@@ -279,11 +279,11 @@ const fetchAllOwnerData = async () => {
             facilityDetails.value = facilityData;
             Object.assign(editedFacility, {
                 id: facilityData.id,
-                name: facilityData.name,
+                facility_name: facilityData.facility_name,
                 amenities: facilityData.amenities,
                 price_per_hour: facilityData.price_per_hour,
-                description: facilityData.description,
-                location: facilityData.location
+                briefdescription: facilityData.briefdescription,
+                address: facilityData.address
             });
         } else {
             console.log("No facility data found for this owner. The user can now create one.");
@@ -447,11 +447,11 @@ const saveFacilityDetails = async () => {
             .upsert({
                 id: editedFacility.id, // Supabase will use this to decide if it's an update or insert
                 owner_id: userId.value,
-                name: editedFacility.name,
+                facility_name: editedFacility.facility_name,
                 amenities: editedFacility.amenities,
                 price_per_hour: editedFacility.price_per_hour,
-                description: editedFacility.description,
-                location: editedFacility.location
+                briefdescription: editedFacility.briefdescription,
+                address: editedFacility.address
             }, { onConflict: 'id' });
 
         if (error) throw error;

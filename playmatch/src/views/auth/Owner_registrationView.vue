@@ -11,7 +11,6 @@ const showConfirmPassword = ref(false)
 
 const formData = ref({
     email: '',
-    contact_number: '',
     password: '',
     confirmPassword: '',
     full_name: '', // Added full_name to match the profiles table
@@ -67,19 +66,19 @@ const triggerFileSelect = () => fileInput.value.click()
 const handleFileChange = (event) => {
   const file = event.target.files[0]
   if (file) {
-    formData.value.facilityPhotos = file
+    formData.value.image_url = file
     previewUrl.value = URL.createObjectURL(file)
   }
 }
 const handleDrop = (event) => {
   const file = event.dataTransfer.files[0]
   if (file) {
-    formData.value.facilityPhotos = file
+    formData.value.image_url = file
     previewUrl.value = URL.createObjectURL(file)
   }
 }
 const removePhoto = () => {
-  formData.value.facilityPhotos = null
+  formData.value.image_url = null
   previewUrl.value = null
   fileInput.value.value = null
 }
@@ -125,7 +124,7 @@ const validateAndSubmit = async () => {
                 address: formData.value.address,
                 city: formData.value.city,
                 zip_code: formData.value.zip_code,
-                phone_number: formData.value.contact_number, // Mapped to contact_number from form
+                phone_number: formData.value.phone_number, // Mapped to contact_number from form
             });
 
         if (profileError) {
@@ -134,8 +133,8 @@ const validateAndSubmit = async () => {
         
         // Handle photo upload
         let photoUrl = null;
-        if (formData.value.facilityPhotos) {
-            const file = formData.value.facilityPhotos;
+        if (formData.value.image_url) {
+            const file = formData.value.image_url;
             const filePath = `${newUserId}/${file.name}`;
             const { error: storageError } = await supabase.storage
                 .from('facility-photos')
@@ -164,7 +163,7 @@ const validateAndSubmit = async () => {
             open_time: formData.value.open_time,
             closing_time: formData.value.closing_time,
             image_url: photoUrl,
-            contact_number: formData.value.contact_number,
+            phone_number: formData.value.phone_number,
         });
 
     if (facilityError) {
@@ -234,7 +233,7 @@ const goToSignIn = () => {
                       </v-col>
                       <v-col cols="12">
                         <v-text-field
-                          v-model="formData.phone"
+                          v-model="formData.phone_number"
                           label="Phone Number"
                           :rules="phoneRules"
                           variant="outlined"
