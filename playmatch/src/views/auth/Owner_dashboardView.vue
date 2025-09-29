@@ -1,242 +1,630 @@
 <template>
-  <div class="flex flex-col md:flex-row min-h-screen font-inter bg-gray-100">
-
-    <aside class="sidebar bg-white shadow-xl flex flex-col p-6 space-y-4">
-      <div class="flex items-center justify-between">
-        <h1 class="text-xl font-bold text-gray-800">{{ facilityDetails?.facility_name || 'Facility Owner' }}</h1>
-        <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">FO</div>
-      </div>
-      <nav class="flex-1 space-y-2 mt-8">
-        <button
-          @click="currentPage = 'dashboard'"
-          :class="['w-full text-left flex items-center space-x-3 p-3 rounded-xl transition-colors', currentPage === 'dashboard' ? 'bg-gray-200' : 'hover:bg-gray-100']"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25h-2.25a2.25 2.25 0 01-2.25-2.25v-2.25z" />
-          </svg>
-          <span>Dashboard</span>
-        </button>
-        <button
-          @click="currentPage = 'availability'"
-          :class="['w-full text-left flex items-center space-x-3 p-3 rounded-xl transition-colors', currentPage === 'availability' ? 'bg-gray-200' : 'hover:bg-gray-100']"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 11.25v7.5m-16.5-7.5h.008v.008h-.008v-.008zM12 12.75h.008v.008H12v-.008zM18.75 12.75h.008v.008h-.008v-.008z" />
-          </svg>
-          <span>Availability Settings</span>
-        </button>
-        <button
-          @click="currentPage = 'bookings'"
-          :class="['w-full text-left flex items-center space-x-3 p-3 rounded-xl transition-colors', currentPage === 'bookings' ? 'bg-gray-200' : 'hover:bg-gray-100']"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
-          </svg>
-          <span>Bookings</span>
-        </button>
-      </nav>
-      <div class="text-center text-sm text-gray-500 mt-auto">
-        <p>User ID: {{ userId }}</p>
-      </div>
-    </aside>
-
-    <main class="main-content flex-1 p-6 md:p-8 space-y-8">
-      <div v-if="currentPage === 'dashboard'">
-        <h2 class="text-3xl font-bold text-gray-800">Dashboard</h2>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          <div class="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center">
-            <h3 class="text-lg font-semibold text-gray-600">Today's Bookings</h3>
-            <p class="text-5xl font-bold text-purple-600 mt-2">{{ dashboardData.todayBookings }}</p>
-          </div>
-          <div class="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center">
-            <h3 class="text-lg font-semibold text-gray-600">Monthly Revenue</h3>
-            <p class="text-5xl font-bold text-green-600 mt-2">₱{{ dashboardData.monthlyRevenue.toFixed(2) }}</p>
-          </div>
-          <div class="bg-white p-6 rounded-2xl shadow-lg flex flex-col items-center justify-center text-center">
-            <h3 class="text-lg font-semibold text-gray-600">Pending Requests</h3>
-            <p class="text-5xl font-bold text-yellow-600 mt-2">{{ dashboardData.pendingRequests }}</p>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-          <div class="bg-white p-6 rounded-2xl shadow-lg">
-            <div class="flex items-center justify-between">
-              <h3 class="text-2xl font-bold text-gray-800">{{ facilityDetails?.facility_name || 'Facility Owner' }}</h3>
-              <button @click="showEditModal = true" class="text-blue-500 hover:text-blue-700 transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18.75 14.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 01-1.125-1.125v-9.75c0-.621.504-1.125 1.125-1.125h3.375" />
-                </svg>
-              </button>
-            </div>
-            <div class="mt-4" v-if="facilityDetails">
-              <h4 class="text-xl font-semibold text-gray-700 mt-4">{{ facilityDetails.name }}</h4>
-              <p class="text-lg text-gray-500 mt-1">₱{{ facilityDetails.price_per_hour }}/hour</p>
-              <p class="text-sm text-gray-500 mt-4">Amenities:</p>
-              <div class="flex flex-wrap gap-2 mt-2">
-                <span v-for="amenity in facilityDetails.amenities.split(',')" :key="amenity" class="bg-blue-100 text-blue-800 text-sm font-medium px-3 py-1 rounded-full">{{ amenity.trim() }}</span>
-              </div>
-              <p class="text-sm text-gray-500 mt-4">{{ facilityDetails.description }}</p>
-              <p class="text-sm text-gray-500 mt-4">{{ facilityDetails.location }}</p>
-            </div>
-            <div v-else class="mt-4 text-center text-gray-500">
-                <p>No facility information found. Please edit to add details.</p>
-            </div>
-          </div>
-
-          <div class="bg-white p-6 rounded-2xl shadow-lg">
-            <h3 class="text-2xl font-bold text-gray-800">Recent Bookings</h3>
-            <ul class="mt-4 space-y-4" v-if="recentBookings.length > 0">
-              <li v-for="booking in recentBookings" :key="booking.id" class="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p class="font-semibold text-gray-700">User {{ booking.user_id.substring(0, 4) }}</p>
-                  <p class="text-sm text-gray-500">{{ new Date(booking.start_time).toLocaleDateString() }} - {{ booking.time_range }}</p>
-                </div>
-                <div class="text-right">
-                  <p class="font-bold text-green-600">₱{{ (booking.price).toFixed(2) }}</p>
-                  <p class="text-sm text-gray-500">{{ booking.hours }}hrs</p>
-                </div>
-              </li>
-            </ul>
-            <div v-else class="text-center text-gray-500">
-              <p>No recent bookings.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-else-if="currentPage === 'availability'">
-        <h2 class="text-3xl font-bold text-gray-800">Availability Settings</h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-          <div class="bg-white p-6 rounded-2xl shadow-lg">
-            <h3 class="text-xl font-bold text-gray-800 mb-4">Regular Operating Hours</h3>
-            <div class="space-y-4">
-              <div v-for="day in daysOfWeek" :key="day" class="flex items-center space-x-4">
-                <label class="flex items-center space-x-2 w-32">
-                  <input type="checkbox" v-model="regularHours[day].isOpen" class="day-checkbox">
-                  <span class="text-sm font-medium text-gray-700">{{ day.charAt(0).toUpperCase() + day.slice(1) }}</span>
-                </label>
-                <div class="flex space-x-2 flex-1">
-                  <input type="time" v-model="regularHours[day].openTime" :disabled="!regularHours[day].isOpen" class="flex-1 p-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  <input type="time" v-model="regularHours[day].closeTime" :disabled="!regularHours[day].isOpen" class="flex-1 p-2 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-              </div>
-            </div>
-            <button @click="saveRegularHours" class="w-full mt-6 bg-blue-600 text-white py-3 rounded-xl hover:bg-blue-700 transition-colors">Save Hours</button>
-          </div>
-          <div class="bg-white p-6 rounded-2xl shadow-lg">
-            <h3 class="text-xl font-bold text-gray-800 mb-4">Custom Schedule for Specific Dates</h3>
-            <div class="space-y-4">
-              <input type="date" v-model="newCustomSchedule.date" class="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <div class="flex space-x-2">
-                <input type="time" v-model="newCustomSchedule.startTime" class="flex-1 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <input type="time" v-model="newCustomSchedule.endTime" class="flex-1 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
-              </div>
-              <input type="text" v-model="newCustomSchedule.reason" placeholder="Reason (e.g., Maintenance)" class="w-full p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <button @click="addCustomSchedule" class="w-full bg-green-600 text-white py-3 rounded-xl hover:bg-green-700 transition-colors">Add Custom Schedule</button>
-            </div>
-            <div class="mt-6 space-y-4">
-              <div v-for="schedule in customSchedules" :key="schedule.id" class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p class="font-semibold text-gray-700">{{ schedule.reason || 'Custom Schedule' }}</p>
-                  <p class="text-sm text-gray-500">{{ new Date(schedule.date + 'T00:00:00').toLocaleDateString() }} {{ schedule.startTime }} - {{ schedule.endTime }}</p>
-                </div>
-                <button @click="removeCustomSchedule(schedule.id)" class="text-red-500 hover:text-red-700 transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-6 h-6">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div v-else-if="currentPage === 'bookings'">
-        <h2 class="text-3xl font-bold text-gray-800">Bookings</h2>
-        <div class="space-y-4 mt-6">
-          <div v-if="pendingBookings.length > 0">
-            <div v-for="booking in pendingBookings" :key="booking.id" class="bg-white p-6 rounded-2xl shadow-sm flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0 md:space-x-4">
-              <div class="flex-1">
-                <p class="font-semibold text-lg text-gray-800">Booking Request from User {{ booking.user_id.substring(0, 4) }}</p>
-                <p class="text-gray-600 mt-1">{{ booking.facility_name }} - {{ new Date(booking.start_time).toLocaleDateString() }}</p>
-                <p class="text-sm text-gray-500">{{ new Date(booking.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }} to {{ new Date(booking.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</p>
-              </div>
-              <div class="flex space-x-4">
-                <button @click="handleBookingStatus(booking.id, 'accepted')" class="bg-green-500 text-white py-2 px-6 rounded-full hover:bg-green-600 transition-colors">Accept</button>
-                <button @click="handleBookingStatus(booking.id, 'declined')" class="bg-red-500 text-white py-2 px-6 rounded-full hover:bg-red-600 transition-colors">Decline</button>
-              </div>
-            </div>
-          </div>
-          <div v-else class="text-center text-gray-500">
-            <p>No pending booking requests.</p>
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <div v-if="showEditModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div class="bg-white p-8 rounded-2xl shadow-2xl w-full max-w-xl">
-        <h3 class="text-2xl font-bold text-red-800 mb-6">Edit Facility Details</h3>
-        <form @submit.prevent="saveFacilityDetails" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Facility Name</label>
-            <input type="text" v-model="editedFacility.facility_name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Amenities (comma-separated)</label>
-            <input type="text" v-model="editedFacility.amenities" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Rate per Hour (₱)</label>
-            <input type="number" v-model.number="editedFacility.price_per_hour" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Description</label>
-            <textarea v-model="editedFacility.briefdescription" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"></textarea>
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700">Address</label>
-            <input type="text" v-model="editedFacility.address" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-          </div>
-          <div class="flex justify-end space-x-4 mt-6">
-            <button type="button" @click="showEditModal = false" class="px-4 py-2 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">Cancel</button>
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">Save Changes</button>
-          </div>
-        </form>
-      </div>
+  <v-app
+    style="
+      background: linear-gradient(to bottom right, rgba(26, 101, 162, 0.6), rgba(119, 154, 229, 0.6)),
+        url('/images/logo.jpg') center/cover no-repeat;
+    "
+  >
+    <div v-if="$vuetify.display.smAndDown">
+        <v-app-bar app color="blue-grey-lighten-5">
+          <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
+            <v-toolbar-title class="font-weight-bold">
+                {{ facilityDetails?.facility_name }}
+            </v-toolbar-title>
+        </v-app-bar>
     </div>
 
-    <div id="alert-container" class="fixed top-4 right-4 z-[9999] w-full max-w-sm"></div>
+    <v-navigation-drawer 
+      v-model="drawer" 
+      :permanent="$vuetify.display.mdAndUp" 
+      :temporary="$vuetify.display.smAndDown" 
+      app 
+      class="sidebar"
+    >
+      <v-list-item class="logo-section d-none d-md-block">
+        <v-list-item-title class="font-weight-bold">
+          {{ facilityDetails?.facility_name }}
+        </v-list-item-title>
+      </v-list-item>
+      <v-divider class="d-none d-md-block" style="border-color: black; border-width: 2px;"></v-divider>
 
-  </div>
+      <v-list dense nav>
+        <v-list-item
+          :class="{ 'v-list-item--active': currentPage === 'dashboard' }"
+          @click="currentPage = 'dashboard'"
+          link
+        >
+          <v-list-item-title>
+            <v-icon>mdi-view-dashboard</v-icon>
+            Dashboard
+          </v-list-item-title>
+        </v-list-item>
+        <v-list-item
+          :class="{ 'v-list-item--active': currentPage === 'bookings' }"
+          @click="currentPage = 'bookings'"
+          link
+        >
+          <v-list-item-title>
+            <v-icon>mdi-book-check</v-icon>
+            Bookings
+          </v-list-item-title>
+        </v-list-item>
+        <v-list-item
+          :class="{ 'v-list-item--active': currentPage === 'availability' }"
+          @click="currentPage = 'availability'"
+          link
+        >
+          <v-list-item-title>
+            <v-icon>mdi-calendar-check</v-icon>
+            Availability Settings</v-list-item-title>
+        </v-list-item>
+        <v-list-item
+          :class="{ 'v-list-item--active': currentPage === 'settings' }"
+          @click="currentPage = 'settings'"
+          link
+        >
+          <v-list-item-title>
+          <v-icon>mdi-cog</v-icon>
+          Settings</v-list-item-title>
+        </v-list-item>
+      </v-list>
+      <template v-slot:append>
+        <div class="pa-4">
+          <v-btn block @click="handleLogout" prepend-icon="mdi-logout"><strong>Logout</strong></v-btn>
+        </div>
+      </template>
+    </v-navigation-drawer>
+    <v-main>
+      <v-container fluid class="main-content">
+        <v-row class="header-row">
+          <v-col>
+            <h1 class="text-h4 font-weight-bold text-black">
+              {{ currentPage.charAt(0).toUpperCase() + currentPage.slice(1) }}
+            </h1>
+          </v-col>
+          <v-col class="text-right d-none d-sm-block">
+            <span class="text-subtitle-1 text-black">User ID: {{ userId }}</span>
+          </v-col>
+        </v-row>
+
+        <div v-if="currentPage === 'dashboard'">
+          <v-row>
+            <v-col cols="12" sm="4">
+              <v-card class="pa-4 dashboard-card" rounded="lg">
+                <v-card-title class="d-flex justify-space-between align-center">
+                  Today's Bookings
+                  <v-icon size="30" color="primary">mdi-calendar-today</v-icon>
+                </v-card-title>
+                <v-card-text class="text-h4 font-weight-bold">
+                  {{ dashboardData.todayBookings }}
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12" sm="4">
+              <v-card class="pa-4 dashboard-card" rounded="lg">
+                <v-card-title class="d-flex justify-space-between align-center">
+                  Monthly Revenue
+                  <v-icon size="30" color="green-darken-2">mdi-currency-php</v-icon>
+                </v-card-title>
+                <v-card-text class="text-h4 font-weight-bold">
+                  ₱{{ dashboardData.monthlyRevenue.toFixed(2) }}
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12" sm="4">
+              <v-card class="pa-4 dashboard-card" rounded="lg">
+                <v-card-title class="d-flex justify-space-between align-center">
+                  Pending Requests
+                  <v-icon size="30" color="orange-darken-2">mdi-alert-circle-outline</v-icon>
+                </v-card-title>
+                <v-card-text class="text-h4 font-weight-bold">
+                  {{ dashboardData.pendingRequests }}
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+          
+          <v-row>
+            <v-col cols="12">
+              <v-card class="pa-4" rounded="lg">
+                <v-card-title class="font-weight-bold d-flex justify-space-between align-center">
+                  <span>My Facility</span> 
+                    <v-btn icon size="small" @click="openEditModal" color="primary">
+                      <v-icon>mdi-pencil</v-icon>
+                    </v-btn>
+                </v-card-title>
+                <v-card-text>
+                  <v-row>
+                    <v-col cols="20" md="10">
+                      <p class="mt-5"><strong>Facility Name:</strong> {{ facilityDetails?.facility_name }}</p>
+                      <p class="mt-5"><strong>Price per hour:</strong> ₱{{ facilityDetails?.price_per_hour }}</p>
+                      <p class="mt-5"><strong>Amenities:</strong> {{ facilityDetails?.amenities }}</p>
+                      <p class="mt-5"><strong>Address:</strong> {{ facilityDetails?.address }}</p>
+                      <p class="mt-5"><strong>Contact Number:</strong> {{ facilityDetails?.phone_number }}</p>
+                      <p class="mt-5"><strong>Description:</strong> {{ facilityDetails?.briefdescription }}</p>
+                    </v-col>
+                    <v-col cols="12" md="4">
+                      <v-img
+                        v-if="facilityDetails?.image_url"
+                        :src="facilityDetails.image_url"
+                        class="rounded-lg"
+                        height="240px"
+                        cover
+                      ></v-img>
+                      <div
+                        v-else
+                        class="d-flex align-center justify-center grey-background rounded-lg"
+                        style="height: 280px;"
+                      >
+                        <v-icon size="50">mdi-image-off</v-icon>
+                        <p class="ml-2">No Image Available</p>
+                      </div>
+                    </v-col>
+
+                        <v-col cols="12" v-if="facilityDetails?.additional_photos?.length">
+                            <v-divider class="my-4"></v-divider>
+                            <h4 class="text-subtitle-1 font-weight-bold mb-3">Gallery Photos ({{ facilityDetails.additional_photos.length }})</h4>
+                            <div class="d-flex flex-wrap" style="gap: 12px;">
+                                <v-img
+                                    v-for="(url, index) in facilityDetails.additional_photos"
+                                    :key="index"
+                                    :src="url"
+                                    class="rounded-lg border"
+                                    style="width: 280px; height: 240px;"
+                                    cover 
+                                ></v-img>
+                            </div>
+                        </v-col>
+                  </v-row>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+          <v-row>
+            <v-col cols="12">
+              <v-card class="pa-4" rounded="lg">
+                <v-card-title class="font-weight-bold">Recent Bookings</v-card-title>
+                <v-card-text>
+                  <v-list v-if="recentBookings.length">
+                    <v-list-item v-for="booking in recentBookings" :key="booking.id">
+                      <v-list-item-title>{{ booking.time_range }}</v-list-item-title>
+                      <v-list-item-subtitle>
+                        Booked for {{ booking.hours }} hours - Price: ₱{{ booking.price.toFixed(2) }}
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                  <v-alert v-else type="info" class="mt-4">No recent bookings.</v-alert>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </div>
+        <div v-if="currentPage === 'bookings'">
+          <v-row>
+            <v-col cols="12">
+              <v-card class="pa-4" rounded="lg">
+                <v-card-title class="font-weight-bold">Accepted Bookings Calendar</v-card-title>
+                <v-card-text>
+                  <v-date-picker 
+                    v-model="calendarDate"
+                    color="primary"
+                    full-width
+                    header-color="primary"
+                    :show-adjacent-months="false"
+                    @update:model-value="selectDay"
+                    width="100%"
+                    height="400" 
+                    view-mode="calendar"
+                    :day-class="getDayClass" 
+                  > 
+                  </v-date-picker>
+
+                  <v-btn 
+                    v-if="selectedDay" 
+                    @click="selectedDay = null" 
+                    color="secondary" 
+                    variant="text" 
+                    class="mt-3"
+                  >
+                    Clear Selected Day
+                  </v-btn>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+          <v-row v-if="selectedDay">
+            <v-col cols="12">
+              <v-card class="pa-4 mt-4" rounded="lg" color="blue-grey-lighten-5">
+                <v-card-title class="font-weight-bold">
+                    Customers Booked for: {{ selectedDay }}
+                </v-card-title>
+                <v-card-text>
+                  <v-list v-if="selectedDateBookings.length" density="compact">
+                    <v-list-item v-for="booking in selectedDateBookings" :key="booking.id">
+                      <v-list-item-title class="font-weight-medium">
+                        {{ new Date(booking.start_time).toLocaleTimeString() }} - 
+                        {{ new Date(booking.end_time).toLocaleTimeString() }}
+                      </v-list-item-title>
+                      <v-list-item-subtitle>
+                        User ID: {{ booking.user_id }} | Price: ₱{{ booking.price.toFixed(2) }}
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </v-list>
+                  <v-alert v-else type="info" class="mt-4">
+                    No accepted bookings for {{ selectedDay }}.
+                  </v-alert>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+
+
+          <v-row>
+            <v-col cols="12">
+              <v-card class="pa-4 mt-4" rounded="lg">
+                <v-card-title class="font-weight-bold">Pending Booking Requests</v-card-title>
+                <v-card-text>
+                  <v-list v-if="pendingBookings.length">
+                    <v-list-item v-for="booking in pendingBookings" :key="booking.id">
+                      <v-list-item-content>
+                        <v-list-item-title>
+                          Date: {{ new Date(booking.start_time).toLocaleDateString() }} 
+                        </v-list-item-title>
+                        <v-list-item-subtitle>
+                          Time: {{ new Date(booking.start_time).toLocaleTimeString() }} -
+                          {{ new Date(booking.end_time).toLocaleTimeString() }}
+                        </v-list-item-subtitle>
+                        <v-list-item-subtitle>
+                          From User: {{ booking.user_id }}
+                        </v-list-item-subtitle>
+                      </v-list-item-content>
+                      <v-list-item-action>
+                        <v-btn color="success" class="mr-2" @click="handleBookingStatus(booking.id, 'accepted')"
+                          >Accept</v-btn
+                        >
+                        <v-btn color="error" @click="handleBookingStatus(booking.id, 'rejected')">Reject</v-btn>
+                      </v-list-item-action>
+                    </v-list-item>
+                  </v-list>
+                  <v-alert v-else type="info" class="mt-4">No pending requests.</v-alert>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </div>
+        <div v-if="currentPage === 'availability'">
+          <v-row>
+            <v-col cols="12">
+              <v-card class="pa-4" rounded="lg">
+                <v-card-title class="font-weight-bold">Regular Operating Hours</v-card-title>
+                <v-card-text>
+                  <v-row v-for="day in daysOfWeek" :key="day">
+                    <v-col cols="12" sm="4" class="d-flex align-center">
+                      <v-checkbox
+                        v-model="regularHours[day].isOpen"
+                        :label="day.charAt(0).toUpperCase() + day.slice(1)"
+                      ></v-checkbox>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-text-field
+                        v-model="regularHours[day].openTime"
+                        label="Open Time"
+                        type="time"
+                        :disabled="!regularHours[day].isOpen"
+                        variant="outlined"
+                      ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" sm="4">
+                      <v-text-field
+                        v-model="regularHours[day].closeTime"
+                        label="Close Time"
+                        type="time"
+                        :disabled="!regularHours[day].isOpen"
+                        variant="outlined"
+                      ></v-text-field>
+                    </v-col>
+                  </v-row>
+                  <v-btn color="primary" @click="saveRegularHours">Save Regular Hours</v-btn>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="12">
+              <v-card class="pa-4 mt-4" rounded="lg">
+                  <v-card-title class="font-weight-bold">Custom Schedules (Closures, Special Hours)</v-card-title>
+                <v-card-text>
+                  <v-form @submit.prevent="addCustomSchedule">
+                    <v-row>
+                      <v-col cols="12" sm="4">
+                        <v-text-field
+                          v-model="newCustomSchedule.date"
+                          label="Date"
+                          type="date"
+                          variant="outlined"
+                        ></v-text-field>
+                      </v-col>
+                      <v-col cols="12" sm="4">
+                        <v-text-field
+                          v-model="newCustomSchedule.startTime"
+                          label="Start Time"
+                          type="time"
+                          variant="outlined"
+                        ></v-text-field>
+                      </v-col>
+                      <v-col cols="12" sm="4">
+                        <v-text-field
+                          v-model="newCustomSchedule.endTime"
+                          label="End Time"
+                          type="time"
+                          variant="outlined"
+                        ></v-text-field>
+                      </v-col>
+                      <v-col cols="12">
+                        <v-text-field
+                          v-model="newCustomSchedule.reason"
+                          label="Reason"
+                          variant="outlined"
+                        ></v-text-field>
+                      </v-col>
+                    </v-row>
+                    <v-btn color="secondary" type="submit">Add Custom Schedule</v-btn>
+                  </v-form>
+                  <v-divider class="my-4"></v-divider>
+                  <v-list>
+                    <v-list-item v-for="schedule in customSchedules" :key="schedule.id">
+                      <v-list-item-title>{{ schedule.date }}</v-list-item-title>
+                      <v-list-item-subtitle>
+                        {{ schedule.startTime }} - {{ schedule.endTime }} ({{ schedule.reason }})
+                      </v-list-item-subtitle>
+                        <v-list-item-action>
+                          <v-btn 
+                            icon 
+                            size="small" 
+                            variant="text" 
+                            color="red" 
+                            @click="openDeleteModal(schedule)"
+                          >
+                            <v-icon>mdi-close-circle-outline</v-icon>
+                          </v-btn>
+                          
+                        </v-list-item-action>
+                    </v-list-item>
+                  </v-list>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </div>
+        <div v-if="currentPage === 'settings'">
+          <v-card class="pa-4" rounded="lg">
+            <v-card-title class="font-weight-bold">Account Settings</v-card-title>
+            <v-card-text>
+              <p>User ID: {{ userId }}</p>
+              <p>You can manage your account and profile settings here.</p>
+            </v-card-text>
+          </v-card>
+        </div>
+      </v-container>
+    </v-main>
+
+    <v-dialog v-model="showEditModal" persistent max-width="600px">
+        <v-card
+            style="
+            background-color: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(4px);
+            border: 2px solid #2196f3;
+            border-radius: 20px;
+          "
+        >
+          <v-card-title class="text-h5">Edit Facility Details</v-card-title>
+            <v-card-text>
+                <v-container>
+                  <v-text-field
+                      v-model="editedFacility.facility_name"
+                      label="Facility Name"
+                      variant="outlined"
+                  ></v-text-field>
+
+                  <v-text-field
+                      v-model="editedFacility.price_per_hour"
+                      label="Price per hour"
+                      variant="outlined"
+                  ></v-text-field>
+
+                  <v-text-field 
+                      v-model="editedFacility.amenities" 
+                      label="Amenities" 
+                      variant="outlined"
+                  ></v-text-field>
+
+                  <v-text-field 
+                      v-model="editedFacility.address" 
+                      label="Address" 
+                      variant="outlined"
+                  ></v-text-field>
+
+                  <v-text-field
+                      v-model="editedFacility.phone_number"
+                      label="Contact Number"
+                      variant="outlined"
+                  ></v-text-field>
+
+                  <v-textarea
+                      v-model="editedFacility.briefdescription"
+                      label="Brief Description"
+                      variant="outlined"
+                  ></v-textarea>
+                
+                  <v-text-field
+                      v-model="editedFacility.image_url"
+                      label="Primary Image URL"
+                      variant="outlined"
+                  ></v-text-field>
+
+                  <h3 class="mt-4 mb-2">Additional Facility Photos (Gallery)</h3>
+
+                  <v-divider class="mb-4"></v-divider>
+
+                  <v-row v-if="existingPhotoUrls.length">
+                      <v-col cols="12">
+                          <p class="text-subtitle-1">Current Gallery Photos:</p>
+                          <div class="d-flex flex-wrap gap-2">
+                              <div v-for="(url, index) in existingPhotoUrls" :key="url" class="ma-2">
+                                  <v-card class="pa-2" outlined>
+                                      <v-img :src="url" height="100px" width="100px" cover></v-img>
+                                      <v-btn 
+                                          color="red" 
+                                          size="x-small" 
+                                          block 
+                                          @click="removeExistingPhoto(index)" 
+                                          class="mt-1"
+                                      >
+                                          Remove
+                                      </v-btn>
+                                  </v-card>
+                              </div>
+                          </div>
+                      </v-col>
+                  </v-row>
+                
+                  <v-row>
+                      <v-col cols="12">
+                          <v-file-input
+                              label="Select New Gallery Photos"
+                              multiple
+                              accept="image/*"
+                              @change="handleGalleryFileChange"
+                              variant="outlined"
+                              prepend-icon="mdi-camera-plus"
+                              clearable
+                          ></v-file-input>
+                      </v-col>
+                  </v-row>
+
+
+                  <v-row v-if="newGalleryFiles.length">
+                      <v-col cols="12">
+                          <p class="text-subtitle-1">New Photos Queued for Upload:</p>
+                          <v-list density="compact">
+                              <v-list-item v-for="(file, index) in newGalleryFiles" :key="index">
+                                  <v-list-item-title>{{ file.name }}</v-list-item-title>
+                                  <template v-slot:append>
+                                      <v-btn 
+                                          icon="mdi-close" 
+                                          color="error" 
+                                          size="x-small" 
+                                          variant="text"
+                                          @click="removeNewGalleryFile(index)"
+                                      ></v-btn>
+                                  </template>
+                              </v-list-item>
+                          </v-list>
+                      </v-col>
+                  </v-row>
+                </v-container>
+            </v-card-text>
+          <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="grey" text @click="showEditModal = false">Cancel</v-btn>
+              <v-btn color="primary" @click="saveFacilityDetails">Save</v-btn>
+          </v-card-actions>
+        </v-card>
+    </v-dialog>
+
+      <v-dialog v-model="showDeleteConfirmModal" max-width="450">
+        <v-card>
+              <v-card-title class="text-h5 bg-red-darken-1 text-white">
+                  <v-icon start icon="mdi-alert-circle-outline"></v-icon>
+                  Confirm Deletion
+              </v-card-title>
+
+              <v-card-text class="pt-4 text-body-1">
+                  Are you sure you want to permanently remove the custom schedule for 
+                  <span class="font-weight-bold text-red-darken-1">{{ scheduleToDeleteDate }}</span>?
+                  This action cannot be undone.
+              </v-card-text>
+
+              <v-card-actions class="pa-4">
+                  <v-spacer></v-spacer>
+                  <v-btn 
+                      color="grey-darken-1" 
+                      variant="flat" 
+                      @click="showDeleteConfirmModal = false"
+                  >
+                      Cancel
+                  </v-btn>
+                  <v-btn 
+                      color="red-darken-1" 
+                      variant="flat" 
+                      @click="removeCustomSchedule"
+                      :loading="loadingState"
+                  >
+                      <v-icon start>mdi-delete</v-icon>
+                      Remove
+                  </v-btn>
+              </v-card-actions>
+        </v-card>
+      </v-dialog>
+
+      <v-alert
+        v-if="alertMessageText"
+        :type="alertColor"
+        class="mb-4"
+        style="position: fixed; top: 20px; right: 20px; z-index: 1000"
+      >
+        {{ alertMessageText }}
+      </v-alert>
+  </v-app>
 </template>
 
 <script setup>
-import { ref, onMounted, reactive } from 'vue';
+import { ref, onMounted, reactive, computed } from 'vue';
 import { supabase } from '@/supabaseClient';
+import { useRouter } from 'vue-router';
 
-// --- Reactive State Variables ---
+const customSchedules = ref([]);
+// 🌟 MODAL STATE VARIABLES - KEPT
+const showDeleteConfirmModal = ref(false);
+const scheduleToDeleteId = ref(null);
+const scheduleToDeleteDate = ref('');
+// NOTE: This now holds the full list of accepted bookings from the database on fetch.
+const acceptedBookings = ref([]); 
+const selectedDateBookings = ref([]); // List of accepted customers for the selected date
+const calendarDate = ref(new Date().toISOString().substring(0, 10)); // The date currently shown by the calendar
+const selectedDay = ref(null); // The specific date the user clicks for the customer list
+
+// Utility to check which dates have accepted bookings for the calendar indicator
+const bookingDates = computed(() => {
+    // Return an array of date strings ('YYYY-MM-DD') that have accepted bookings
+    return acceptedBookings.value.map(b => new Date(b.start_time).toISOString().substring(0, 10));
+});
+const drawer = ref(true); // Start as open on desktop, but collapsible on mobile
+const newGalleryFiles = ref([]); // Holds new files selected in the modal
+const existingPhotoUrls = ref([]); // Holds URLs fetched from `additional_photos`
+const router = useRouter();
 const userId = ref(null);
 const currentPage = ref('dashboard');
 const showEditModal = ref(false);
-
 const dashboardData = reactive({
     todayBookings: 0,
     monthlyRevenue: 0,
     pendingRequests: 0,
 });
-
 const facilityDetails = ref(null);
 const editedFacility = reactive({
     id: null,
     facility_name: '',
+    facility_type: '', // Included for save/edit
     amenities: '',
     price_per_hour: 0,
+    open_time: '', // Included for save/edit
+    closing_time: '', // Included for save/edit
+    address: '',
+    phone_number: '',
     briefdescription: '',
-    address: ''
+    image_url: '',
 });
-
 const recentBookings = ref([]);
 const pendingBookings = ref([]);
 const regularHours = ref({
@@ -246,32 +634,89 @@ const regularHours = ref({
     thursday: { isOpen: false, openTime: '08:00', closeTime: '17:00' },
     friday: { isOpen: false, openTime: '08:00', closeTime: '17:00' },
     saturday: { isOpen: false, openTime: '08:00', closeTime: '17:00' },
-    sunday: { isOpen: false, openTime: '08:00', closeTime: '17:00' }
+    sunday: { isOpen: false, openTime: '08:00', closeTime: '17:00' },
 });
 const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
-const customSchedules = ref([]);
+// NOTE: customSchedules is already defined above
 const newCustomSchedule = reactive({
     date: '',
     startTime: '08:00',
     endTime: '17:00',
-    reason: ''
+    reason: '',
 });
+const alertMessageText = ref(null);
+const alertColor = ref(null);
+const loadingState = ref(false); // 🌟 Added loading state for the modal button
 
-// --- Functions ---
-const fetchAllOwnerData = async () => {
-    if (!userId.value) return;
+// 🌟 NEW FUNCTION: Opens the custom confirmation modal
+const openDeleteModal = (schedule) => {
+    scheduleToDeleteId.value = schedule.id;
+    // Format the date for a friendly message in the modal
+    if (schedule.date) {
+        scheduleToDeleteDate.value = new Date(schedule.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    } else {
+        scheduleToDeleteDate.value = 'this custom schedule';
+    }
+    showDeleteConfirmModal.value = true;
+};
+
+// 🌟 MODIFIED FUNCTION: Executes the deletion after confirmation from the modal
+// This function no longer takes an 'id' but uses the stored 'scheduleToDeleteId'
+const removeCustomSchedule = async () => {
+    if (!scheduleToDeleteId.value) return; // Exit if no ID is set
+
+    loadingState.value = true; // Start loading spinner
 
     try {
-        // Fetch Facility Details
+        // --- Deletion Logic ---
+        const { error } = await supabase
+            .from('schedules')
+            .delete()
+            .eq('id', scheduleToDeleteId.value);
+        
+        if (error) throw error;
+        
+        // --- Success Cleanup ---
+        alertMessage('Custom schedule removed.', 'success');
+        fetchAllOwnerData(); // Refresh the list
+
+    } catch (error) {
+        console.error('Error removing custom schedule: ', error.message);
+        alertMessage('Failed to remove custom schedule.', 'error');
+    } finally {
+        // --- Always close modal and reset state ---
+        loadingState.value = false; // Stop loading spinner
+        showDeleteConfirmModal.value = false;
+        scheduleToDeleteId.value = null;
+        scheduleToDeleteDate.value = '';
+    }
+};
+
+
+// 🌟 NEW COMPUTED PROPERTY: Filters out days that are closed (NULL times in DB)
+// This is the array you will now use in your HTML template to list the operating hours.
+const openRegularHours = computed(() => {
+    // Convert the reactive object into an array of [dayName, data] entries
+    return Object.entries(regularHours.value)
+        .filter(([, data]) => data.isOpen) // Keep only days where 'isOpen' is true
+        .map(([day, data]) => ({ // Map it into a cleaner object structure
+            day: day.charAt(0).toUpperCase() + day.slice(1), // Capitalize the day name
+            openTime: data.openTime,
+            closeTime: data.closeTime
+        }));
+});
+
+const fetchAllOwnerData = async () => {
+    if (!userId.value) return;
+    try {
         let { data: facilityData, error: facilityError } = await supabase
             .from('facilities')
             .select('*')
             .eq('owner_id', userId.value)
             .single();
 
-        // Check if the error is due to no data found (PGRST116) or a real error
         if (facilityError && facilityError.code !== 'PGRST116') {
-            console.error("Error fetching facility data:", facilityError.message);
+            console.error('Error fetching facility data:', facilityError.message);
             throw facilityError;
         }
 
@@ -280,52 +725,76 @@ const fetchAllOwnerData = async () => {
             Object.assign(editedFacility, {
                 id: facilityData.id,
                 facility_name: facilityData.facility_name,
+                facility_type: facilityData.facility_type, // FIX: Added
                 amenities: facilityData.amenities,
                 price_per_hour: facilityData.price_per_hour,
+                open_time: facilityData.open_time, // FIX: Added
+                closing_time: facilityData.closing_time, // FIX: Added
                 briefdescription: facilityData.briefdescription,
-                address: facilityData.address
+                address: facilityData.address,
             });
         } else {
-            console.log("No facility data found for this owner. The user can now create one.");
+            console.log('No facility data found for this owner. The user can now create one.');
             facilityDetails.value = null;
+            // *** CRITICAL FIX: Exit early if facility is null ***
+            return; 
         }
-
-        // Fetch Regular Hours
+        
+        // START: Logic for fetching regular hours (Requires facilityDetails.value.id)
         let { data: hoursData, error: hoursError } = await supabase
             .from('schedules')
-            .select('*')
-            .eq('owner_id', userId.value)
-            .eq('type', 'regular')
-            .single();
+            .select('day_of_week, start_time, end_time') 
+            .eq('facility_id', facilityDetails.value.id) 
+            .eq('type', 'regular');
 
-        if (hoursError && hoursError.code !== 'PGRST116') {
-            console.error("Error fetching regular hours:", hoursError.message);
+        if (hoursError) {
+            console.error('Error fetching regular hours:', hoursError.message);
         }
-        if (hoursData) regularHours.value = hoursData.hours;
 
-        // Fetch Custom Schedules
+        // Initialize regularHours with defaults
+        const newRegularHours = { ...regularHours.value }; 
+
+        if (hoursData && hoursData.length > 0) {
+            hoursData.forEach(item => {
+                const day = item.day_of_week;
+                if (newRegularHours[day]) {
+                    // Determine if the day is open (start_time is not null)
+                    const isOpen = !!item.start_time; 
+                    newRegularHours[day] = {
+                        isOpen: isOpen,
+                        openTime: item.start_time || '08:00', // Use '08:00' as a default if null
+                        closeTime: item.end_time || '17:00', // Use '17:00' as a default if null
+                    };
+                }
+            });
+        }
+
+        // Update the main reactive ref with the fetched/processed data
+        regularHours.value = newRegularHours;
+        // END: Logic for handling fetched regular hours
+
         let { data: customData, error: customError } = await supabase
             .from('schedules')
             .select('*')
-            .eq('owner_id', userId.value)
+            .eq('facility_id', facilityDetails.value.id) // Use facility ID for RLS compatibility
             .eq('type', 'custom');
-
-        if (customError) console.error("Error fetching custom schedules:", customError.message);
+        if (customError) console.error('Error fetching custom schedules:', customError.message);
         if (customData) customSchedules.value = customData;
 
-        // Fetch Bookings
+        // Fetch Bookings (Requires facilityDetails.value.id)
         let { data: bookingsData, error: bookingsError } = await supabase
             .from('bookings')
             .select('*')
-            .eq('owner_id', userId.value);
-
+            .eq('facility_id', facilityDetails.value.id); 
         if (bookingsError) throw bookingsError;
         
         const allBookings = bookingsData || [];
-        pendingBookings.value = allBookings.filter(b => b.status === 'pending');
-        const acceptedBookings = allBookings.filter(b => b.status === 'accepted');
+        
+        // Update both pending and accepted bookings refs
+        pendingBookings.value = allBookings.filter((b) => b.status === 'pending');
+        // *** FIX: Update the global acceptedBookings ref on initial fetch ***
+        acceptedBookings.value = allBookings.filter((b) => b.status === 'accepted'); 
 
-        // Calculate dashboard metrics
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const nextDay = new Date(today);
@@ -333,12 +802,15 @@ const fetchAllOwnerData = async () => {
         const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
         const nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1);
 
-        const todayAccepted = acceptedBookings.filter(b => new Date(b.start_time) >= today && new Date(b.start_time) < nextDay);
+        // Use the globally updated acceptedBookings.value for calculations
+        const todayAccepted = acceptedBookings.value.filter(
+            (b) => new Date(b.start_time) >= today && new Date(b.start_time) < nextDay,
+        );
         dashboardData.todayBookings = todayAccepted.length;
         dashboardData.pendingRequests = pendingBookings.value.length;
         
         let monthlyRevenueCalc = 0;
-        acceptedBookings.forEach(booking => {
+        acceptedBookings.value.forEach((booking) => {
             const bookingDate = new Date(booking.start_time);
             if (bookingDate >= currentMonthStart && bookingDate < nextMonthStart) {
                 const durationHours = (new Date(booking.end_time) - new Date(booking.start_time)) / 3600000;
@@ -347,8 +819,8 @@ const fetchAllOwnerData = async () => {
         });
         dashboardData.monthlyRevenue = monthlyRevenueCalc;
 
-        const sortedBookings = acceptedBookings.sort((a, b) => new Date(b.start_time) - new Date(a.start_time)).slice(0, 5);
-        recentBookings.value = sortedBookings.map(booking => {
+        const sortedBookings = acceptedBookings.value.sort((a, b) => new Date(b.start_time) - new Date(a.start_time)).slice(0, 5);
+        recentBookings.value = sortedBookings.map((booking) => {
             const start = new Date(booking.start_time);
             const end = new Date(booking.end_time);
             const hours = (end - start) / 3600000;
@@ -356,188 +828,392 @@ const fetchAllOwnerData = async () => {
                 ...booking,
                 time_range: `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
                 hours: hours,
-                price: hours * (facilityDetails.value ? facilityDetails.value.price_per_hour : 0)
+                price: hours * (facilityDetails.value ? facilityDetails.value.price_per_hour : 0),
             };
         });
-
     } catch (error) {
-        console.error("Error fetching data:", error.message);
+        console.error('Error fetching data:', error.message);
     }
 };
 
 const handleBookingStatus = async (bookingId, status) => {
     try {
-        const { error } = await supabase
-            .from('bookings')
-            .update({ status: status })
-            .eq('id', bookingId);
-
+        const { error } = await supabase.from('bookings').update({ status: status }).eq('id', bookingId);
         if (error) throw error;
-        alertMessage(`Booking ${status}!`, 'green');
-        fetchAllOwnerData(); // Re-fetch all data to update the dashboard
+        alertMessage('Booking ' + status + '!', 'success');
+        
+        // FIX: Removed manual state updates, relying solely on fetchAllOwnerData() 
+        // to refresh all dashboard data (pending, accepted, recent, etc.)
+        fetchAllOwnerData();
+
     } catch (error) {
         console.error(`Error updating booking status: `, error.message);
-        alertMessage(`Failed to update booking status.`, 'red');
+        alertMessage('Failed to update booking status.', 'error');
     }
 };
 
-const saveRegularHours = async () => {
-    try {
-        const { error } = await supabase
-            .from('schedules')
-            .update({ hours: regularHours.value })
-            .eq('owner_id', userId.value)
-            .eq('type', 'regular');
+const selectDay = (dateString) => {
+    // The dateString is typically in 'YYYY-MM-DD' format from v-date-picker
+    selectedDay.value = dateString;
+    
+    // Filter the global acceptedBookings array for the selected date
+    selectedDateBookings.value = acceptedBookings.value.filter(booking => 
+        new Date(booking.start_time).toISOString().substring(0, 10) === dateString
+    );
+};
 
-        if (error) throw error;
-        alertMessage('Regular hours saved successfully!', 'green');
+const saveRegularHours = async () => {
+    // 🛑 FIX Applied by user previously (Good Check)
+    if (!facilityDetails.value || !facilityDetails.value.id) {
+        alertMessage('Failed to save regular hours: Facility data is not yet loaded.', 'error');
+        return;
+    }
+    
+    try {
+        const facilityId = facilityDetails.value.id; 
+
+        // 1. Prepare an array of promises for 7 days (Upsert logic is correct here)
+        const updates = Object.keys(regularHours.value).map(day => {
+            const data = regularHours.value[day];
+
+            const scheduleData = {
+                facility_id: facilityId, // Use the extracted ID
+                type: 'regular',
+                day_of_week: day,
+                start_time: data.isOpen ? data.openTime : null,
+                end_time: data.isOpen ? data.closeTime : null,
+            };
+
+            return supabase
+                .from('schedules')
+                .upsert(scheduleData, {
+                    onConflict: 'facility_id, type, day_of_week' 
+                });
+        });
+
+        // 5. Run all 7 database operations concurrently
+        const results = await Promise.all(updates);
+        
+        alertMessage('Regular hours saved successfully!', 'success');
+        // Refresh data to update the display
+        fetchAllOwnerData(); 
+        
     } catch (error) {
-        console.error("Error saving regular hours: ", error.message);
-        alertMessage('Failed to save regular hours.', 'red');
+        console.error('Error saving regular hours: ', error.message);
+        alertMessage('Failed to save regular hours.', 'error');
     }
 };
 
 const addCustomSchedule = async () => {
     if (!newCustomSchedule.date || !newCustomSchedule.startTime || !newCustomSchedule.endTime) {
-        alertMessage('Please fill all date and time fields.', 'red');
+        alertMessage('Please fill all date and time fields.', 'error');
         return;
     }
+
+    // 🛑 FIX Applied by user previously (Good Check)
+    if (!facilityDetails.value || !facilityDetails.value.id) {
+        alertMessage('Failed to add custom schedule: Facility data is not yet loaded.', 'error');
+        return; 
+    }
+    
     try {
         const { error } = await supabase.from('schedules').insert({
-            owner_id: userId.value,
+            facility_id: facilityDetails.value.id, // Now safe to access
             date: newCustomSchedule.date,
-            startTime: newCustomSchedule.startTime,
-            endTime: newCustomSchedule.endTime,
+            start_time: newCustomSchedule.startTime,
+            end_time: newCustomSchedule.endTime,
             reason: newCustomSchedule.reason,
-            type: 'custom'
+            type: 'custom',
         });
-
         if (error) throw error;
-        alertMessage('Custom schedule added!', 'green');
-        newCustomSchedule.date = '';
-        newCustomSchedule.startTime = '08:00';
-        newCustomSchedule.endTime = '17:00';
-        newCustomSchedule.reason = '';
-        fetchAllOwnerData(); // Re-fetch to update the list
+        
+        alertMessage('Custom schedule added successfully!', 'success');
+        Object.assign(newCustomSchedule, { // Clear the input fields
+            date: '',
+            startTime: '08:00',
+            endTime: '17:00',
+            reason: ''
+        });
+        fetchAllOwnerData(); // Refresh data to see the new custom schedule
+        
     } catch (error) {
-        console.error("Error adding custom schedule: ", error.message);
-        alertMessage('Failed to add custom schedule.', 'red');
+        console.error('Error adding custom schedule: ', error.message);
+        alertMessage('Failed to add custom schedule. (Check if schedule already exists for this date).', 'error');
     }
 };
 
-const removeCustomSchedule = async (id) => {
-    if (window.confirm("Are you sure you want to remove this custom schedule?")) {
-        try {
-            const { error } = await supabase.from('schedules').delete().eq('id', id);
+const handleGalleryFileChange = (event) => {
+    // Add all selected files to the newGalleryFiles array
+    newGalleryFiles.value.push(...Array.from(event.target.files));
+    // Clear the input value so the same file can be selected again if needed
+    event.target.value = null; 
+};
 
-            if (error) throw error;
-            alertMessage('Custom schedule removed.', 'green');
-            fetchAllOwnerData(); // Re-fetch to update the list
-        } catch (error) {
-            console.error("Error removing custom schedule: ", error.message);
-            alertMessage('Failed to remove custom schedule.', 'red');
-        }
-    }
+const removeNewGalleryFile = (index) => {
+    // Removes a file that was just selected but hasn't been uploaded yet
+    newGalleryFiles.value.splice(index, 1);
+};
+
+const removeExistingPhoto = (index) => {
+    // This removes the URL from the existingPhotoUrls array. 
+    // Since this array is saved to the DB, the photo will disappear upon saving.
+    existingPhotoUrls.value.splice(index, 1);
+    // NOTE: The actual file remains in Supabase Storage.
 };
 
 const saveFacilityDetails = async () => {
     try {
-        const { error } = await supabase
-            .from('facilities')
-            .upsert({
-                id: editedFacility.id, // Supabase will use this to decide if it's an update or insert
+        let finalImageUrl = editedFacility.image_url;
+        // Start with existing URLs (those loaded from the DB and not removed by the owner)
+        let galleryUrlsToSave = [...existingPhotoUrls.value]; 
+        
+        // --- 1. HANDLE ADDITIONAL PHOTOS UPLOAD ---
+        if (newGalleryFiles.value.length > 0) {
+            const newUrls = [];
+            
+            for (const file of newGalleryFiles.value) {
+                // Use a unique file path for each new gallery image
+                const filePath = `${userId.value}/gallery/${Date.now()}_${file.name}`;
+                
+                const { error: storageError } = await supabase.storage
+                    .from('facility-photos') // Use your correct bucket name!
+                    .upload(filePath, file, { upsert: true });
+
+                if (storageError) {
+                    console.error(`Gallery upload failed for ${file.name}:`, storageError.message);
+                    alertMessage(`Failed to upload ${file.name}. Continuing with others.`, 'warning');
+                    continue; 
+                }
+
+                // Get the public URL for the new image
+                const { data: publicUrlData } = supabase.storage
+                    .from('facility-photos')
+                    .getPublicUrl(filePath);
+
+                if (publicUrlData.publicUrl) {
+                    newUrls.push(publicUrlData.publicUrl);
+                }
+            }
+            
+            // Add all successfully uploaded new URLs to the array to be saved
+            galleryUrlsToSave.push(...newUrls);
+        }
+
+        // --- 2. DATABASE UPDATE ---
+        const { error: updateError } = await supabase.from('facilities').upsert(
+            {
+                id: editedFacility.id,
                 owner_id: userId.value,
                 facility_name: editedFacility.facility_name,
+                facility_type: editedFacility.facility_type, // FIX: Included
                 amenities: editedFacility.amenities,
                 price_per_hour: editedFacility.price_per_hour,
+                open_time: editedFacility.open_time, // FIX: Included
+                closing_time: editedFacility.closing_time, // FIX: Included
+                address: editedFacility.address,
+                phone_number: editedFacility.phone_number,
                 briefdescription: editedFacility.briefdescription,
-                address: editedFacility.address
-            }, { onConflict: 'id' });
-
-        if (error) throw error;
-        alertMessage('Facility updated successfully!', 'green');
+                image_url: finalImageUrl,
+                // CRITICAL: Save the combined array of URLs to the new array column
+                additional_photos: galleryUrlsToSave, 
+            },
+            { onConflict: 'id' },
+        );
+        
+        if (updateError) throw updateError;
+        
+        // --- 3. SUCCESS CLEANUP ---
+        alertMessage('Facility updated successfully!', 'success');
         showEditModal.value = false;
-        fetchAllOwnerData(); // Re-fetch to update the dashboard
+        await fetchAllOwnerData(); // Ensure dashboard refreshes with new data
+        newGalleryFiles.value = []; // Now safe to clear the files after success
+
     } catch (error) {
-        console.error("Error updating facility:", error.message);
-        alertMessage('Failed to update facility.', 'red');
+        console.error('Error updating facility:', error.message);
+        alertMessage('Failed to update facility.', 'error');
     }
 };
 
-// Custom alert function
-function alertMessage(message, color) {
-    const alertContainer = document.getElementById('alert-container');
-    if (!alertContainer) {
-        console.error("Alert container not found.");
-        return;
-    }
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `p-4 rounded-md shadow-lg mb-2 text-white transform transition-transform duration-300 ease-out translate-x-full`;
-    
-    if (color === 'green') {
-        alertDiv.classList.add('bg-green-500');
-    } else if (color === 'red') {
-        alertDiv.classList.add('bg-red-500');
-    }
-    
-    alertDiv.textContent = message;
-    
-    alertContainer.appendChild(alertDiv);
-    
-    // Animate in
+const alertMessage = (message, color) => {
+    alertMessageText.value = message;
+    alertColor.value = color;
     setTimeout(() => {
-        alertDiv.style.transform = 'translate-x-0';
-    }, 10);
-    
-    // Animate out and remove after a few seconds
-    setTimeout(() => {
-        alertDiv.style.transform = 'translate-x-full';
-        alertDiv.style.opacity = '0';
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 500); // Wait for the transition to finish before removing
+        alertMessageText.value = null;
+        alertColor.value = null;
     }, 5000);
-}
+};
 
-// --- Lifecycle Hook ---
+const handleLogout = async () => {
+    try {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+        router.push({ name: 'signin' });
+    } catch (error) {
+        console.error('Error logging out:', error.message);
+        alertMessage('Failed to log out.', 'error');
+    }
+};
+
 onMounted(async () => {
     try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const {
+            data: { session },
+        } = await supabase.auth.getSession();
         if (session) {
             userId.value = session.user.id;
-            console.log("User authenticated with ID:", userId.value);
+            console.log('User authenticated with ID:', userId.value);
             await fetchAllOwnerData();
         } else {
-            console.log("No active session found.");
-            // Handle case where user is not logged in, e.g., redirect to login
+            console.log('No active session found.');
+            router.push({ name: 'signin' });
         }
     } catch (error) {
-        console.error("Session fetch failed:", error.message);
+        console.error('Session fetch failed:', error.message);
     }
 });
+
+const openEditModal = () => {
+    if (!facilityDetails.value) {
+        alertMessage("Cannot edit facility: Facility data not loaded.", "error");
+        return;
+    }
+    // 1. Copy the current facility details to the reactive 'editedFacility' object
+    Object.assign(editedFacility, {
+        id: facilityDetails.value.id,
+        facility_name: facilityDetails.value.facility_name,
+        facility_type: facilityDetails.value.facility_type, // FIX: Included
+        amenities: facilityDetails.value.amenities,
+        price_per_hour: facilityDetails.value.price_per_hour,
+        open_time: facilityDetails.value.open_time, // FIX: Included
+        closing_time: facilityDetails.value.closing_time, // FIX: Included
+        address: facilityDetails.value.address,
+        phone_number: facilityDetails.value.phone_number,
+        briefdescription: facilityDetails.value.briefdescription,
+        image_url: facilityDetails.value.image_url,
+    });
+    
+    // 2. Initialize the state for the additional (gallery) photos
+    // Get existing URLs from the new database column ('additional_photos'). 
+    // Ensure it defaults to an empty array if the DB value is null.
+    existingPhotoUrls.value = facilityDetails.value.additional_photos || []; 
+    
+    // Clear the array that holds any *new* files the user might select during this session.
+    newGalleryFiles.value = []; 
+
+    // 3. Show the modal
+    showEditModal.value = true;
+};
 </script>
 
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: #F3F4F6;
-}
+<style scoped>
+
 .sidebar {
-    width: 280px;
+  background-color: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(4px);
+  border-right: 2px solid #2196f3;
 }
+
+.sidebar .v-list-item {
+  transition: background-color 0.3s ease;
+}
+.sidebar .v-list-item:hover {
+  background-color: rgba(158, 208, 248, 1);
+}
+.sidebar .v-list-item--active {
+  background-color: rgba(158, 208, 248, 1);
+}
+
+.logo-section.v-list-item {
+  pointer-events: none !important; 
+  background-color: transparent !important;
+}
+
+.logo-section .v-list-item-title {
+  white-space: normal !important; 
+  overflow: visible !important;
+  text-overflow: clip !important;
+  height: auto !important; 
+  line-height: 1.5;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  font-size: 1.2rem;
+}
+
+.logo-section {
+  padding-top: 25px !important;
+  padding-bottom: 25px !important;
+  min-height: unset !important;
+}
+
+.v-list-item{
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+}
+
+.v-icon{
+  margin-right: 10px !important;
+  font-size: 2.1rem;
+}
+
+.v-card-title .v-btn .v-icon.mdi-pencil {
+  font-size: 25px !important;
+  color: white !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  margin-left: 8px !important;
+  box-shadow: 0px 2px 4px -1px rgba(0,0,0,0.2), 
+              0px 4px 5px 0px rgba(0,0,0,0.14), 
+              0px 1px 10px 0px rgba(0,0,0,0.12) !important;
+}
+
+/* Style for the calendar indicator */
+.booking-indicator-day {
+    position: relative;
+    /* Ensure the button/div itself is the position reference */
+}
+
+.booking-indicator-day::after {
+    content: '';
+    position: absolute;
+    /* Adjust position */
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6px;
+    height: 6px;
+    background-color: #4CAF50; /* Green dot for accepted booking */
+    border-radius: 50%;
+}
+
 .main-content {
-    flex-grow: 1;
+  padding: 24px;
 }
-@media (max-width: 768px) {
-    .sidebar {
-        width: 100%;
-        height: auto;
-        position: static;
-    }
-    .main-content {
-        margin-left: 0;
-    }
+
+.header-row {
+  margin-bottom: 24px;
+  align-items: center;
 }
+
+.dashboard-card,
+.v-card {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+  backdrop-filter: blur(4px);
+  border: 2px solid #2196f3;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  margin-bottom: 20px;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s ease;
+}
+
+.grey-background {
+  background-color: #e0e0e0;
+}
+
 </style>

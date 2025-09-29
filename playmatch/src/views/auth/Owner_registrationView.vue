@@ -135,20 +135,34 @@ const validateAndSubmit = async () => {
         let photoUrl = null;
         if (formData.value.image_url) {
             const file = formData.value.image_url;
-            const filePath = `${newUserId}/${file.name}`;
+            const filePath = `${newUserId}/${Date.now()}_${file.name}`;
+
             const { error: storageError } = await supabase.storage
                 .from('facility-photos')
-                .upload(filePath, file);
+                .upload(filePath, file,
+                {
+                    cacheControl: '3600',
+                    upsert: true,
+                });
 
-      if (storageError) {
-        console.error('Storage upload failed:', storageError)
-      } else {
-        const { data: publicUrlData } = supabase.storage
-          .from('facility-photos')
-          .getPublicUrl(filePath)
-        photoUrl = publicUrlData.publicUrl
-      }
-    }
+            if (storageError) {
+              console.error('Storage upload failed:', storageError.message);
+              showTemporaryAlert(`Image upload failed: ${storageError.message}`, 'error');
+              // photoUrl remains null, and registration continues without a photo URL
+            } else {
+              const { data } = supabase.storage
+              .from('facility-photos')
+              .getPublicUrl(filePath);
+
+              if (data && data.publicUrl) {
+                photoUrl = data.publicUrl;
+                console.log('SUCCESS: Public Photo URL:', photoUrl); //CHECK CONSOLE FOR THIS
+              } else {
+                console.error('CRITICAL: Failed to get public URL after successful upload.');
+                // photoUrl remains null, and registration continues wihtout a photo URL
+              }
+            }
+        }
 
         // Step 3: Insert the facility data into the 'facilities' table.
         // This now works because the 'owner_id' exists in 'profiles'.
@@ -399,7 +413,7 @@ const goToSignIn = () => {
                                     </v-list-item>
 
                   <v-list-item class="mb-4">
-                    <v-list-item-title class="font-weight-bold">Facility Photo</v-list-item-title>
+                    <v-list-item-title class="font-weight-bold">Facility Photo (Primary Photo)</v-list-item-title>
 
                     <div
                       v-if="!previewUrl"
@@ -553,4 +567,5 @@ const goToSignIn = () => {
 .sign-in-button:active {
   transform: scale(0.98);
 }
+
 </style>
