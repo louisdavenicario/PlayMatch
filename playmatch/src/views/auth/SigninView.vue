@@ -1,3 +1,74 @@
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { supabase } from '@/supabaseClient'
+
+const email = ref('')
+const password = ref('')
+const role = ref(null)
+const showPassword = ref(false)
+const errorMessage = ref(null)
+
+const router = useRouter()
+
+const handleLogin = async () => {
+  errorMessage.value = null // Clear previous errors
+
+  if (!email.value || !password.value || !role.value) {
+    errorMessage.value = 'Please fill in all fields.'
+    return
+  }
+
+  try {
+    // 1. Sign in with email and password
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.value,
+      password: password.value,
+    })
+
+    if (signInError) throw signInError
+
+    const user = signInData.user || signInData.session?.user
+    if (!user) {
+      errorMessage.value = 'Login failed. No user found.'
+      return
+    }
+
+    // 2. Fetch the user's profile safely
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (profileError) throw profileError
+
+    if (!profile) {
+      errorMessage.value = 'Profile not found. Please complete your registration.'
+      await supabase.auth.signOut()
+      return
+    }
+
+    // 3. Check role
+    if (profile.role.toLowerCase() !== role.value.toLowerCase()) {
+      errorMessage.value = `You are registered as a ${profile.role}. Please log in with the correct role.`
+      await supabase.auth.signOut()
+      return
+    }
+
+    // 4. Redirect based on role
+    if (role.value.toLowerCase() === 'owner') {
+      router.push('/owner-dashboard')
+    } else if (role.value.toLowerCase() === 'customer') {
+      router.push('/customer_dashboardv1')
+    }
+  } catch (error) {
+    console.error('Login failed:', error)
+    errorMessage.value = error.message || 'An unexpected error occurred.'
+  }
+}
+</script>
+
 <template>
   <v-app :theme="theme">
     <div
@@ -103,73 +174,6 @@
     </div>
   </v-app>
 </template>
-
-<script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { supabase } from '@/supabaseClient'
-
-const email = ref('')
-const password = ref('')
-const role = ref(null)
-const showPassword = ref(false)
-const errorMessage = ref(null) // State to store error messages
-
-const router = useRouter()
-
-const handleLogin = async () => {
-  errorMessage.value = null // Clear any previous errors
-
-  if (!email.value || !password.value || !role.value) {
-    errorMessage.value = 'Please fill in all fields.'
-    return
-  }
-
-  try {
-    const {
-      data: { user },
-      error: signInError,
-    } = await supabase.auth.signInWithPassword({
-      email: email.value,
-      password: password.value,
-    })
-
-    if (signInError) {
-      throw signInError
-    }
-
-    if (user) {
-      // Fetch the user's role from the 'profiles' table using their Supabase user ID
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-
-      if (profileError) {
-        throw profileError
-      }
-
-      // Check if the selected role matches the role in the database
-      if (profile.role.toLowerCase() === role.value.toLowerCase()) {
-        if (role.value.toLowerCase() === 'owner') {
-          router.push('/owner-dashboard')
-        } else if (role.value.toLowerCase() === 'customer') {
-          router.push('/customer-dashboard')
-        }
-      } else {
-        // Mismatch between selected role and database role
-        errorMessage.value = `You are a registered as a ${profile.role}. Please log in with the correct role.`
-        // Sign out the user to prevent them from accessing unauthorized routes
-        await supabase.auth.signOut()
-      }
-    }
-  } catch (error) {
-    console.error('Login failed:', error)
-    errorMessage.value = error.message
-  }
-}
-</script>
 
 <style scoped>
 .min-h-screen {
