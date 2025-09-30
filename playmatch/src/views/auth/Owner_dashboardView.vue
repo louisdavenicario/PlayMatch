@@ -215,7 +215,7 @@
                     :show-adjacent-months="false"
                     @update:model-value="selectDay"
                     width="100%"
-                    height="400" 
+                    height="100%" 
                     view-mode="calendar"
                     :day-class="getDayClass" 
                   > 
