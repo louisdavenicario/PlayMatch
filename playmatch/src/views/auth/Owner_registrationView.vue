@@ -414,7 +414,9 @@ const goToSignIn = () => {
 
                   <v-list-item class="mb-4">
                     <v-list-item-title class="font-weight-bold">Facility Photo (Primary Photo)</v-list-item-title>
-
+                        <p class="text-caption text-medium-emphasis mb-4">
+                          Note: The facility photo you upload here acts as the main display picture of the facility. You can add more photos in the Edit Facility section after you successfully complete your account setup.
+                        </p>
                     <div
                       v-if="!previewUrl"
                       class="file-upload-container"
