@@ -144,8 +144,66 @@
                       <p class="mt-5"><strong>Address:</strong> {{ facilityDetails?.address }}</p>
                       <p class="mt-5"><strong>Contact Number:</strong> {{ facilityDetails?.phone_number }}</p>
                       <p class="mt-5"><strong>Description:</strong> {{ facilityDetails?.briefdescription }}</p>
+                      <p class="mt-5 mb-2"><strong>Regular Operating Hours:</strong></p>
+                      <v-col cols="20" md="20">
+                          <v-table density="compact" class="elevation-1 rounded-lg">
+                              <thead>
+                                  <tr>
+                                      <th class="text-left text-body-2 font-weight-bold">Day</th>
+                                      <th class="text-left text-body-2 font-weight-bold">Open</th>
+                                      <th class="text-left text-body-2 font-weight-bold">Close</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  <tr v-for="hour in displayRegularHours" :key="hour.day">
+                                      <td>{{ hour.day }}</td>
+                                      <td :class="{'text-error': hour.openTime === '--'}">{{ hour.openTime }}</td>
+                                      <td :class="{'text-error': hour.closeTime === '--'}">{{ hour.closeTime }}</td>
+                                  </tr>
+                              </tbody>
+                          </v-table>
+                      </v-col>
+                      <p class="mt-5 mb-2"><strong>Custom Schedule(s):</strong></p>
+                      <v-col cols="20" md="20">
+                          <v-table 
+                              density="compact" 
+                              class="elevation-1 rounded-lg"
+                              style="width: 100%;"
+                          >
+                              <thead>
+                                  <tr>
+                                      <th class="text-left text-body-2 font-weight-bold">Date</th>
+                                      <th class="text-left text-body-2 font-weight-bold">Start Time</th>
+                                      <th class="text-left text-body-2 font-weight-bold">End Time</th>
+                                      <th class="text-left text-body-2 font-weight-bold">Reason</th>
+                                  </tr>
+                              </thead>
+                              <tbody>
+                                  <tr v-for="(schedule, index) in upcomingCustomSchedules" :key="index">
+                                      <td 
+                                          :colspan="schedule.isPlaceholder ? 4 : 1" 
+                                          :class="{'text-center font-italic': schedule.isPlaceholder}"
+                                      >
+                                          <template v-if="schedule.isPlaceholder">
+                                              {{ schedule.reason }}
+                                          </template>
+                                          <template v-else>
+                                              {{ schedule.date }}
+                                          </template>
+                                      </td>
+                                      
+                                      <template v-if="!schedule.isPlaceholder">
+                                          <td>{{ schedule.startTime }}</td>
+                                          <td>{{ schedule.endTime }}</td>
+                                          <td style="white-space: normal;">{{ schedule.reason }}</td>
+                                      </template>
+                                  </tr>
+                              </tbody>
+                          </v-table>
+                      </v-col>
                     </v-col>
                     <v-col cols="12" md="4">
+                      <p class="mt-5"><strong>Primary Photo:</strong></p>
                       <v-img
                         v-if="facilityDetails?.image_url"
                         :src="facilityDetails.image_url"
@@ -164,8 +222,7 @@
                     </v-col>
 
                         <v-col cols="12" v-if="facilityDetails?.additional_photos?.length">
-                            <v-divider class="my-4"></v-divider>
-                            <h4 class="text-subtitle-1 font-weight-bold mb-3">Gallery Photos ({{ facilityDetails.additional_photos.length }})</h4>
+                            <p class="mt-5"><strong>Gallery Photos ({{ facilityDetails.additional_photos.length }}):</strong></p>
                             <div class="d-flex flex-wrap" style="gap: 12px;">
                                 <v-img
                                     v-for="(url, index) in facilityDetails.additional_photos"
@@ -456,11 +513,42 @@
                       variant="outlined"
                   ></v-textarea>
                 
-                  <v-text-field
-                      v-model="editedFacility.image_url"
-                      label="Primary Image URL"
-                      variant="outlined"
-                  ></v-text-field>
+                  <h3 class="mt-4 mb-2">Primary Facility Photo</h3>
+                    <v-divider class="mb-4"></v-divider>
+
+                    <v-img 
+                        v-if="editedFacility.image_url"
+                        :src="editedFacility.image_url" 
+                        aspect-ratio="1.7778" 
+                        cover
+                        class="rounded-lg mb-4 elevation-2"
+                        max-height="250"
+                    />
+
+                    <v-file-input
+                        v-model="primaryPhotoFile"
+                        accept="image/*"
+                        label="Select or replace primary photo"
+                        prepend-icon="mdi-camera"
+                        variant="outlined"
+                        density="compact"
+                        :clearable="true"
+                        hint="Select a new image. It will be uploaded when you click 'Save Facility Details'."
+                        persistent-hint
+                        class="mb-2"
+                    ></v-file-input>
+
+                    <v-btn
+                        v-if="editedFacility.image_url"
+                        color="error"
+                        variant="text"
+                        prepend-icon="mdi-delete"
+                        @click="removePrimaryPhoto"
+                    >
+                        Remove Current Photo
+                    </v-btn>
+
+                  <v-divider class="my-4"></v-divider>
 
                   <h3 class="mt-4 mb-2">Additional Facility Photos (Gallery)</h3>
 
@@ -599,6 +687,7 @@ const bookingDates = computed(() => {
     // Return an array of date strings ('YYYY-MM-DD') that have accepted bookings
     return acceptedBookings.value.map(b => new Date(b.start_time).toISOString().substring(0, 10));
 });
+const primaryPhotoFile = ref(null); // Holds the single file selected for the primary photo
 const drawer = ref(true); // Start as open on desktop, but collapsible on mobile
 const newGalleryFiles = ref([]); // Holds new files selected in the modal
 const existingPhotoUrls = ref([]); // Holds URLs fetched from `additional_photos`
@@ -704,6 +793,69 @@ const openRegularHours = computed(() => {
             openTime: data.openTime,
             closeTime: data.closeTime
         }));
+});
+
+// 🌟 NEW COMPUTED PROPERTY 1: Displays all days (open/closed) for the main dashboard.
+const displayRegularHours = computed(() => {
+    // Start with the daysOfWeek array to ensure correct order
+    return daysOfWeek.map(dayKey => {
+        const data = regularHours.value[dayKey];
+        const dayName = dayKey.charAt(0).toUpperCase() + dayKey.slice(1);
+        
+        return {
+            day: dayName,
+            // If isOpen is false, use '--' for times, otherwise use the actual times
+            openTime: data.isOpen ? data.openTime : '--',
+            closeTime: data.isOpen ? data.closeTime : '--',
+        };
+    });
+});
+
+// 🌟 NEW COMPUTED PROPERTY 2: Finds the next upcoming custom schedule or returns placeholder.
+const upcomingCustomSchedules = computed(() => {
+    if (!customSchedules.value || customSchedules.value.length === 0) {
+        // Return an array with a single placeholder object if none exist
+        return [{
+            date: '--',
+            startTime: '--',
+            endTime: '--',
+            reason: 'No Custom Schedules Set',
+            isPlaceholder: true // Helper flag for template formatting
+        }];
+    }
+
+    const today = new Date().toISOString().substring(0, 10); // 'YYYY-MM-DD'
+
+    // 1. Filter out past schedules
+    const upcoming = customSchedules.value
+        .filter(s => s.date >= today)
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (upcoming.length === 0) {
+        // Return placeholder if all schedules are in the past
+        return [{
+            date: '--',
+            startTime: '--',
+            endTime: '--',
+            reason: 'All custom schedules have passed.',
+            isPlaceholder: true 
+        }];
+    }
+
+    // 2. Format the date for all upcoming schedules
+    return upcoming.map(schedule => {
+        const formattedDate = new Date(schedule.date).toLocaleDateString('en-US', { 
+            year: 'numeric', month: 'short', day: 'numeric' 
+        });
+
+        return {
+            date: formattedDate,
+            startTime: schedule.start_time,
+            endTime: schedule.end_time,
+            reason: schedule.reason || 'Special Hours',
+            isPlaceholder: false
+        };
+    });
 });
 
 const fetchAllOwnerData = async () => {
@@ -954,6 +1106,14 @@ const removeNewGalleryFile = (index) => {
     newGalleryFiles.value.splice(index, 1);
 };
 
+const removePrimaryPhoto = () => {
+    // Clear the URL, which will be saved as null to the DB on form submission
+    editedFacility.image_url = null;
+    // Clear the file input in case a new one was selected
+    primaryPhotoFile.value = null; 
+    alertMessage('Primary photo cleared. Click Save to confirm removal.', 'info');
+};
+
 const removeExistingPhoto = (index) => {
     // This removes the URL from the existingPhotoUrls array. 
     // Since this array is saved to the DB, the photo will disappear upon saving.
@@ -967,6 +1127,32 @@ const saveFacilityDetails = async () => {
         // Start with existing URLs (those loaded from the DB and not removed by the owner)
         let galleryUrlsToSave = [...existingPhotoUrls.value]; 
         
+        // --- NEW STEP: 1. HANDLE PRIMARY PHOTO UPLOAD ---
+        if (primaryPhotoFile.value) {
+            const file = primaryPhotoFile.value[0] || primaryPhotoFile.value; // Handle v-file-input returning array/single
+            const filePath = `${userId.value}/primary/${Date.now()}_${file.name}`;
+
+            const { error: storageError } = await supabase.storage
+                .from('facility-photos') // **USE YOUR CORRECT BUCKET NAME**
+                .upload(filePath, file, { upsert: true });
+
+            if (storageError) {
+                console.error(`Primary photo upload failed:`, storageError.message);
+                alertMessage(`Failed to upload primary photo: ${storageError.message}`, 'error');
+                // STOP THE SAVE HERE if the primary photo fails, or proceed with old URL
+                return; // or continue, depending on your error tolerance
+            }
+
+            // Get the public URL for the new image
+            const { data: publicUrlData } = supabase.storage
+                .from('facility-photos')
+                .getPublicUrl(filePath);
+
+            if (publicUrlData.publicUrl) {
+                finalImageUrl = publicUrlData.publicUrl;
+            }
+        }
+        // --- END PRIMARY PHOTO UPLOAD ---
         // --- 1. HANDLE ADDITIONAL PHOTOS UPLOAD ---
         if (newGalleryFiles.value.length > 0) {
             const newUrls = [];
@@ -1099,6 +1285,8 @@ const openEditModal = () => {
     
     // Clear the array that holds any *new* files the user might select during this session.
     newGalleryFiles.value = []; 
+    primaryPhotoFile.value = null; // Clear any file selected in a previous attempt
+
 
     // 3. Show the modal
     showEditModal.value = true;
