@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 
+const loading = ref(false)
 const email = ref('')
 const password = ref('')
 const role = ref(null)
@@ -18,6 +19,7 @@ const handleLogin = async () => {
     errorMessage.value = 'Please fill in all fields.'
     return
   }
+  loading.value = true
 
   try {
     // 1. Sign in with email and password
@@ -65,6 +67,9 @@ const handleLogin = async () => {
   } catch (error) {
     console.error('Login failed:', error)
     errorMessage.value = error.message || 'An unexpected error occurred.'
+  }
+  finally {
+    loading.value = false
   }
 }
 </script>
@@ -155,7 +160,7 @@ const handleLogin = async () => {
                 class="mb-4"
               ></v-select>
 
-              <v-btn type="submit" color="primary" size="large" block rounded="lg" class="my-4">
+              <v-btn type="submit" color="primary" size="large" block rounded="lg" class="my-4" :loading="loading">
                 Sign In
               </v-btn>
             </v-form>

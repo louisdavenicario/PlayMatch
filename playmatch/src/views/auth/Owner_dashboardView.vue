@@ -69,9 +69,15 @@
         </v-list-item>
       </v-list>
       <template v-slot:append>
-        <div class="pa-4">
-          <v-btn block @click="handleLogout" prepend-icon="mdi-logout"><strong>Logout</strong></v-btn>
-        </div>
+          <div class="pa-4">
+            <v-btn 
+                block 
+                @click="handleLogout" 
+                prepend-icon="mdi-logout"
+                :loading="loading"      :disabled="loading">
+                <strong>Logout</strong>
+            </v-btn>
+          </div>
       </template>
     </v-navigation-drawer>
     <v-main>
@@ -671,6 +677,7 @@ import { ref, onMounted, reactive, computed } from 'vue';
 import { supabase } from '@/supabaseClient';
 import { useRouter } from 'vue-router';
 
+const loading = ref(false);
 const customSchedules = ref([]);
 // 🌟 MODAL STATE VARIABLES - KEPT
 const showDeleteConfirmModal = ref(false);
@@ -1230,6 +1237,7 @@ const alertMessage = (message, color) => {
 };
 
 const handleLogout = async () => {
+    loading.value = true;
     try {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
@@ -1237,6 +1245,9 @@ const handleLogout = async () => {
     } catch (error) {
         console.error('Error logging out:', error.message);
         alertMessage('Failed to log out.', 'error');
+    }
+    finally {
+        loading.value = false;
     }
 };
 
