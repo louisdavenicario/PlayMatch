@@ -9,6 +9,7 @@ import Owner_registrationView from '@/views/auth/Owner_registrationView.vue'
 import Owner_dashboardView from '@/views/auth/Owner_dashboardView.vue'
 import Customer_dashboardv1View from '@/views/auth/Customer_dashboardv1View.vue'
 import Facility_detailsView from '@/views/auth/Facility_detailsView.vue'
+import Customer_profileView from '@/views/auth/Customer_profileView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -53,6 +54,11 @@ const router = createRouter({
       name: 'facility-details',
       component: Facility_detailsView,
       props: true,
+    },
+    {
+      path: '/customer_profile',
+      name: 'customer-profile',
+      component: Customer_profileView,
     },
   ],
 })

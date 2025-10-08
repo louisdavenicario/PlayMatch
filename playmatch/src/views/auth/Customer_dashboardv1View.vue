@@ -4,7 +4,7 @@
       app
       :style="{
         background:
-          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.2), rgba(119, 154, 229, 0.4))',
+          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.6), rgba(119, 154, 229, 0.6))',
       }"
       flat
     >
