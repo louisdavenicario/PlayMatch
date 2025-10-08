@@ -7,6 +7,8 @@ import Customer_registrationView from '@/views/auth/Customer_registrationView.vu
 import Choose_roleView from '@/views/auth/Choose_roleView.vue'
 import Owner_registrationView from '@/views/auth/Owner_registrationView.vue'
 import Owner_dashboardView from '@/views/auth/Owner_dashboardView.vue'
+import Customer_dashboardv1View from '@/views/auth/Customer_dashboardv1View.vue'
+import Facility_detailsView from '@/views/auth/Facility_detailsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -40,6 +42,17 @@ const router = createRouter({
       path: '/owner-dashboard',
       name: 'owner-dashboard',
       component: Owner_dashboardView,
+    },
+    {
+      path: '/customer_dashboardv1',
+      name: 'customer-dashboard',
+      component: Customer_dashboardv1View,
+    },
+    {
+      path: '/facility_details/:id',
+      name: 'facility-details',
+      component: Facility_detailsView,
+      props: true,
     },
   ],
 })
