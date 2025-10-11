@@ -10,6 +10,7 @@ import Owner_dashboardView from '@/views/auth/Owner_dashboardView.vue'
 import Customer_dashboardv1View from '@/views/auth/Customer_dashboardv1View.vue'
 import Facility_detailsView from '@/views/auth/Facility_detailsView.vue'
 import Customer_profileView from '@/views/auth/Customer_profileView.vue'
+import Play_requestView from '@/views/auth/Play_requestView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -59,6 +60,11 @@ const router = createRouter({
       path: '/customer_profile',
       name: 'customer-profile',
       component: Customer_profileView,
+    },
+    {
+      path: '/playmate-requests',
+      name: 'playmate-requests',
+      component: Play_requestView,
     },
   ],
 })

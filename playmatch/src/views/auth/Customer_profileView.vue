@@ -1,3 +1,62 @@
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { supabase } from '@/supabaseClient'
+
+const router = useRouter()
+const profileData = ref(null)
+const loading = ref(false)
+const error = ref(null)
+
+// Fetches the user's profile data from Supabase.
+
+const fetchProfile = async () => {
+  loading.value = true
+  error.value = null
+  profileData.value = null
+
+  try {
+    // Get the current user session
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      console.log('No user logged in, redirecting to sign-in.')
+      router.push({ name: 'signin' })
+      return
+    }
+
+    // Fetch the corresponding profile data using the user's ID
+    const { data, error: fetchError } = await supabase
+      .from('profiles')
+      .select('full_name, phone_number, address, city, zip_code, role')
+      .eq('id', user.id)
+      .single()
+
+    if (fetchError && fetchError.code !== 'PGRST116') {
+      // PGRST116 means no rows found (profile might be missing)
+      throw fetchError
+    }
+
+    // Combine the profile data with the user's email from the auth object
+    profileData.value = {
+      email: user.email,
+      ...data,
+    }
+  } catch (err) {
+    console.error('Profile fetch failed:', err.message)
+    error.value = 'Failed to load profile. Please try again.'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  fetchProfile()
+})
+</script>
+
 <template>
   <v-app>
     <v-main
@@ -100,76 +159,17 @@
   </v-app>
 </template>
 
-<script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { supabase } from '@/supabaseClient'
-
-const router = useRouter()
-const profileData = ref(null)
-const loading = ref(false)
-const error = ref(null)
-
-// Fetches the user's profile data from Supabase.
-
-const fetchProfile = async () => {
-  loading.value = true
-  error.value = null
-  profileData.value = null
-
-  try {
-    // 1. Get the current user session
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      console.log('No user logged in, redirecting to sign-in.')
-      router.push({ name: 'signin' })
-      return
-    }
-
-    // 2. Fetch the corresponding profile data using the user's ID
-    const { data, error: fetchError } = await supabase
-      .from('profiles')
-      .select('full_name, phone_number, address, city, zip_code, role')
-      .eq('id', user.id)
-      .single()
-
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      // PGRST116 means no rows found (profile might be missing)
-      throw fetchError
-    }
-
-    // 3. Combine the profile data with the user's email from the auth object
-    profileData.value = {
-      email: user.email,
-      ...data,
-    }
-  } catch (err) {
-    console.error('Profile fetch failed:', err.message)
-    error.value = 'Failed to load profile. Please try again.'
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(() => {
-  fetchProfile()
-})
-</script>
-
 <style scoped>
 .profile-details-list {
   background-color: transparent !important;
 }
 
 .profile-details-list .v-list-item {
-  padding: 12px 0; /* Vertical padding */
+  padding: 12px 0;
 }
 
 .list-item-hover:hover {
-  background-color: rgba(0, 0, 0, 0.03); /* Light hover effect for list items */
+  background-color: rgba(0, 0, 0, 0.03);
   transition: background-color 0.2s;
   border-radius: 8px;
 }

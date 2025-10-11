@@ -1,10 +1,126 @@
+<script>
+import { supabase } from '@/supabaseClient'
+
+export default {
+  name: 'ReservoSprotBookingHome',
+  data: () => ({
+    currentUserId: null, // To store the logged-in user's ID
+    playmateRequests: [],
+    playmateLoading: false,
+    facilities: [],
+    loading: false,
+    error: null,
+  }),
+  async mounted() {
+    await this.getCurrentUser() // Fetch user ID immediately
+    this.fetchFacilities()
+    this.fetchPlaymateRequests()
+  },
+  methods: {
+    async getCurrentUser() {
+      try {
+        const { data, error } = await supabase.auth.getUser()
+        if (error) throw error
+        this.currentUserId = data.user?.id || null
+      } catch (err) {
+        console.error('Error fetching current user:', err.message)
+        this.currentUserId = null
+      }
+    },
+    isCreator(creatorId) {
+      // Returns true if the logged-in user is the one who created the request
+      return this.currentUserId === creatorId
+    },
+    handlePlaymateAction(request) {
+      if (this.isCreator(request.creator_id)) {
+        this.$router.push({ name: 'playmate-requests' })
+      } else {
+        this.goToPlaymateRequests()
+      }
+    },
+
+    formatDate(dateString) {
+      if (!dateString) return ''
+      return new Date(dateString).toLocaleDateString(undefined, {
+        month: 'short',
+        day: 'numeric',
+      })
+    },
+    formatTime(timeString) {
+      if (!timeString) return ''
+      const [hours, minutes] = timeString.split(':')
+      const tempDate = new Date()
+      tempDate.setHours(hours, minutes)
+      return tempDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+    },
+    // --- Navigation ---
+    goToPlaymateRequests() {
+      this.$router.push({ name: 'playmate-requests' })
+    },
+
+    // --- Data Fetching Methods ---
+    async fetchPlaymateRequests() {
+      this.playmateLoading = true
+      try {
+        // 1. Fetch playmate requests that are open and in the future
+        const { data: requestsData, error: requestsError } = await supabase
+          .from('playmate_requests')
+          .select('*, creator:creator_id (full_name)')
+          .eq('status', 'open')
+          .gte('date', new Date().toISOString().split('T')[0])
+          .order('date', { ascending: true })
+          .order('start_time', { ascending: true })
+          .limit(3) // Limit to 3 requests for the home page
+
+        if (requestsError) throw requestsError
+
+        // 2. Process data to flatten creator name
+        this.playmateRequests = requestsData.map((request) => ({
+          ...request,
+          creator_name: request.creator?.full_name || 'Anonymous',
+        }))
+      } catch (err) {
+        console.error('Error fetching playmate requests:', err.message)
+      } finally {
+        this.playmateLoading = false
+      }
+    },
+
+    async fetchFacilities() {
+      this.loading = true
+      this.error = null
+      try {
+        const { data, error } = await supabase.from('facilities').select('*').limit(5) // Limit to a few popular facilities
+        if (error) throw error
+
+        this.facilities = data.map((facility) => ({
+          id: facility.id,
+          name: facility.facility_name,
+          type: facility.facility_type,
+          address: facility.address,
+          rating: facility.rating || '4.5',
+          reviews: facility.reviews || '0',
+          price: facility.price_per_hour,
+          image: facility.image_url,
+        }))
+      } catch (err) {
+        console.error('Error fetching facilities:', err.message)
+        this.error = 'Failed to load facilities.'
+      } finally {
+        this.loading = false
+      }
+    },
+  },
+}
+</script>
+
 <template>
   <v-app>
     <v-app-bar
       app
       :style="{
         background:
-          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.6), rgba(119, 154, 229, 0.6))',
+          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.2), rgba(119, 154, 229, 0.4))',
       }"
       flat
     >
@@ -64,7 +180,7 @@
               class="text-capitalize font-weight-bold"
               @click="goToPlaymateRequests"
             >
-              View <v-icon right small>mdi-chevron-right</v-icon>
+              View All <v-icon right small>mdi-chevron-right</v-icon>
             </v-btn>
           </v-col>
 
@@ -76,14 +192,14 @@
             <div v-else-if="playmateRequests.length === 0" class="text-center py-4">
               <p class="grey--text">
                 No playmate requests found. You can be the first to <br />
-                create one by clicking "See all"!
+                create one by clicking "View All"!
               </p>
             </div>
 
             <v-col
               v-else
               cols="12"
-              v-for="request in playmateRequests"
+              v-for="request in playmateRequests.slice(0, 3)"
               :key="request.id"
               class="mb-3 pa-0"
             >
@@ -106,7 +222,16 @@
                   </div>
                 </div>
                 <v-spacer></v-spacer>
-                <v-btn small color="blue" dark rounded>Join</v-btn>
+
+                <v-btn
+                  small
+                  :color="isCreator(request.creator_id) ? 'orange darken-1' : 'blue'"
+                  dark
+                  rounded
+                  @click="handlePlaymateAction(request)"
+                >
+                  {{ isCreator(request.creator_id) ? 'Manage' : 'Join' }}
+                </v-btn>
               </v-card>
             </v-col>
           </v-col>
@@ -210,110 +335,11 @@
   </v-app>
 </template>
 
-<script>
-// NOTE: Ensure '@/supabaseClient' is correctly configured in your project
-import { supabase } from '@/supabaseClient'
-
-export default {
-  name: 'ReservoSprotBookingHome',
-  data: () => ({
-    // Removed static playmates
-    playmateRequests: [],
-    playmateLoading: false,
-    facilities: [],
-    loading: false,
-    error: null,
-  }),
-  async mounted() {
-    this.fetchFacilities()
-    this.fetchPlaymateRequests()
-  },
-  methods: {
-    // --- Utility Methods ---
-    formatDate(dateString) {
-      if (!dateString) return ''
-      return new Date(dateString).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-      })
-    },
-    formatTime(timeString) {
-      if (!timeString) return ''
-      // Time string is typically 'HH:MM:SS', we use a temporary date object to format it
-      const [hours, minutes] = timeString.split(':')
-      const tempDate = new Date()
-      tempDate.setHours(hours, minutes)
-      return tempDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
-    },
-    // --- Navigation ---
-    goToPlaymateRequests() {
-      // NOTE: You'll need to configure a route named 'playmate-requests'
-      this.$router.push({ name: 'playmate-requests' })
-    },
-
-    // --- Data Fetching Methods ---
-    async fetchPlaymateRequests() {
-      this.playmateLoading = true
-      try {
-        // 1. Fetch playmate requests that are open and in the future
-        const { data: requestsData, error: requestsError } = await supabase
-          .from('playmate_requests')
-          .select('*, creator:creator_id (full_name)') // Select all columns and the creator's full_name via the foreign key
-          .eq('status', 'open')
-          .gte('date', new Date().toISOString().split('T')[0]) // Only requests from today onward
-          .order('date', { ascending: true })
-          .order('start_time', { ascending: true })
-
-        if (requestsError) throw requestsError
-
-        // 2. Process data to flatten creator name
-        this.playmateRequests = requestsData.map((request) => ({
-          ...request,
-          creator_name: request.creator?.full_name || 'Anonymous', // Use 'Anonymous' if profile is missing
-        }))
-      } catch (err) {
-        console.error('Error fetching playmate requests:', err.message)
-      } finally {
-        this.playmateLoading = false
-      }
-    },
-
-    async fetchFacilities() {
-      this.loading = true
-      this.error = null
-      try {
-        // NOTE: This assumes you have a 'facilities' table in your Supabase database
-        const { data, error } = await supabase.from('facilities').select('*')
-        if (error) throw error
-
-        this.facilities = data.map((facility) => ({
-          id: facility.id,
-          name: facility.facility_name,
-          type: facility.facility_type,
-          address: facility.address,
-          rating: facility.rating || '4.5',
-          reviews: facility.reviews || '0',
-          price: facility.price_per_hour,
-          image: facility.image_url,
-        }))
-      } catch (err) {
-        console.error('Error fetching facilities:', err.message)
-        this.error = 'Failed to load facilities.'
-      } finally {
-        this.loading = false
-      }
-    },
-  },
-}
-</script>
-
 <style scoped>
-/* UPDATED: Header bar with Blue/Sky Blue gradient */
 .header-gradient {
   background: linear-gradient(135deg, #007acc 0%, #00c6ff 100%) !important;
 }
 
-/* Floating search card positioning */
 .search-prompt-container {
   position: absolute;
   bottom: -30px; /* Position the card to float below the extended header */
@@ -323,7 +349,6 @@ export default {
   border-radius: 12px !important;
   width: 90%;
   text-align: center;
-  /* Since the header is dark, make the floating card text white for contrast */
   background-color: white;
 }
 .floating-search-card .white--text {
@@ -334,11 +359,9 @@ export default {
 .map-section {
   padding-top: 50px !important; /* Offset for the floating search card */
 }
-/* UPDATED: Map placeholder with a softer Blue gradient */
 .map-placeholder {
   position: relative;
   overflow: hidden;
-  /* Soft blue gradient for a map look */
   background-image: linear-gradient(to bottom right, #bbdefb, #e1f5fe);
 }
 .map-visual {
@@ -372,12 +395,11 @@ export default {
   top: 45%;
   left: 70%;
 }
-/* Hide scrollbar for horizontal facility section */
 .facility-scroll-container {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 .facility-scroll-container::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 </style>
