@@ -27,10 +27,27 @@ export default {
         this.currentUserId = null
       }
     },
+
+    async logout() {
+      try {
+        const { error } = await supabase.auth.signOut()
+        if (error) throw error
+
+        // Optional: clear local storage if you stored session info
+        localStorage.clear()
+
+        // Redirect user to login page after successful logout
+        this.$router.push({ name: 'signin' })
+      } catch (err) {
+        console.error('Logout failed:', err.message)
+        alert('Failed to logout. Please try again.')
+      }
+    },
+
     isCreator(creatorId) {
-      // Returns true if the logged-in user is the one who created the request
       return this.currentUserId === creatorId
     },
+
     handlePlaymateAction(request) {
       if (this.isCreator(request.creator_id)) {
         this.$router.push({ name: 'playmate-requests' })
@@ -46,6 +63,7 @@ export default {
         day: 'numeric',
       })
     },
+
     formatTime(timeString) {
       if (!timeString) return ''
       const [hours, minutes] = timeString.split(':')
@@ -53,16 +71,14 @@ export default {
       tempDate.setHours(hours, minutes)
       return tempDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
     },
-    // --- Navigation ---
+
     goToPlaymateRequests() {
       this.$router.push({ name: 'playmate-requests' })
     },
 
-    // --- Data Fetching Methods ---
     async fetchPlaymateRequests() {
       this.playmateLoading = true
       try {
-        // 1. Fetch playmate requests that are open and in the future
         const { data: requestsData, error: requestsError } = await supabase
           .from('playmate_requests')
           .select('*, creator:creator_id (full_name)')
@@ -70,11 +86,10 @@ export default {
           .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .order('start_time', { ascending: true })
-          .limit(3) // Limit to 3 requests for the home page
+          .limit(3)
 
         if (requestsError) throw requestsError
 
-        // 2. Process data to flatten creator name
         this.playmateRequests = requestsData.map((request) => ({
           ...request,
           creator_name: request.creator?.full_name || 'Anonymous',
@@ -90,7 +105,7 @@ export default {
       this.loading = true
       this.error = null
       try {
-        const { data, error } = await supabase.from('facilities').select('*').limit(5) // Limit to a few popular facilities
+        const { data, error } = await supabase.from('facilities').select('*').limit(5)
         if (error) throw error
 
         this.facilities = data.map((facility) => ({
@@ -128,8 +143,8 @@ export default {
       <v-spacer></v-spacer>
       <v-btn icon><v-icon>mdi-magnify</v-icon></v-btn>
 
-      <v-btn icon to="/profile">
-        <v-icon>mdi-account-circle</v-icon>
+      <v-btn icon @click="logout">
+        <v-icon color="red">mdi-logout</v-icon>
       </v-btn>
 
       <template v-slot:extension>
@@ -236,6 +251,7 @@ export default {
             </v-col>
           </v-col>
         </v-row>
+
         <v-row no-gutters class="facilities-section px-4 mt-5 mb-10">
           <v-col cols="12" class="mb-3">
             <h2 class="text-h6 font-weight-medium">Popular Facilities</h2>
@@ -342,7 +358,7 @@ export default {
 
 .search-prompt-container {
   position: absolute;
-  bottom: -30px; /* Position the card to float below the extended header */
+  bottom: -30px;
   width: 100%;
 }
 .floating-search-card {
@@ -352,12 +368,12 @@ export default {
   background-color: white;
 }
 .floating-search-card .white--text {
-  color: #007acc !important; /* Make the text blue when card is white */
+  color: #007acc !important;
   caret-color: #007acc !important;
 }
 
 .map-section {
-  padding-top: 50px !important; /* Offset for the floating search card */
+  padding-top: 50px !important;
 }
 .map-placeholder {
   position: relative;
