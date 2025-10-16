@@ -11,6 +11,7 @@ import Customer_dashboardv1View from '@/views/auth/Customer_dashboardv1View.vue'
 import Facility_detailsView from '@/views/auth/Facility_detailsView.vue'
 import Customer_profileView from '@/views/auth/Customer_profileView.vue'
 import Play_requestView from '@/views/auth/Play_requestView.vue'
+import FavoritesView from '@/views/auth/FavoritesView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -65,6 +66,11 @@ const router = createRouter({
       path: '/playmate-requests',
       name: 'playmate-requests',
       component: Play_requestView,
+    },
+    {
+      path: '/favorites',
+      name: 'favorites',
+      component: FavoritesView,
     },
   ],
 })

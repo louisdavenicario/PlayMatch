@@ -8,15 +8,20 @@ export default {
     playmateRequests: [],
     playmateLoading: false,
     facilities: [],
+    favorites: [], // ❤️ Store favorite facility IDs
     loading: false,
     error: null,
   }),
+
   async mounted() {
-    await this.getCurrentUser() // Fetch user ID immediately
+    await this.getCurrentUser()
+    await this.fetchFavorites() // ❤️ load favorites after login
     this.fetchFacilities()
     this.fetchPlaymateRequests()
   },
+
   methods: {
+    // 🧍 Fetch current logged user
     async getCurrentUser() {
       try {
         const { data, error } = await supabase.auth.getUser()
@@ -28,19 +33,69 @@ export default {
       }
     },
 
+    // 🚪 Logout
     async logout() {
       try {
         const { error } = await supabase.auth.signOut()
         if (error) throw error
-
-        // Optional: clear local storage if you stored session info
         localStorage.clear()
-
-        // Redirect user to login page after successful logout
         this.$router.push({ name: 'signin' })
       } catch (err) {
         console.error('Logout failed:', err.message)
         alert('Failed to logout. Please try again.')
+      }
+    },
+
+    // ❤️ Toggle favorites (add/remove)
+    async toggleFavorite(facilityId) {
+      if (!this.currentUserId) {
+        alert('Please log in to add favorites.')
+        return
+      }
+
+      const isFav = this.isFavorite(facilityId)
+
+      try {
+        if (isFav) {
+          // remove
+          const { error } = await supabase
+            .from('favorites')
+            .delete()
+            .eq('user_id', this.currentUserId)
+            .eq('facility_id', facilityId)
+          if (error) throw error
+          this.favorites = this.favorites.filter((id) => id !== facilityId)
+        } else {
+          // add
+          const { error } = await supabase
+            .from('favorites')
+            .insert([{ user_id: this.currentUserId, facility_id: facilityId }])
+          if (error) throw error
+          this.favorites.push(facilityId)
+        }
+      } catch (err) {
+        console.error('Error toggling favorite:', err.message)
+        alert('Failed to update favorites.')
+      }
+    },
+
+    // Check if facility is favorited
+    isFavorite(facilityId) {
+      return this.favorites.includes(facilityId)
+    },
+
+    // Load all favorites
+    async fetchFavorites() {
+      if (!this.currentUserId) return
+      try {
+        const { data, error } = await supabase
+          .from('favorites')
+          .select('facility_id')
+          .eq('user_id', this.currentUserId)
+        if (error) throw error
+        this.favorites = data.map((item) => item.facility_id)
+      } catch (err) {
+        console.error('Error fetching favorites:', err.message)
       }
     },
 
@@ -131,6 +186,7 @@ export default {
 
 <template>
   <v-app>
+    <!-- 🧭 Top App Bar -->
     <v-app-bar
       app
       :style="{
@@ -142,7 +198,6 @@ export default {
       <v-toolbar-title class="font-weight-bold ml-1">RESERVO</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn icon><v-icon>mdi-magnify</v-icon></v-btn>
-
       <v-btn icon @click="logout">
         <v-icon color="red">mdi-logout</v-icon>
       </v-btn>
@@ -158,16 +213,13 @@ export default {
       </template>
     </v-app-bar>
 
+    <!-- 🧩 Main Content -->
     <v-main>
       <v-container fluid class="pa-0">
+        <!-- 🗺 Map Section -->
         <v-row no-gutters class="map-section px-4 pt-10">
           <v-col cols="12" class="d-flex justify-center pt-2 pb-4">
-            <v-card
-              rounded="lg"
-              width="100%"
-              height="200px"
-              class="grey lighten-3 elevation-3 map-placeholder"
-            >
+            <v-card rounded="lg" width="100%" height="200px" class="grey lighten-3 elevation-3">
               <div class="map-visual">
                 <v-icon class="map-marker marker-1" color="red">mdi-map-marker</v-icon>
                 <v-icon class="map-marker marker-2" color="red">mdi-map-marker</v-icon>
@@ -185,6 +237,7 @@ export default {
           </v-col>
         </v-row>
 
+        <!-- 🧑‍🤝‍🧑 Playmates Section -->
         <v-row no-gutters class="playmates-section px-4">
           <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
             <h2 class="text-h6 font-weight-medium">Find Playmates</h2>
@@ -252,6 +305,7 @@ export default {
           </v-col>
         </v-row>
 
+        <!-- 🏟 Facilities Section -->
         <v-row no-gutters class="facilities-section px-4 mt-5 mb-10">
           <v-col cols="12" class="mb-3">
             <h2 class="text-h6 font-weight-medium">Popular Facilities</h2>
@@ -290,7 +344,13 @@ export default {
                     >
                       {{ facility.type }}
                     </v-chip>
-                    <v-btn icon dark><v-icon>mdi-heart-outline</v-icon></v-btn>
+
+                    <!-- ❤️ Favorite button -->
+                    <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
+                      <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
+                        {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                      </v-icon>
+                    </v-btn>
                   </v-card-text>
                 </v-img>
 
@@ -318,12 +378,11 @@ export default {
 
                 <v-card-actions class="pt-0 pr-3 pb-3 justify-end">
                   <v-btn
-                    value="details"
-                    :to="{ name: 'facility-details', params: { id: facility.id } }"
                     small
                     color="blue"
                     dark
                     rounded
+                    :to="{ name: 'facility-details', params: { id: facility.id } }"
                     >View Details</v-btn
                   >
                 </v-card-actions>
@@ -334,6 +393,7 @@ export default {
       </v-container>
     </v-main>
 
+    <!-- ⬇️ Bottom Navigation -->
     <v-bottom-navigation app fixed color="white" light>
       <v-btn value="search">
         <v-icon large color="blue">mdi-magnify</v-icon>
@@ -341,8 +401,8 @@ export default {
       <v-btn value="calendar">
         <v-icon large color="grey darken-1">mdi-calendar-month-outline</v-icon>
       </v-btn>
-      <v-btn value="favorites">
-        <v-icon large color="grey darken-1">mdi-heart-outline</v-icon>
+      <v-btn value="favorites" @click="$router.push({ name: 'favorites' })">
+        <v-icon large color="red">mdi-heart</v-icon>
       </v-btn>
       <v-btn value="profile" to="/customer_profile">
         <v-icon large color="grey darken-1">mdi-account-circle-outline</v-icon>
@@ -352,10 +412,6 @@ export default {
 </template>
 
 <style scoped>
-.header-gradient {
-  background: linear-gradient(135deg, #007acc 0%, #00c6ff 100%) !important;
-}
-
 .search-prompt-container {
   position: absolute;
   bottom: -30px;
@@ -369,9 +425,7 @@ export default {
 }
 .floating-search-card .white--text {
   color: #007acc !important;
-  caret-color: #007acc !important;
 }
-
 .map-section {
   padding-top: 50px !important;
 }
@@ -379,13 +433,6 @@ export default {
   position: relative;
   overflow: hidden;
   background-image: linear-gradient(to bottom right, #bbdefb, #e1f5fe);
-}
-.map-visual {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
 }
 .map-controls {
   position: absolute;
@@ -396,7 +443,6 @@ export default {
 }
 .map-marker {
   position: absolute;
-  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
   font-size: 30px;
 }
 .marker-1 {
