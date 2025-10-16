@@ -30,58 +30,75 @@
     <v-card class="pa-4 mt-6" rounded="lg" elevation="2">
       <h3 class="text-h6 font-weight-medium mb-3">Book this Facility</h3>
 
-      <v-date-picker
-        v-model="selectedDate"
-        :allowed-dates="allowedDates"
-        :events="availableDates"
-        event-color="blue"
-        color="blue"
-        class="mb-4"
-      />
+      <v-skeleton-loader v-if="loadingSchedules" type="date-picker, text" />
 
-      <div v-if="selectedDate">
-        <h4 class="text-subtitle-1 font-weight-bold mb-2">{{ selectedDate }}</h4>
+      <div v-else>
+        <v-date-picker
+          v-model="selectedDate"
+          :allowed-dates="allowedDates"
+          :events="availableDates"
+          event-color="blue"
+          color="blue"
+          class="mb-4"
+        />
 
-        <div
-          v-if="groupedSchedules[selectedDate] && groupedSchedules[selectedDate].length > 0"
-          class="d-flex flex-wrap"
-        >
-          <v-btn
-            v-for="slot in groupedSchedules[selectedDate]"
-            :key="slot.start_time"
-            :color="selectedSchedule === slot.start_time ? 'blue' : 'grey lighten-2'"
-            dark
-            class="ma-2"
-            rounded
-            @click="selectedSchedule = slot.start_time"
+        <div v-if="selectedDate">
+          <h4 class="text-subtitle-1 font-weight-bold mb-2">
+            Available Slots for {{ selectedDate }}
+          </h4>
+
+          <div
+            v-if="groupedSchedules[selectedDate] && groupedSchedules[selectedDate].length > 0"
+            class="d-flex flex-wrap"
           >
-            {{
-              new Date(slot.start_time).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true,
-              })
-            }}
-          </v-btn>
+            <v-btn
+              v-for="slot in groupedSchedules[selectedDate]"
+              :key="slot.start_time"
+              :color="selectedSchedule === slot.start_time ? 'blue' : 'grey lighten-2'"
+              dark
+              class="ma-2"
+              rounded
+              @click="selectedSchedule = slot.start_time"
+            >
+              {{
+                new Date(slot.start_time).toLocaleTimeString([], {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true,
+                })
+              }}
+            </v-btn>
+          </div>
+
+          <div v-else class="grey--text">No available slots for this date</div>
         </div>
 
-        <div v-else class="grey--text">No available slots for this date</div>
+        <div v-else class="grey--text">Select a date with available times</div>
+
+        <v-alert
+          v-if="selectedDate && selectedSchedule"
+          type="info"
+          text
+          color="blue"
+          icon="mdi-calendar-clock"
+          class="mt-4"
+        >
+          <div class="font-weight-bold">Selected Booking Time:</div>
+          {{ selectedDate }} at **{{ formattedSelectedTime }}**
+        </v-alert>
+        <v-btn
+          block
+          color="blue"
+          dark
+          rounded
+          class="mt-4"
+          @click="bookFacility"
+          :loading="loading"
+          :disabled="!selectedSchedule"
+        >
+          Book Now
+        </v-btn>
       </div>
-
-      <div v-else class="grey--text">Select a date with available times</div>
-
-      <v-btn
-        block
-        color="blue"
-        dark
-        rounded
-        class="mt-4"
-        @click="bookFacility"
-        :loading="loading"
-        :disabled="!selectedSchedule"
-      >
-        Book Now
-      </v-btn>
     </v-card>
   </v-container>
 </template>
@@ -95,7 +112,8 @@ export default {
   data: () => ({
     facility: {},
     schedules: [],
-    reservations: [],
+    // NOTE: This will now hold bookings, not reservations
+    bookings: [],
     availableSchedules: [],
     groupedSchedules: {},
     availableDates: [],
@@ -103,11 +121,24 @@ export default {
     selectedSchedule: '',
     loading: false,
     loadingSchedules: false,
+    // Configuration for slot generation
+    SLOT_DURATION_MINUTES: 60, // Assuming 1-hour booking slots
+    DAYS_TO_GENERATE: 90, // Generate slots for the next 90 days
   }),
   async mounted() {
     await this.fetchFacility()
-    await this.fetchSchedulesAndReservations()
+    await this.fetchSchedulesAndBookings() // Changed function name
     this.autoSelectFirstAvailableDate()
+  },
+  computed: {
+    formattedSelectedTime() {
+      if (!this.selectedSchedule) return ''
+      return new Date(this.selectedSchedule).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      })
+    },
   },
   methods: {
     goBack() {
@@ -124,76 +155,134 @@ export default {
       else console.error('Error fetching facility:', error.message)
     },
 
-    async fetchSchedulesAndReservations() {
+    // Renamed function to reflect 'Bookings' table
+    async fetchSchedulesAndBookings() {
       this.loadingSchedules = true
+
       try {
+        // 1. Fetch ALL schedules for the facility (regular and custom)
         const { data: schedulesData, error: schedulesError } = await supabase
           .from('schedules')
           .select('*')
           .eq('facility_id', this.id)
-          .order('start_time', { ascending: true })
         if (schedulesError) throw schedulesError
         this.schedules = schedulesData || []
 
-        const { data: reservationsData, error: reservationsError } = await supabase
-          .from('reservations')
-          .select('*')
+        // 2. Fetch ALL existing bookings for conflict checking
+        // 🚨 CORRECTED: Using 'bookings' table name
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          // Assuming 'start_time' in 'bookings' corresponds to the reserved slot time
+          .select('start_time')
           .eq('facility_id', this.id)
-        if (reservationsError) throw reservationsError
-        this.reservations = reservationsData || []
+        if (bookingsError) throw bookingsError
 
-        // Build available schedules (future only, not booked)
-        this.availableSchedules = this.schedules
-          .filter((s) => new Date(s.start_time) > new Date())
-          .map((s) => {
-            const isBooked = this.reservations.some(
-              (r) =>
-                new Date(r.reserved_start).toISOString() === new Date(s.start_time).toISOString(),
-            )
+        // Convert reserved start times to a Set for quick ISO string lookups
+        const reservedStarts = new Set(
+          bookingsData.map(
+            (b) => new Date(b.start_time).toISOString(), // Assuming 'start_time' holds the reserved slot
+          ),
+        )
 
-            return {
-              start_time: s.start_time,
-              booked: isBooked,
-            }
-          })
-          .filter((slot) => !slot.booked)
+        // 3. Generate future slots based on schedules and apply overrides
+        const generatedSlots = this.generateFutureSlots()
 
-        // Group by date
-        const grouped = {}
-        this.availableSchedules.forEach((slot) => {
-          const dateKey = new Date(slot.start_time).toLocaleDateString(undefined, {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric',
-          })
-
-          if (!grouped[dateKey]) {
-            grouped[dateKey] = []
-          }
-          grouped[dateKey].push(slot)
+        // 4. Filter generated slots against bookings
+        this.availableSchedules = generatedSlots.filter((slot) => {
+          const slotStartTimeISO = new Date(slot.start_time).toISOString()
+          return !reservedStarts.has(slotStartTimeISO)
         })
-        this.groupedSchedules = grouped
 
-        // Store available dates for highlighting
-        this.availableDates = Object.keys(grouped)
+        // 5. Group the final available slots for the date picker
+        this.groupAvailableSchedules()
       } catch (err) {
-        console.error('Error fetching schedules or reservations:', err.message)
+        // Updated error message to reflect the new table name
+        console.error('Error fetching schedules or bookings:', err.message)
       } finally {
         this.loadingSchedules = false
       }
     },
 
+    generateFutureSlots() {
+      // ... (No logic change needed here, it correctly uses this.schedules)
+      const slots = []
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+
+      for (let i = 0; i < this.DAYS_TO_GENERATE; i++) {
+        const date = new Date(today)
+        date.setDate(today.getDate() + i)
+
+        const dayOfWeekName = days[date.getDay()]
+        const dateString = date.toISOString().split('T')[0]
+
+        const customSchedule = this.schedules.find(
+          (s) => s.type === 'custom' && s.date === dateString,
+        )
+        const regularSchedule = this.schedules.find(
+          (s) => s.type === 'regular' && s.day_of_week === dayOfWeekName,
+        )
+        const effectiveSchedule = customSchedule || regularSchedule
+
+        if (!effectiveSchedule || !effectiveSchedule.start_time || !effectiveSchedule.end_time) {
+          continue
+        }
+
+        const [startHour, startMinute] = effectiveSchedule.start_time.split(':').map(Number)
+        const [endHour, endMinute] = effectiveSchedule.end_time.split(':').map(Number)
+
+        let currentSlotTime = new Date(date)
+        currentSlotTime.setHours(startHour, startMinute, 0, 0)
+
+        const closingTime = new Date(date)
+        closingTime.setHours(endHour, endMinute, 0, 0)
+
+        if (closingTime < currentSlotTime) {
+          closingTime.setDate(closingTime.getDate() + 1)
+        }
+
+        while (currentSlotTime < closingTime) {
+          if (currentSlotTime > new Date()) {
+            slots.push({
+              start_time: currentSlotTime.toISOString(),
+            })
+          }
+          currentSlotTime = new Date(currentSlotTime.getTime() + this.SLOT_DURATION_MINUTES * 60000)
+        }
+      }
+      return slots
+    },
+
+    groupAvailableSchedules() {
+      // ... (No logic change needed here)
+      const grouped = {}
+      this.availableSchedules.forEach((slot) => {
+        const dateKey = new Date(slot.start_time).toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        })
+
+        if (!grouped[dateKey]) {
+          grouped[dateKey] = []
+        }
+        grouped[dateKey].push(slot)
+      })
+      this.groupedSchedules = grouped
+      this.availableDates = Object.keys(grouped)
+    },
+
     allowedDates(date) {
+      // ... (No logic change needed here)
       const today = new Date()
       today.setHours(0, 0, 0, 0)
 
       const picked = new Date(date)
       picked.setHours(0, 0, 0, 0)
 
-      // 🚫 Block past days
       if (picked < today) return false
 
-      // Format like groupedSchedules keys
       const formatted = picked.toLocaleDateString(undefined, {
         year: 'numeric',
         month: 'long',
@@ -219,24 +308,26 @@ export default {
       try {
         const user = (await supabase.auth.getUser()).data.user
         if (!user) {
-          alert('Please log in to make a reservation.')
+          alert('Please log in to make a booking.')
           this.loading = false
           return
         }
 
-        const { error } = await supabase.from('reservations').insert([
+        // 🚨 CORRECTED: Inserting into the 'bookings' table
+        const { error } = await supabase.from('bookings').insert([
           {
             facility_id: this.facility.id,
-            reserved_start: this.selectedSchedule,
+            start_time: this.selectedSchedule, // Using 'start_time' as per the bookings schema
             status: 'pending',
             user_id: user.id,
           },
         ])
         if (error) throw error
 
-        alert('Reservation successful! Your booking is now pending.')
+        alert('Booking successful! Your booking is now pending.')
         this.selectedSchedule = ''
-        await this.fetchSchedulesAndReservations()
+        // Re-fetch using the new function name
+        await this.fetchSchedulesAndBookings()
         this.autoSelectFirstAvailableDate()
       } catch (err) {
         console.error('Booking error:', err.message)
