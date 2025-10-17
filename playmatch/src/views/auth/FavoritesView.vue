@@ -9,8 +9,13 @@
       <v-spacer></v-spacer>
     </v-app-bar>
 
-    <!-- 🏟 Main Content -->
-    <v-main>
+    <!-- Main Content -->
+    <v-main
+      :style="{
+        background:
+          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.2), rgba(119, 154, 229, 0.4))',
+      }"
+    >
       <v-container class="pt-5 px-4">
         <!-- Loading -->
         <div v-if="loading" class="text-center py-10">
@@ -116,7 +121,7 @@ export default {
       }
     },
 
-    // ❤️ Fetch user's favorites (JOIN facilities)
+    // Fetch user's favorites (JOIN facilities)
     async fetchFavorites() {
       this.loading = true
       try {
@@ -164,7 +169,7 @@ export default {
       }
     },
 
-    // 💔 Remove from favorites
+    //  Remove from favorites
     async removeFavorite(facilityId) {
       try {
         const { error } = await supabase

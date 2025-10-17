@@ -1,6 +1,6 @@
 <template>
   <v-app>
-    <v-app-bar app color="blue" dark flat>
+    <v-app-bar app color="blue-lighten-3" flat>
       <v-btn icon @click="$router.go(-1)">
         <v-icon>mdi-arrow-left</v-icon>
       </v-btn>
@@ -11,7 +11,12 @@
       </v-btn>
     </v-app-bar>
 
-    <v-main class="grey lighten-4">
+    <v-main
+      :style="{
+        background:
+          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.2), rgba(119, 154, 229, 0.4))',
+      }"
+    >
       <v-container>
         <v-card class="pa-4 mb-4" rounded="lg" elevation="1">
           <v-text-field

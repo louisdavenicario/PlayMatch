@@ -4,29 +4,40 @@ import { supabase } from '@/supabaseClient'
 export default {
   name: 'ReservoSprotBookingHome',
   data: () => ({
-    currentUserId: null, // To store the logged-in user's ID
+    currentUserId: null,
     playmateRequests: [],
     playmateLoading: false,
     facilities: [],
-    favorites: [], // ❤️ Store favorite facility IDs
+    favorites: [], // ❤️ Store favorite facility objects
+    favoriteIds: [], // store only facility_id for quick check
     loading: false,
     error: null,
   }),
 
   async mounted() {
     await this.getCurrentUser()
-    await this.fetchFavorites() // ❤️ load favorites after login
+    if (this.currentUserId) {
+      await this.fetchFavorites()
+    }
     this.fetchFacilities()
     this.fetchPlaymateRequests()
+    this.subscribeFavoritesRealtime() // 👀 watch for changes
+  },
+
+  beforeUnmount() {
+    if (this.favSubscription) {
+      this.favSubscription.unsubscribe()
+    }
   },
 
   methods: {
-    // 🧍 Fetch current logged user
+    // 🧍 Get logged-in user
     async getCurrentUser() {
       try {
         const { data, error } = await supabase.auth.getUser()
         if (error) throw error
         this.currentUserId = data.user?.id || null
+        console.log('✅ Current user ID:', this.currentUserId)
       } catch (err) {
         console.error('Error fetching current user:', err.message)
         this.currentUserId = null
@@ -46,7 +57,7 @@ export default {
       }
     },
 
-    // ❤️ Toggle favorites (add/remove)
+    // ❤️ Toggle favorites
     async toggleFavorite(facilityId) {
       if (!this.currentUserId) {
         alert('Please log in to add favorites.')
@@ -57,48 +68,95 @@ export default {
 
       try {
         if (isFav) {
-          // remove
           const { error } = await supabase
             .from('favorites')
             .delete()
             .eq('user_id', this.currentUserId)
             .eq('facility_id', facilityId)
           if (error) throw error
-          this.favorites = this.favorites.filter((id) => id !== facilityId)
+
+          this.favoriteIds = this.favoriteIds.filter((id) => id !== facilityId)
+          this.favorites = this.favorites.filter((f) => f.id !== facilityId)
         } else {
-          // add
           const { error } = await supabase
             .from('favorites')
             .insert([{ user_id: this.currentUserId, facility_id: facilityId }])
           if (error) throw error
-          this.favorites.push(facilityId)
+          await this.fetchFavorites()
         }
       } catch (err) {
         console.error('Error toggling favorite:', err.message)
-        alert('Failed to update favorites.')
       }
     },
 
-    // Check if facility is favorited
+    // ❤️ Check if facility is in favorites
     isFavorite(facilityId) {
-      return this.favorites.includes(facilityId)
+      return this.favoriteIds.includes(facilityId)
     },
 
-    // Load all favorites
+    // 🧠 Fetch all favorite facilities (JOIN)
     async fetchFavorites() {
       if (!this.currentUserId) return
+      this.loading = true
       try {
         const { data, error } = await supabase
           .from('favorites')
-          .select('facility_id')
+          .select(
+            `
+            id,
+            created_at,
+            facilities (
+              id,
+              facility_name,
+              address,
+              facility_type,
+              image_url,
+              price_per_hour
+            )
+          `,
+          )
           .eq('user_id', this.currentUserId)
+
         if (error) throw error
-        this.favorites = data.map((item) => item.facility_id)
+
+        this.favorites = data.map((f) => ({
+          id: f.facilities.id,
+          facility_name: f.facilities.facility_name,
+          address: f.facilities.address,
+          facility_type: f.facilities.facility_type,
+          image_url: f.facilities.image_url,
+          price_per_hour: f.facilities.price_per_hour,
+        }))
+        this.favoriteIds = this.favorites.map((f) => f.id)
+        console.log('⭐ Favorites loaded:', this.favorites)
       } catch (err) {
         console.error('Error fetching favorites:', err.message)
+      } finally {
+        this.loading = false
       }
     },
 
+    // 🔁 Real-time updates for favorites
+    async subscribeFavoritesRealtime() {
+      this.favSubscription = supabase
+        .channel('favorites-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'favorites',
+            filter: `user_id=eq.${this.currentUserId}`,
+          },
+          async () => {
+            console.log('🔄 Favorites updated, refetching...')
+            await this.fetchFavorites()
+          },
+        )
+        .subscribe()
+    },
+
+    // 🏃 Other existing functions
     isCreator(creatorId) {
       return this.currentUserId === creatorId
     },
@@ -134,7 +192,7 @@ export default {
     async fetchPlaymateRequests() {
       this.playmateLoading = true
       try {
-        const { data: requestsData, error: requestsError } = await supabase
+        const { data, error } = await supabase
           .from('playmate_requests')
           .select('*, creator:creator_id (full_name)')
           .eq('status', 'open')
@@ -143,11 +201,11 @@ export default {
           .order('start_time', { ascending: true })
           .limit(3)
 
-        if (requestsError) throw requestsError
+        if (error) throw error
 
-        this.playmateRequests = requestsData.map((request) => ({
-          ...request,
-          creator_name: request.creator?.full_name || 'Anonymous',
+        this.playmateRequests = data.map((req) => ({
+          ...req,
+          creator_name: req.creator?.full_name || 'Anonymous',
         }))
       } catch (err) {
         console.error('Error fetching playmate requests:', err.message)
@@ -158,24 +216,22 @@ export default {
 
     async fetchFacilities() {
       this.loading = true
-      this.error = null
       try {
         const { data, error } = await supabase.from('facilities').select('*').limit(5)
         if (error) throw error
 
-        this.facilities = data.map((facility) => ({
-          id: facility.id,
-          name: facility.facility_name,
-          type: facility.facility_type,
-          address: facility.address,
-          rating: facility.rating || '4.5',
-          reviews: facility.reviews || '0',
-          price: facility.price_per_hour,
-          image: facility.image_url,
+        this.facilities = data.map((f) => ({
+          id: f.id,
+          name: f.facility_name,
+          type: f.facility_type,
+          address: f.address,
+          rating: f.rating || '4.5',
+          reviews: f.reviews || '0',
+          price: f.price_per_hour,
+          image: f.image_url,
         }))
       } catch (err) {
         console.error('Error fetching facilities:', err.message)
-        this.error = 'Failed to load facilities.'
       } finally {
         this.loading = false
       }
@@ -186,7 +242,7 @@ export default {
 
 <template>
   <v-app>
-    <!-- 🧭 Top App Bar -->
+    <!-- App Bar -->
     <v-app-bar
       app
       :style="{
@@ -198,114 +254,62 @@ export default {
       <v-toolbar-title class="font-weight-bold ml-1">RESERVO</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn icon><v-icon>mdi-magnify</v-icon></v-btn>
-      <v-btn icon @click="logout">
-        <v-icon color="red">mdi-logout</v-icon>
-      </v-btn>
-
-      <template v-slot:extension>
-        <div class="d-flex justify-center w-100 search-prompt-container">
-          <v-card class="floating-search-card pa-3 mx-4" elevation="4">
-            <div class="text-subtitle-1 white--text font-weight-medium">
-              Book courts and find playmates nearby
-            </div>
-          </v-card>
-        </div>
-      </template>
+      <v-btn icon @click="logout"><v-icon color="red">mdi-logout</v-icon></v-btn>
     </v-app-bar>
 
-    <!-- 🧩 Main Content -->
+    <!-- Main Content -->
     <v-main>
       <v-container fluid class="pa-0">
-        <!-- 🗺 Map Section -->
-        <v-row no-gutters class="map-section px-4 pt-10">
-          <v-col cols="12" class="d-flex justify-center pt-2 pb-4">
-            <v-card rounded="lg" width="100%" height="200px" class="grey lighten-3 elevation-3">
-              <div class="map-visual">
-                <v-icon class="map-marker marker-1" color="red">mdi-map-marker</v-icon>
-                <v-icon class="map-marker marker-2" color="red">mdi-map-marker</v-icon>
-                <v-icon class="map-marker marker-3" color="red">mdi-map-marker</v-icon>
-              </div>
-              <div class="map-controls">
-                <v-btn fab small class="mb-1" color="white" elevation="2">
-                  <v-icon>mdi-plus</v-icon>
-                </v-btn>
-                <v-btn fab small color="white" elevation="2">
-                  <v-icon>mdi-minus</v-icon>
-                </v-btn>
-              </div>
-            </v-card>
-          </v-col>
-        </v-row>
-
-        <!-- 🧑‍🤝‍🧑 Playmates Section -->
-        <v-row no-gutters class="playmates-section px-4">
+        <!-- Playmates -->
+        <v-row no-gutters class="px-4 pt-10">
           <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
             <h2 class="text-h6 font-weight-medium">Find Playmates</h2>
-            <v-btn
-              text
-              small
-              color="blue"
-              class="text-capitalize font-weight-bold"
-              @click="goToPlaymateRequests"
-            >
+            <v-btn text small color="blue" @click="goToPlaymateRequests">
               View All <v-icon right small>mdi-chevron-right</v-icon>
             </v-btn>
           </v-col>
 
           <v-col cols="12">
             <div v-if="playmateLoading" class="text-center py-4">
-              <v-progress-circular indeterminate color="blue"></v-progress-circular>
+              <v-progress-circular indeterminate color="blue" />
             </div>
 
-            <div v-else-if="playmateRequests.length === 0" class="text-center py-4">
-              <p class="grey--text">
-                No playmate requests found. You can be the first to <br />
-                create one by clicking "View All"!
-              </p>
+            <div v-else-if="playmateRequests.length === 0" class="text-center grey--text py-4">
+              No playmate requests found.
             </div>
 
-            <v-col
-              v-else
-              cols="12"
-              v-for="request in playmateRequests.slice(0, 3)"
-              :key="request.id"
-              class="mb-3 pa-0"
-            >
+            <v-col v-else cols="12" v-for="req in playmateRequests" :key="req.id" class="mb-3 pa-0">
               <v-card class="pa-3 d-flex align-center" rounded="lg" elevation="1">
                 <v-avatar color="blue lighten-4" size="44" class="mr-4">
-                  <span class="white--text font-weight-bold">
-                    {{ request.creator_name ? request.creator_name[0] : 'U' }}
-                  </span>
+                  <span class="white--text font-weight-bold">{{ req.creator_name[0] }}</span>
                 </v-avatar>
-
                 <div>
                   <div class="font-weight-semibold text-body-1">
-                    {{ request.creator_name || 'User' }} • {{ request.sport }}
+                    {{ req.creator_name }} • {{ req.sport }}
                   </div>
                   <div class="text-caption grey--text d-flex align-center">
                     <v-icon x-small class="mr-1">mdi-calendar-today</v-icon>
-                    {{ formatDate(request.date) }}
+                    {{ formatDate(req.date) }}
                     <v-icon x-small class="ml-3 mr-1">mdi-clock-outline</v-icon>
-                    {{ formatTime(request.start_time) }}
+                    {{ formatTime(req.start_time) }}
                   </div>
                 </div>
                 <v-spacer></v-spacer>
-
                 <v-btn
                   small
-                  :color="isCreator(request.creator_id) ? 'orange darken-1' : 'blue'"
+                  :color="isCreator(req.creator_id) ? 'orange darken-1' : 'blue'"
                   dark
                   rounded
-                  @click="handlePlaymateAction(request)"
+                  @click="handlePlaymateAction(req)"
                 >
-                  {{ isCreator(request.creator_id) ? 'Manage' : 'Join' }}
+                  {{ isCreator(req.creator_id) ? 'Manage' : 'Join' }}
                 </v-btn>
               </v-card>
             </v-col>
           </v-col>
         </v-row>
 
-        <!-- 🏟 Facilities Section -->
+        <!-- Facilities -->
         <v-row no-gutters class="facilities-section px-4 mt-5 mb-10">
           <v-col cols="12" class="mb-3">
             <h2 class="text-h6 font-weight-medium">Popular Facilities</h2>
@@ -313,11 +317,11 @@ export default {
 
           <v-col cols="12">
             <div v-if="loading" class="text-center py-4">
-              <v-progress-circular indeterminate color="blue"></v-progress-circular>
+              <v-progress-circular indeterminate color="blue" />
             </div>
 
             <div v-else-if="facilities.length === 0" class="text-center py-4 grey--text">
-              No facilities registered yet.
+              No facilities available.
             </div>
 
             <div v-else class="d-flex overflow-x-auto pb-2 facility-scroll-container">
@@ -327,25 +331,12 @@ export default {
                 class="mr-4 flex-shrink-0"
                 width="280"
                 rounded="lg"
-                @click="$router.push({ name: 'facility-details', params: { id: facility.id } })"
               >
-                <v-img
-                  height="150"
-                  :src="facility.image || '/images/default-facility.jpg'"
-                  class="grey lighten-3"
-                >
+                <v-img :src="facility.image" height="150" class="grey lighten-3">
                   <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
-                    <v-chip
-                      x-small
-                      dark
-                      color="black"
-                      class="text-overline font-weight-bold"
-                      style="opacity: 0.7"
-                    >
+                    <v-chip x-small dark color="black" class="text-overline font-weight-bold">
                       {{ facility.type }}
                     </v-chip>
-
-                    <!-- ❤️ Favorite button -->
                     <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
                       <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
                         {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
@@ -365,26 +356,14 @@ export default {
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
                       <v-icon small color="amber">mdi-star</v-icon>
-                      <span class="text-caption ml-1 font-weight-medium">
-                        {{ facility.rating }} ({{ facility.reviews }})
-                      </span>
+                      <span class="text-caption ml-1 font-weight-medium">4.5 (10)</span>
                     </div>
-                    <v-chip color="green darken-1" dark small>
-                      <span class="font-weight-bold">₱{{ facility.price }}</span>
-                      <span class="text-caption ml-1 font-weight-light">/hour</span>
-                    </v-chip>
+                    <v-chip color="green darken-1" dark small> ₱{{ facility.price }}/hour </v-chip>
                   </div>
                 </v-card-text>
 
                 <v-card-actions class="pt-0 pr-3 pb-3 justify-end">
-                  <v-btn
-                    small
-                    color="blue"
-                    dark
-                    rounded
-                    :to="{ name: 'facility-details', params: { id: facility.id } }"
-                    >View Details</v-btn
-                  >
+                  <v-btn small color="blue" dark rounded>View Details</v-btn>
                 </v-card-actions>
               </v-card>
             </div>
@@ -393,14 +372,12 @@ export default {
       </v-container>
     </v-main>
 
-    <!-- ⬇️ Bottom Navigation -->
-    <v-bottom-navigation app fixed color="white" light>
-      <v-btn value="search">
-        <v-icon large color="blue">mdi-magnify</v-icon>
-      </v-btn>
-      <v-btn value="calendar">
-        <v-icon large color="grey darken-1">mdi-calendar-month-outline</v-icon>
-      </v-btn>
+    <!-- Bottom Navigation -->
+    <v-bottom-navigation app fixed color="white">
+      <v-btn value="search"><v-icon large color="blue">mdi-magnify</v-icon></v-btn>
+      <v-btn value="calendar"
+        ><v-icon large color="grey darken-1">mdi-calendar-month-outline</v-icon></v-btn
+      >
       <v-btn value="favorites" @click="$router.push({ name: 'favorites' })">
         <v-icon large color="red">mdi-heart</v-icon>
       </v-btn>
@@ -425,37 +402,6 @@ export default {
 }
 .floating-search-card .white--text {
   color: #007acc !important;
-}
-.map-section {
-  padding-top: 50px !important;
-}
-.map-placeholder {
-  position: relative;
-  overflow: hidden;
-  background-image: linear-gradient(to bottom right, #bbdefb, #e1f5fe);
-}
-.map-controls {
-  position: absolute;
-  right: 15px;
-  top: 15px;
-  display: flex;
-  flex-direction: column;
-}
-.map-marker {
-  position: absolute;
-  font-size: 30px;
-}
-.marker-1 {
-  top: 30%;
-  left: 30%;
-}
-.marker-2 {
-  top: 60%;
-  left: 55%;
-}
-.marker-3 {
-  top: 45%;
-  left: 70%;
 }
 .facility-scroll-container {
   -ms-overflow-style: none;
