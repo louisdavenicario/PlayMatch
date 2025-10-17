@@ -15,7 +15,6 @@
       <h2 class="font-weight-bold">{{ facility.facility_name }}</h2>
       <p class="grey--text mb-2">{{ facility.address }}</p>
 
-      <!-- ⭐ Star rating display + user interaction -->
       <div class="d-flex align-center mb-3">
         <div class="d-flex align-center mr-2">
           <v-icon
@@ -41,7 +40,6 @@
       <p class="grey--text">{{ facility.briefdescription || 'No description available.' }}</p>
     </v-card>
 
-    <!-- Existing booking section below -->
     <v-card class="pa-4 mt-6" rounded="lg" elevation="2">
       <h3 class="text-h6 font-weight-medium mb-3">Book this Facility</h3>
 
@@ -140,14 +138,14 @@ export default {
 
     // ⭐ Added for rating
     userRating: 0,
-    averageRating: 0,
+    averageRating: '0.0',
     totalRatings: 0,
     currentUserId: null,
   }),
   async mounted() {
     await this.getCurrentUser()
     await this.fetchFacility()
-    await this.fetchRatings() // ⭐ fetch ratings
+    await this.fetchRatings()
     await this.fetchSchedulesAndBookings()
     this.autoSelectFirstAvailableDate()
   },
@@ -181,33 +179,33 @@ export default {
       else console.error('Error fetching facility:', error.message)
     },
 
-    // ⭐ Fetch ratings (average, total, and user's own)
+    // ⭐ FIX 1: Fetch ALL ratings for correct average calculation and user rating detection
     async fetchRatings() {
       try {
-        // Average + count
+        // Fetch ALL ratings for the facility
         const { data: allRatings, error: allError } = await supabase
           .from('ratings')
-          .select('rating_value')
+          .select('rating_value, user_id')
           .eq('facility_id', this.id)
 
         if (allError) throw allError
 
-        const ratings = allRatings.map((r) => r.rating_value)
-        this.totalRatings = ratings.length
+        const ratings = allRatings || []
+        const ratingValues = ratings.map((r) => r.rating_value)
+
+        // Calculate average and total from ALL ratings
+        this.totalRatings = ratingValues.length
         this.averageRating =
-          ratings.length > 0 ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : 0
+          ratingValues.length > 0
+            ? (ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length).toFixed(1)
+            : '0.0'
 
-        // User’s own rating
+        // Find the current user’s own rating
+        this.userRating = 0
         if (this.currentUserId) {
-          const { data: userRatingData, error: userError } = await supabase
-            .from('ratings')
-            .select('rating_value')
-            .eq('facility_id', this.id)
-            .eq('user_id', this.currentUserId)
-            .maybeSingle()
-
-          if (!userError && userRatingData) {
-            this.userRating = userRatingData.rating_value
+          const userRatingRecord = ratings.find((r) => r.user_id === this.currentUserId)
+          if (userRatingRecord) {
+            this.userRating = userRatingRecord.rating_value
           }
         }
       } catch (err) {
@@ -215,7 +213,7 @@ export default {
       }
     },
 
-    // ⭐ User clicks a star to rate or update
+    // ⭐ FIX 2: Use .limit(1) to check for existing rating and prevent JSON error
     async rateFacility(star) {
       if (!this.currentUserId) {
         alert('Please log in to rate this facility.')
@@ -231,16 +229,18 @@ export default {
           .select('id')
           .eq('user_id', this.currentUserId)
           .eq('facility_id', this.id)
-          .maybeSingle()
+          .limit(1) // CRITICAL FIX: Use limit(1) instead of maybeSingle()
 
         if (fetchError) throw fetchError
 
-        if (existing) {
+        const existingRatingId = existing && existing.length > 0 ? existing[0].id : null
+
+        if (existingRatingId) {
           // Update rating
           const { error: updateError } = await supabase
             .from('ratings')
             .update({ rating_value: star })
-            .eq('id', existing.id)
+            .eq('id', existingRatingId)
 
           if (updateError) throw updateError
         } else {
@@ -259,6 +259,13 @@ export default {
         await this.fetchRatings()
       } catch (err) {
         console.error('Error submitting rating:', err.message)
+        if (err.message.includes('permission denied')) {
+          alert(
+            'Failed to submit rating. Please check your Supabase Row Level Security (RLS) policies for the ratings table. You need SELECT, INSERT, and UPDATE policies.',
+          )
+        } else {
+          alert('Failed to submit rating. Please try again.')
+        }
       }
     },
 

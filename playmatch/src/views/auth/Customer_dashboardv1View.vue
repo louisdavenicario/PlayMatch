@@ -11,8 +11,9 @@ export default {
     favorites: [],
     favoriteIds: [],
     loading: false,
-    error: null, // ⭐ Rating dialog
+    error: null,
 
+    // ⭐ Rating dialog state
     ratingDialog: {
       visible: false,
       facility: null,
@@ -25,15 +26,15 @@ export default {
     if (this.currentUserId) {
       await this.fetchFavorites()
     }
-    this.fetchFacilities()
+    await this.fetchFacilities()
     this.fetchPlaymateRequests()
     this.subscribeFavoritesRealtime()
+    this.subscribeRatingsRealtime()
   },
 
   beforeUnmount() {
-    if (this.favSubscription) {
-      this.favSubscription.unsubscribe()
-    }
+    if (this.favSubscription) this.favSubscription.unsubscribe()
+    if (this.ratingSubscription) this.ratingSubscription.unsubscribe()
   },
 
   methods: {
@@ -48,20 +49,24 @@ export default {
         console.error('Error fetching current user:', err.message)
         this.currentUserId = null
       }
-    }, // 🚪 Logout
+    },
 
+    // 🚪 Logout
     async logout() {
       try {
         const { error } = await supabase.auth.signOut()
         if (error) throw error
         localStorage.clear()
+        this.currentUserId = null
+        this.ratingDialog = { visible: false, facility: null, value: 0 }
         this.$router.push({ name: 'signin' })
       } catch (err) {
         console.error('Logout failed:', err.message)
         alert('Failed to logout. Please try again.')
       }
-    }, // ❤️ Toggle favorites
+    },
 
+    // ❤️ Toggle favorites
     async toggleFavorite(facilityId) {
       if (!this.currentUserId) {
         alert('Please log in to add favorites.')
@@ -91,12 +96,14 @@ export default {
       } catch (err) {
         console.error('Error toggling favorite:', err.message)
       }
-    }, // ❤️ Check if facility is in favorites
+    },
 
+    // ❤️ Check if facility is favorite
     isFavorite(facilityId) {
       return this.favoriteIds.includes(facilityId)
-    }, // 🧠 Fetch all favorite facilities (JOIN)
+    },
 
+    // 🧠 Fetch favorites
     async fetchFavorites() {
       if (!this.currentUserId) return
       this.loading = true
@@ -105,17 +112,17 @@ export default {
           .from('favorites')
           .select(
             `
-            id,
-            created_at,
-            facilities (
-              id,
-              facility_name,
-              address,
-              facility_type,
-              image_url,
-              price_per_hour
-            )
-          `,
+             id,
+             created_at,
+             facilities (
+               id,
+               facility_name,
+               address,
+               facility_type,
+               image_url,
+               price_per_hour
+             )
+           `,
           )
           .eq('user_id', this.currentUserId)
 
@@ -136,11 +143,11 @@ export default {
       } finally {
         this.loading = false
       }
-    }, // 🔁 Real-time updates for favorites
+    },
 
+    // 🔁 Subscribe to real-time favorites
     async subscribeFavoritesRealtime() {
-      if (!this.currentUserId) return // Only subscribe if user is logged in
-
+      if (!this.currentUserId) return
       this.favSubscription = supabase
         .channel('favorites-changes')
         .on(
@@ -157,38 +164,48 @@ export default {
           },
         )
         .subscribe()
-    }, // ⭐ Open rating dialog (prefill existing rating if any)
+    },
 
+    // ⭐ Subscribe to real-time ratings
+    async subscribeRatingsRealtime() {
+      this.ratingSubscription = supabase
+        .channel('ratings-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'ratings',
+          },
+          async () => {
+            console.log('🔄 Ratings updated, refetching facilities...')
+            // This call ensures all users get the consistent, server-calculated average
+            await this.fetchFacilities()
+          },
+        )
+        .subscribe()
+    },
+
+    // ⭐ Open rating dialog
     async openRatingDialog(facility) {
       if (!this.currentUserId) {
         alert('Please log in to rate facilities.')
         return
       }
 
-      try {
-        const { data, error } = await supabase
-          .from('ratings')
-          .select('rating_value')
-          .eq('user_id', this.currentUserId)
-          .eq('facility_id', facility.id)
-          .maybeSingle()
+      this.ratingDialog.facility = facility
+      this.ratingDialog.value = facility.myRating || 0
+      this.ratingDialog.visible = true
+    },
 
-        if (error) throw error
-
-        this.ratingDialog.facility = facility
-        this.ratingDialog.value = data?.rating_value || 0
-        this.ratingDialog.visible = true
-      } catch (err) {
-        console.error('Error loading rating dialog:', err.message)
-      }
-    }, // 🚪 Close rating dialog
-
+    // 🚪 Close rating dialog
     closeRatingDialog() {
       this.ratingDialog.visible = false
       this.ratingDialog.facility = null
       this.ratingDialog.value = 0
-    }, // 💾 Submit or update rating
+    },
 
+    // 💾 Submit or update rating
     async submitRating() {
       if (!this.ratingDialog.value) {
         alert('Please select a star rating first.')
@@ -196,26 +213,27 @@ export default {
       }
 
       try {
-        const { facility, value } = this.ratingDialog // Check if user already rated this facility
+        const { facility, value } = this.ratingDialog
 
+        // Check if a rating already exists for this user and facility
         const { data: existing, error: fetchError } = await supabase
           .from('ratings')
           .select('id')
           .eq('user_id', this.currentUserId)
           .eq('facility_id', facility.id)
-          .maybeSingle()
+          .limit(1)
 
         if (fetchError) throw fetchError
 
-        if (existing) {
+        const existingRatingId = existing && existing.length > 0 ? existing[0].id : null
+
+        if (existingRatingId) {
           // Update existing rating
           const { error: updateError } = await supabase
             .from('ratings')
             .update({ rating_value: value })
-            .eq('id', existing.id)
-
-          if (updateError) throw updateError // Simplified alert for quick feedback
-          // alert(`You updated your rating for ${facility.name} to ${value}⭐!`)
+            .eq('id', existingRatingId)
+          if (updateError) throw updateError
         } else {
           // Insert new rating
           const { error: insertError } = await supabase.from('ratings').insert([
@@ -225,19 +243,21 @@ export default {
               rating_value: value,
             },
           ])
-
-          if (insertError) throw insertError // Simplified alert for quick feedback
-          // alert(`You rated ${facility.name} ${value}⭐ successfully!`)
+          if (insertError) throw insertError
         }
 
-        this.closeRatingDialog() // Re-fetch facilities to update the average rating immediately
-        await this.fetchFacilities()
+        // ❌ REMOVED: The previous manual/optimistic local update logic is removed.
+        // The real-time subscription will now handle the UI refresh (via fetchFacilities),
+        // ensuring the UI is consistently updated with the single source of truth (the database).
+
+        this.closeRatingDialog()
       } catch (err) {
         console.error('Error submitting rating:', err.message)
         alert('Failed to submit rating. Please try again.')
       }
-    }, // 🏟 Fetch facilities with average ratings
+    },
 
+    // 🏟 Fetch facilities with average + user-specific rating
     async fetchFacilities() {
       this.loading = true
       try {
@@ -245,16 +265,14 @@ export default {
           .from('facilities')
           .select(
             `
-            id,
-            facility_name,
-            facility_type,
-            address,
-            price_per_hour,
-            image_url,
-            ratings:ratings(
-              rating_value
-            )
-          `,
+             id,
+             facility_name,
+             facility_type,
+             address,
+             price_per_hour,
+             image_url,
+             ratings:ratings(user_id, rating_value)
+           `,
           )
           .limit(5)
 
@@ -268,6 +286,10 @@ export default {
               ? (ratings.reduce((sum, r) => sum + r.rating_value, 0) / ratingCount).toFixed(1)
               : '0.0'
 
+          const myRating = this.currentUserId
+            ? ratings.find((r) => r.user_id === this.currentUserId)?.rating_value || 0
+            : 0
+
           return {
             id: f.id,
             name: f.facility_name,
@@ -277,6 +299,8 @@ export default {
             image: f.image_url,
             rating: averageRating,
             reviews: ratingCount,
+            myRating, // User's own rating
+            ratings, // Retained as the source of truth from DB for new fetches
           }
         })
       } catch (err) {
@@ -284,8 +308,9 @@ export default {
       } finally {
         this.loading = false
       }
-    }, // 🏃 Other helpers
+    },
 
+    // 🏃 Playmate helpers
     isCreator(creatorId) {
       return this.currentUserId === creatorId
     },
@@ -350,9 +375,11 @@ export default {
   <v-app>
     <v-app-bar
       app
+      fixed
+      dark
       :style="{
         background:
-          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.2), rgba(119, 154, 229, 0.4))',
+          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.8), rgba(119, 154, 229, 0.8))',
       }"
       flat
     >
@@ -478,9 +505,15 @@ export default {
                     "
                     >View Details</v-btn
                   >
-                  <v-btn small color="amber" dark rounded @click.stop="openRatingDialog(facility)"
-                    >Rate</v-btn
+                  <v-btn
+                    small
+                    :color="facility.myRating > 0 ? 'orange darken-1' : 'amber'"
+                    dark
+                    rounded
+                    @click.stop="openRatingDialog(facility)"
                   >
+                    {{ facility.myRating > 0 ? 'Edit Rate' : 'Rate' }}
+                  </v-btn>
                 </v-card-actions>
               </v-card>
             </div>
@@ -515,16 +548,10 @@ export default {
       </v-card>
     </v-dialog>
     <v-bottom-navigation app fixed color="white" light>
-      <v-btn value="search" to="/search"><v-icon large color="blue">mdi-magnify</v-icon></v-btn>
-      <v-btn value="calendar" to="/bookings"
-        ><v-icon large color="grey darken-1">mdi-calendar-month-outline</v-icon></v-btn
-      >
-      <v-btn value="favorites" @click="$router.push({ name: 'favorites' })">
-        <v-icon large color="red">mdi-heart</v-icon>
-      </v-btn>
-      <v-btn value="profile" to="/customer_profile">
-        <v-icon large color="grey darken-1">mdi-account-circle-outline</v-icon>
-      </v-btn>
+      <v-btn @click="$router.push({ name: 'home' })"><v-icon>mdi-home</v-icon></v-btn>
+      <v-btn @click="goToPlaymateRequests"><v-icon>mdi-account-group</v-icon></v-btn>
+      <v-btn @click="$router.push({ name: 'favorites' })"><v-icon>mdi-heart</v-icon></v-btn>
+      <v-btn @click="$router.push({ name: 'profile' })"><v-icon>mdi-account</v-icon></v-btn>
     </v-bottom-navigation>
   </v-app>
 </template>
