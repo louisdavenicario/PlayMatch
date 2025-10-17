@@ -15,9 +15,23 @@
       <h2 class="font-weight-bold">{{ facility.facility_name }}</h2>
       <p class="grey--text mb-2">{{ facility.address }}</p>
 
+      <!-- ⭐ Star rating display + user interaction -->
       <div class="d-flex align-center mb-3">
-        <v-icon color="amber">mdi-star</v-icon>
-        <span class="ml-1">{{ facility.rating || '4.5' }} ({{ facility.reviews || 0 }})</span>
+        <div class="d-flex align-center mr-2">
+          <v-icon
+            v-for="star in 5"
+            :key="star"
+            :color="star <= userRating ? 'amber' : 'grey lighten-1'"
+            large
+            @click="rateFacility(star)"
+            style="cursor: pointer"
+          >
+            {{ star <= userRating ? 'mdi-star' : 'mdi-star-outline' }}
+          </v-icon>
+        </div>
+        <span class="ml-2 grey--text text-body-2">
+          {{ averageRating }} ({{ totalRatings }} reviews)
+        </span>
       </div>
 
       <v-chip color="green darken-1" dark> ₱{{ facility.price_per_hour || 'N/A' }} / hour </v-chip>
@@ -27,6 +41,7 @@
       <p class="grey--text">{{ facility.briefdescription || 'No description available.' }}</p>
     </v-card>
 
+    <!-- Existing booking section below -->
     <v-card class="pa-4 mt-6" rounded="lg" elevation="2">
       <h3 class="text-h6 font-weight-medium mb-3">Book this Facility</h3>
 
@@ -84,7 +99,7 @@
           class="mt-4"
         >
           <div class="font-weight-bold">Selected Booking Time:</div>
-          {{ selectedDate }} at **{{ formattedSelectedTime }}**
+          {{ selectedDate }} at {{ formattedSelectedTime }}
         </v-alert>
         <v-btn
           block
@@ -112,7 +127,6 @@ export default {
   data: () => ({
     facility: {},
     schedules: [],
-    // NOTE: This will now hold bookings, not reservations
     bookings: [],
     availableSchedules: [],
     groupedSchedules: {},
@@ -121,13 +135,20 @@ export default {
     selectedSchedule: '',
     loading: false,
     loadingSchedules: false,
-    // Configuration for slot generation
-    SLOT_DURATION_MINUTES: 60, // Assuming 1-hour booking slots
-    DAYS_TO_GENERATE: 90, // Generate slots for the next 90 days
+    SLOT_DURATION_MINUTES: 60,
+    DAYS_TO_GENERATE: 90,
+
+    // ⭐ Added for rating
+    userRating: 0,
+    averageRating: 0,
+    totalRatings: 0,
+    currentUserId: null,
   }),
   async mounted() {
+    await this.getCurrentUser()
     await this.fetchFacility()
-    await this.fetchSchedulesAndBookings() // Changed function name
+    await this.fetchRatings() // ⭐ fetch ratings
+    await this.fetchSchedulesAndBookings()
     this.autoSelectFirstAvailableDate()
   },
   computed: {
@@ -145,6 +166,11 @@ export default {
       this.$router.push({ name: 'customer-dashboard' })
     },
 
+    async getCurrentUser() {
+      const { data } = await supabase.auth.getUser()
+      this.currentUserId = data?.user?.id || null
+    },
+
     async fetchFacility() {
       const { data, error } = await supabase
         .from('facilities')
@@ -155,12 +181,91 @@ export default {
       else console.error('Error fetching facility:', error.message)
     },
 
-    // Renamed function to reflect 'Bookings' table
-    async fetchSchedulesAndBookings() {
-      this.loadingSchedules = true
+    // ⭐ Fetch ratings (average, total, and user's own)
+    async fetchRatings() {
+      try {
+        // Average + count
+        const { data: allRatings, error: allError } = await supabase
+          .from('ratings')
+          .select('rating_value')
+          .eq('facility_id', this.id)
+
+        if (allError) throw allError
+
+        const ratings = allRatings.map((r) => r.rating_value)
+        this.totalRatings = ratings.length
+        this.averageRating =
+          ratings.length > 0 ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : 0
+
+        // User’s own rating
+        if (this.currentUserId) {
+          const { data: userRatingData, error: userError } = await supabase
+            .from('ratings')
+            .select('rating_value')
+            .eq('facility_id', this.id)
+            .eq('user_id', this.currentUserId)
+            .maybeSingle()
+
+          if (!userError && userRatingData) {
+            this.userRating = userRatingData.rating_value
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching ratings:', err.message)
+      }
+    },
+
+    // ⭐ User clicks a star to rate or update
+    async rateFacility(star) {
+      if (!this.currentUserId) {
+        alert('Please log in to rate this facility.')
+        return
+      }
 
       try {
-        // 1. Fetch ALL schedules for the facility (regular and custom)
+        this.userRating = star
+
+        // Check if user has rated before
+        const { data: existing, error: fetchError } = await supabase
+          .from('ratings')
+          .select('id')
+          .eq('user_id', this.currentUserId)
+          .eq('facility_id', this.id)
+          .maybeSingle()
+
+        if (fetchError) throw fetchError
+
+        if (existing) {
+          // Update rating
+          const { error: updateError } = await supabase
+            .from('ratings')
+            .update({ rating_value: star })
+            .eq('id', existing.id)
+
+          if (updateError) throw updateError
+        } else {
+          // New rating
+          const { error: insertError } = await supabase.from('ratings').insert([
+            {
+              facility_id: this.id,
+              user_id: this.currentUserId,
+              rating_value: star,
+            },
+          ])
+          if (insertError) throw insertError
+        }
+
+        // Refresh displayed average
+        await this.fetchRatings()
+      } catch (err) {
+        console.error('Error submitting rating:', err.message)
+      }
+    },
+
+    // --- existing booking methods below ---
+    async fetchSchedulesAndBookings() {
+      this.loadingSchedules = true
+      try {
         const { data: schedulesData, error: schedulesError } = await supabase
           .from('schedules')
           .select('*')
@@ -168,35 +273,25 @@ export default {
         if (schedulesError) throw schedulesError
         this.schedules = schedulesData || []
 
-        // 2. Fetch ALL existing bookings for conflict checking
-        // 🚨 CORRECTED: Using 'bookings' table name
         const { data: bookingsData, error: bookingsError } = await supabase
           .from('bookings')
-          // Assuming 'start_time' in 'bookings' corresponds to the reserved slot time
           .select('start_time')
           .eq('facility_id', this.id)
         if (bookingsError) throw bookingsError
 
-        // Convert reserved start times to a Set for quick ISO string lookups
         const reservedStarts = new Set(
-          bookingsData.map(
-            (b) => new Date(b.start_time).toISOString(), // Assuming 'start_time' holds the reserved slot
-          ),
+          bookingsData.map((b) => new Date(b.start_time).toISOString()),
         )
 
-        // 3. Generate future slots based on schedules and apply overrides
         const generatedSlots = this.generateFutureSlots()
 
-        // 4. Filter generated slots against bookings
         this.availableSchedules = generatedSlots.filter((slot) => {
           const slotStartTimeISO = new Date(slot.start_time).toISOString()
           return !reservedStarts.has(slotStartTimeISO)
         })
 
-        // 5. Group the final available slots for the date picker
         this.groupAvailableSchedules()
       } catch (err) {
-        // Updated error message to reflect the new table name
         console.error('Error fetching schedules or bookings:', err.message)
       } finally {
         this.loadingSchedules = false
@@ -204,7 +299,6 @@ export default {
     },
 
     generateFutureSlots() {
-      // ... (No logic change needed here, it correctly uses this.schedules)
       const slots = []
       const today = new Date()
       today.setHours(0, 0, 0, 0)
@@ -255,7 +349,6 @@ export default {
     },
 
     groupAvailableSchedules() {
-      // ... (No logic change needed here)
       const grouped = {}
       this.availableSchedules.forEach((slot) => {
         const dateKey = new Date(slot.start_time).toLocaleDateString(undefined, {
@@ -264,9 +357,7 @@ export default {
           day: 'numeric',
         })
 
-        if (!grouped[dateKey]) {
-          grouped[dateKey] = []
-        }
+        if (!grouped[dateKey]) grouped[dateKey] = []
         grouped[dateKey].push(slot)
       })
       this.groupedSchedules = grouped
@@ -274,28 +365,21 @@ export default {
     },
 
     allowedDates(date) {
-      // ... (No logic change needed here)
       const today = new Date()
       today.setHours(0, 0, 0, 0)
-
       const picked = new Date(date)
       picked.setHours(0, 0, 0, 0)
-
       if (picked < today) return false
-
       const formatted = picked.toLocaleDateString(undefined, {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
       })
-
       return !!this.groupedSchedules[formatted]
     },
 
     autoSelectFirstAvailableDate() {
-      if (this.availableDates.length > 0) {
-        this.selectedDate = this.availableDates[0]
-      }
+      if (this.availableDates.length > 0) this.selectedDate = this.availableDates[0]
     },
 
     async bookFacility() {
@@ -313,11 +397,10 @@ export default {
           return
         }
 
-        // 🚨 CORRECTED: Inserting into the 'bookings' table
         const { error } = await supabase.from('bookings').insert([
           {
             facility_id: this.facility.id,
-            start_time: this.selectedSchedule, // Using 'start_time' as per the bookings schema
+            start_time: this.selectedSchedule,
             status: 'pending',
             user_id: user.id,
           },
@@ -326,7 +409,6 @@ export default {
 
         alert('Booking successful! Your booking is now pending.')
         this.selectedSchedule = ''
-        // Re-fetch using the new function name
         await this.fetchSchedulesAndBookings()
         this.autoSelectFirstAvailableDate()
       } catch (err) {
@@ -347,7 +429,6 @@ export default {
   padding-top: 20px !important;
   padding-bottom: 20px !important;
 }
-
 .v-card {
   background-color: white !important;
 }

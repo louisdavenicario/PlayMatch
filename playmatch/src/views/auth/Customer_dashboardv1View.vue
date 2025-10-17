@@ -2,16 +2,22 @@
 import { supabase } from '@/supabaseClient'
 
 export default {
-  name: 'ReservoSprotBookingHome',
+  name: 'ReservoSportBookingHome',
   data: () => ({
     currentUserId: null,
     playmateRequests: [],
     playmateLoading: false,
     facilities: [],
-    favorites: [], // ❤️ Store favorite facility objects
-    favoriteIds: [], // store only facility_id for quick check
+    favorites: [],
+    favoriteIds: [],
     loading: false,
-    error: null,
+    error: null, // ⭐ Rating dialog
+
+    ratingDialog: {
+      visible: false,
+      facility: null,
+      value: 0,
+    },
   }),
 
   async mounted() {
@@ -21,7 +27,7 @@ export default {
     }
     this.fetchFacilities()
     this.fetchPlaymateRequests()
-    this.subscribeFavoritesRealtime() // 👀 watch for changes
+    this.subscribeFavoritesRealtime()
   },
 
   beforeUnmount() {
@@ -42,9 +48,8 @@ export default {
         console.error('Error fetching current user:', err.message)
         this.currentUserId = null
       }
-    },
+    }, // 🚪 Logout
 
-    // 🚪 Logout
     async logout() {
       try {
         const { error } = await supabase.auth.signOut()
@@ -55,9 +60,8 @@ export default {
         console.error('Logout failed:', err.message)
         alert('Failed to logout. Please try again.')
       }
-    },
+    }, // ❤️ Toggle favorites
 
-    // ❤️ Toggle favorites
     async toggleFavorite(facilityId) {
       if (!this.currentUserId) {
         alert('Please log in to add favorites.')
@@ -87,14 +91,12 @@ export default {
       } catch (err) {
         console.error('Error toggling favorite:', err.message)
       }
-    },
+    }, // ❤️ Check if facility is in favorites
 
-    // ❤️ Check if facility is in favorites
     isFavorite(facilityId) {
       return this.favoriteIds.includes(facilityId)
-    },
+    }, // 🧠 Fetch all favorite facilities (JOIN)
 
-    // 🧠 Fetch all favorite facilities (JOIN)
     async fetchFavorites() {
       if (!this.currentUserId) return
       this.loading = true
@@ -103,17 +105,17 @@ export default {
           .from('favorites')
           .select(
             `
-            id,
-            created_at,
-            facilities (
-              id,
-              facility_name,
-              address,
-              facility_type,
-              image_url,
-              price_per_hour
-            )
-          `,
+            id,
+            created_at,
+            facilities (
+              id,
+              facility_name,
+              address,
+              facility_type,
+              image_url,
+              price_per_hour
+            )
+          `,
           )
           .eq('user_id', this.currentUserId)
 
@@ -134,10 +136,11 @@ export default {
       } finally {
         this.loading = false
       }
-    },
+    }, // 🔁 Real-time updates for favorites
 
-    // 🔁 Real-time updates for favorites
     async subscribeFavoritesRealtime() {
+      if (!this.currentUserId) return // Only subscribe if user is logged in
+
       this.favSubscription = supabase
         .channel('favorites-changes')
         .on(
@@ -154,9 +157,135 @@ export default {
           },
         )
         .subscribe()
-    },
+    }, // ⭐ Open rating dialog (prefill existing rating if any)
 
-    // 🏃 Other existing functions
+    async openRatingDialog(facility) {
+      if (!this.currentUserId) {
+        alert('Please log in to rate facilities.')
+        return
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('ratings')
+          .select('rating_value')
+          .eq('user_id', this.currentUserId)
+          .eq('facility_id', facility.id)
+          .maybeSingle()
+
+        if (error) throw error
+
+        this.ratingDialog.facility = facility
+        this.ratingDialog.value = data?.rating_value || 0
+        this.ratingDialog.visible = true
+      } catch (err) {
+        console.error('Error loading rating dialog:', err.message)
+      }
+    }, // 🚪 Close rating dialog
+
+    closeRatingDialog() {
+      this.ratingDialog.visible = false
+      this.ratingDialog.facility = null
+      this.ratingDialog.value = 0
+    }, // 💾 Submit or update rating
+
+    async submitRating() {
+      if (!this.ratingDialog.value) {
+        alert('Please select a star rating first.')
+        return
+      }
+
+      try {
+        const { facility, value } = this.ratingDialog // Check if user already rated this facility
+
+        const { data: existing, error: fetchError } = await supabase
+          .from('ratings')
+          .select('id')
+          .eq('user_id', this.currentUserId)
+          .eq('facility_id', facility.id)
+          .maybeSingle()
+
+        if (fetchError) throw fetchError
+
+        if (existing) {
+          // Update existing rating
+          const { error: updateError } = await supabase
+            .from('ratings')
+            .update({ rating_value: value })
+            .eq('id', existing.id)
+
+          if (updateError) throw updateError // Simplified alert for quick feedback
+          // alert(`You updated your rating for ${facility.name} to ${value}⭐!`)
+        } else {
+          // Insert new rating
+          const { error: insertError } = await supabase.from('ratings').insert([
+            {
+              user_id: this.currentUserId,
+              facility_id: facility.id,
+              rating_value: value,
+            },
+          ])
+
+          if (insertError) throw insertError // Simplified alert for quick feedback
+          // alert(`You rated ${facility.name} ${value}⭐ successfully!`)
+        }
+
+        this.closeRatingDialog() // Re-fetch facilities to update the average rating immediately
+        await this.fetchFacilities()
+      } catch (err) {
+        console.error('Error submitting rating:', err.message)
+        alert('Failed to submit rating. Please try again.')
+      }
+    }, // 🏟 Fetch facilities with average ratings
+
+    async fetchFacilities() {
+      this.loading = true
+      try {
+        const { data, error } = await supabase
+          .from('facilities')
+          .select(
+            `
+            id,
+            facility_name,
+            facility_type,
+            address,
+            price_per_hour,
+            image_url,
+            ratings:ratings(
+              rating_value
+            )
+          `,
+          )
+          .limit(5)
+
+        if (error) throw error
+
+        this.facilities = data.map((f) => {
+          const ratings = f.ratings || []
+          const ratingCount = ratings.length
+          const averageRating =
+            ratingCount > 0
+              ? (ratings.reduce((sum, r) => sum + r.rating_value, 0) / ratingCount).toFixed(1)
+              : '0.0'
+
+          return {
+            id: f.id,
+            name: f.facility_name,
+            type: f.facility_type,
+            address: f.address,
+            price: f.price_per_hour,
+            image: f.image_url,
+            rating: averageRating,
+            reviews: ratingCount,
+          }
+        })
+      } catch (err) {
+        console.error('Error fetching facilities:', err.message)
+      } finally {
+        this.loading = false
+      }
+    }, // 🏃 Other helpers
+
     isCreator(creatorId) {
       return this.currentUserId === creatorId
     },
@@ -213,36 +342,12 @@ export default {
         this.playmateLoading = false
       }
     },
-
-    async fetchFacilities() {
-      this.loading = true
-      try {
-        const { data, error } = await supabase.from('facilities').select('*').limit(5)
-        if (error) throw error
-
-        this.facilities = data.map((f) => ({
-          id: f.id,
-          name: f.facility_name,
-          type: f.facility_type,
-          address: f.address,
-          rating: f.rating || '4.5',
-          reviews: f.reviews || '0',
-          price: f.price_per_hour,
-          image: f.image_url,
-        }))
-      } catch (err) {
-        console.error('Error fetching facilities:', err.message)
-      } finally {
-        this.loading = false
-      }
-    },
   },
 }
 </script>
 
 <template>
   <v-app>
-    <!-- App Bar -->
     <v-app-bar
       app
       :style="{
@@ -257,10 +362,8 @@ export default {
       <v-btn icon @click="logout"><v-icon color="red">mdi-logout</v-icon></v-btn>
     </v-app-bar>
 
-    <!-- Main Content -->
     <v-main>
       <v-container fluid class="pa-0">
-        <!-- Playmates -->
         <v-row no-gutters class="px-4 pt-10">
           <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
             <h2 class="text-h6 font-weight-medium">Find Playmates</h2>
@@ -309,7 +412,6 @@ export default {
           </v-col>
         </v-row>
 
-        <!-- Facilities -->
         <v-row no-gutters class="facilities-section px-4 mt-5 mb-10">
           <v-col cols="12" class="mb-3">
             <h2 class="text-h6 font-weight-medium">Popular Facilities</h2>
@@ -331,6 +433,7 @@ export default {
                 class="mr-4 flex-shrink-0"
                 width="280"
                 rounded="lg"
+                @click="$router.push({ name: 'facility-details', params: { id: facility.id } })"
               >
                 <v-img :src="facility.image" height="150" class="grey lighten-3">
                   <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
@@ -356,14 +459,28 @@ export default {
                   <div class="d-flex align-center justify-space-between mb-3">
                     <div class="d-flex align-center">
                       <v-icon small color="amber">mdi-star</v-icon>
-                      <span class="text-caption ml-1 font-weight-medium">4.5 (10)</span>
+                      <span class="text-caption ml-1 font-weight-medium">
+                        {{ facility.rating }} ({{ facility.reviews }})
+                      </span>
                     </div>
                     <v-chip color="green darken-1" dark small> ₱{{ facility.price }}/hour </v-chip>
                   </div>
                 </v-card-text>
 
                 <v-card-actions class="pt-0 pr-3 pb-3 justify-end">
-                  <v-btn small color="blue" dark rounded>View Details</v-btn>
+                  <v-btn
+                    small
+                    color="blue"
+                    dark
+                    rounded
+                    @click.stop="
+                      $router.push({ name: 'facility-details', params: { id: facility.id } })
+                    "
+                    >View Details</v-btn
+                  >
+                  <v-btn small color="amber" dark rounded @click.stop="openRatingDialog(facility)"
+                    >Rate</v-btn
+                  >
                 </v-card-actions>
               </v-card>
             </div>
@@ -372,10 +489,34 @@ export default {
       </v-container>
     </v-main>
 
-    <!-- Bottom Navigation -->
-    <v-bottom-navigation app fixed color="white">
-      <v-btn value="search"><v-icon large color="blue">mdi-magnify</v-icon></v-btn>
-      <v-btn value="calendar"
+    <v-dialog v-model="ratingDialog.visible" max-width="400">
+      <v-card>
+        <v-card-title class="font-weight-bold">
+          Rate {{ ratingDialog.facility?.name }}
+        </v-card-title>
+        <v-card-text>
+          <div class="d-flex justify-center my-4">
+            <v-icon
+              v-for="n in 5"
+              :key="n"
+              large
+              :color="n <= ratingDialog.value ? 'amber' : 'grey'"
+              class="mx-1"
+              @click="ratingDialog.value = n"
+            >
+              {{ n <= ratingDialog.value ? 'mdi-star' : 'mdi-star-outline' }}
+            </v-icon>
+          </div>
+        </v-card-text>
+        <v-card-actions class="justify-end">
+          <v-btn text @click="closeRatingDialog">Cancel</v-btn>
+          <v-btn color="blue" dark @click="submitRating">Submit</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+    <v-bottom-navigation app fixed color="white" light>
+      <v-btn value="search" to="/search"><v-icon large color="blue">mdi-magnify</v-icon></v-btn>
+      <v-btn value="calendar" to="/bookings"
         ><v-icon large color="grey darken-1">mdi-calendar-month-outline</v-icon></v-btn
       >
       <v-btn value="favorites" @click="$router.push({ name: 'favorites' })">
