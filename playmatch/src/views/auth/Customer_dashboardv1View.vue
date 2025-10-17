@@ -383,7 +383,7 @@ export default {
       }"
       flat
     >
-      <v-toolbar-title class="font-weight-bold ml-1">RESERVO</v-toolbar-title>
+      <v-toolbar-title class="font-weight-bold ml-3 text-white">RESERVO</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn icon><v-icon>mdi-magnify</v-icon></v-btn>
       <v-btn icon @click="logout"><v-icon color="red">mdi-logout</v-icon></v-btn>
@@ -548,10 +548,12 @@ export default {
       </v-card>
     </v-dialog>
     <v-bottom-navigation app fixed color="white" light>
-      <v-btn @click="$router.push({ name: 'home' })"><v-icon>mdi-home</v-icon></v-btn>
+      <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
+        <v-icon color="blue">mdi-home</v-icon>
+      </v-btn>
       <v-btn @click="goToPlaymateRequests"><v-icon>mdi-account-group</v-icon></v-btn>
       <v-btn @click="$router.push({ name: 'favorites' })"><v-icon>mdi-heart</v-icon></v-btn>
-      <v-btn @click="$router.push({ name: 'profile' })"><v-icon>mdi-account</v-icon></v-btn>
+      <v-btn value="profile" to="/customer_profile"> <v-icon>mdi-account</v-icon></v-btn>
     </v-bottom-navigation>
   </v-app>
 </template>

@@ -1,7 +1,16 @@
 <template>
   <v-app>
     <!-- 🧭 Top Bar -->
-    <v-app-bar app color="white" flat>
+    <v-app-bar
+      app
+      fixed
+      dark
+      :style="{
+        background:
+          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.8), rgba(119, 154, 229, 0.8))',
+      }"
+      flat
+    >
       <v-btn icon @click="$router.go(-1)">
         <v-icon>mdi-arrow-left</v-icon>
       </v-btn>

@@ -1,12 +1,23 @@
 <template>
   <v-app>
-    <v-app-bar app color="blue-lighten-3" flat>
+    <v-app-bar
+      app
+      fixed
+      dark
+      :style="{
+        background:
+          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.8), rgba(119, 154, 229, 0.8))',
+      }"
+      flat
+    >
       <v-btn icon @click="$router.go(-1)">
-        <v-icon>mdi-arrow-left</v-icon>
+        <v-icon color="white">mdi-arrow-left</v-icon>
       </v-btn>
-      <v-toolbar-title class="font-weight-bold">Playmate Requests</v-toolbar-title>
+      <v-toolbar-title class="font-weight-bold" style="color: white">
+        Playmate Requests
+      </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon @click="dialog = true">
+      <v-btn icon @click="dialog = true" color="white">
         <v-icon>mdi-plus</v-icon>
       </v-btn>
     </v-app-bar>
