@@ -8,8 +8,11 @@ const profileData = ref(null)
 const loading = ref(false)
 const error = ref(null)
 
-// Fetches the user's profile data from Supabase.
+const isEditing = ref(false)
+const formData = ref({}) // Holds data for the edit form
+const saving = ref(false)
 
+// Fetches the user's profile data from Supabase.
 const fetchProfile = async () => {
   loading.value = true
   error.value = null
@@ -40,15 +43,65 @@ const fetchProfile = async () => {
     }
 
     // Combine the profile data with the user's email from the auth object
-    profileData.value = {
+    const finalData = {
       email: user.email,
+      id: user.id,
       ...data,
     }
+    profileData.value = finalData
+
+    // Initialize form data with current profile data
+    formData.value = { ...finalData }
   } catch (err) {
     console.error('Profile fetch failed:', err.message)
     error.value = 'Failed to load profile. Please try again.'
   } finally {
     loading.value = false
+  }
+}
+
+const toggleEdit = () => {
+  if (!profileData.value) return
+  isEditing.value = !isEditing.value
+  if (isEditing.value) {
+    formData.value = { ...profileData.value }
+  }
+}
+
+const saveProfile = async () => {
+  saving.value = true
+  error.value = null // Clear any previous errors
+
+  try {
+    const updates = {
+      id: profileData.value.id,
+      full_name: formData.value.full_name,
+      phone_number: formData.value.phone_number,
+      address: formData.value.address,
+      city: formData.value.city,
+      zip_code: formData.value.zip_code,
+      updated_at: new Date().toISOString(), // Track update time
+    }
+
+    // Update the 'profiles' table in Supabase
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', profileData.value.id)
+      .select()
+
+    if (updateError) {
+      throw updateError
+    }
+
+    // Successfully updated
+    await fetchProfile() // Re-fetch to show latest data
+    isEditing.value = false
+  } catch (err) {
+    console.error('Profile update failed:', err.message)
+    error.value = 'Failed to save profile. Please check your inputs and try again.'
+  } finally {
+    saving.value = false
   }
 }
 
@@ -70,10 +123,12 @@ onMounted(() => {
           <v-col cols="12" md="8" lg="6">
             <v-card class="pa-6" elevation="5" rounded="lg">
               <div class="d-flex align-center mb-4">
-                <v-btn icon @click="router.back()" class="mr-3">
+                <v-btn icon @click="router.back()" class="mr-3" :disabled="isEditing">
                   <v-icon>mdi-arrow-left</v-icon>
                 </v-btn>
-                <h1 class="text-h5 font-weight-bold primary--text">My Profile</h1>
+                <h1 class="text-h5 font-weight-bold primary--text">
+                  {{ isEditing ? 'Edit Profile' : 'My Profile' }}
+                </h1>
               </div>
 
               <v-divider class="mb-5"></v-divider>
@@ -84,7 +139,7 @@ onMounted(() => {
               </div>
 
               <v-alert v-else-if="error" type="error" dense dismissible class="mb-4">
-                Error loading profile: {{ error }}
+                Error: {{ error }}
               </v-alert>
 
               <v-card-text v-else-if="profileData">
@@ -103,7 +158,7 @@ onMounted(() => {
                   </p>
                 </div>
 
-                <v-list dense class="profile-details-list">
+                <v-list dense class="profile-details-list" v-if="!isEditing">
                   <v-list-item class="list-item-hover">
                     <v-list-item-icon
                       ><v-icon color="blue">mdi-email-outline</v-icon></v-list-item-icon
@@ -120,11 +175,27 @@ onMounted(() => {
 
                   <v-list-item class="list-item-hover">
                     <v-list-item-icon
+                      ><v-icon color="indigo">mdi-account-details-outline</v-icon></v-list-item-icon
+                    >
+                    <v-list-item-content>
+                      <v-list-item-title class="font-weight-medium">Full Name</v-list-item-title>
+                      <v-list-item-subtitle>{{
+                        profileData.full_name || 'N/A'
+                      }}</v-list-item-subtitle>
+                    </v-list-item-content>
+                  </v-list-item>
+
+                  <v-divider inset></v-divider>
+
+                  <v-list-item class="list-item-hover">
+                    <v-list-item-icon
                       ><v-icon color="green">mdi-phone-outline</v-icon></v-list-item-icon
                     >
                     <v-list-item-content>
                       <v-list-item-title class="font-weight-medium">Phone Number</v-list-item-title>
-                      <v-list-item-subtitle>{{ profileData.phone_number }}</v-list-item-subtitle>
+                      <v-list-item-subtitle>{{
+                        profileData.phone_number || 'N/A'
+                      }}</v-list-item-subtitle>
                     </v-list-item-content>
                   </v-list-item>
 
@@ -137,18 +208,102 @@ onMounted(() => {
                     <v-list-item-content>
                       <v-list-item-title class="font-weight-medium">Address</v-list-item-title>
                       <v-list-item-subtitle>
-                        {{ profileData.address }}<br />
-                        {{ profileData.city }}, {{ profileData.zip_code }}
+                        {{ profileData.address || 'N/A' }}<br />
+                        {{ profileData.city || ''
+                        }}{{ profileData.city && profileData.zip_code ? ', ' : ''
+                        }}{{ profileData.zip_code || '' }}
                       </v-list-item-subtitle>
                     </v-list-item-content>
                   </v-list-item>
                 </v-list>
+
+                <v-form v-else @submit.prevent="saveProfile">
+                  <v-text-field
+                    v-model="formData.full_name"
+                    label="Full Name"
+                    prepend-icon="mdi-account"
+                    required
+                    class="mb-3"
+                  ></v-text-field>
+
+                  <v-text-field
+                    :value="profileData.email"
+                    label="Email Address (Read Only)"
+                    prepend-icon="mdi-email"
+                    disabled
+                    class="mb-3"
+                  ></v-text-field>
+
+                  <v-text-field
+                    v-model="formData.phone_number"
+                    label="Phone Number"
+                    prepend-icon="mdi-phone"
+                    class="mb-3"
+                  ></v-text-field>
+
+                  <v-text-field
+                    v-model="formData.address"
+                    label="Street Address"
+                    prepend-icon="mdi-map-marker"
+                    class="mb-3"
+                  ></v-text-field>
+
+                  <v-row>
+                    <v-col cols="12" sm="6">
+                      <v-text-field
+                        v-model="formData.city"
+                        label="City"
+                        prepend-icon="mdi-city"
+                        class="mb-3"
+                      ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                      <v-text-field
+                        v-model="formData.zip_code"
+                        label="ZIP Code"
+                        prepend-icon="mdi-postage-box"
+                        class="mb-3"
+                      ></v-text-field>
+                    </v-col>
+                  </v-row>
+                </v-form>
               </v-card-text>
 
               <v-card-actions class="pt-4 px-4 justify-end">
-                <v-btn color="primary" rounded large>
+                <v-btn
+                  v-if="isEditing"
+                  color="secondary"
+                  rounded
+                  large
+                  @click="toggleEdit"
+                  :disabled="saving"
+                >
+                  <v-icon left>mdi-cancel</v-icon>
+                  Cancel
+                </v-btn>
+                <v-btn
+                  v-if="!isEditing"
+                  color="primary"
+                  rounded
+                  large
+                  @click="toggleEdit"
+                  :disabled="loading"
+                >
                   <v-icon left>mdi-pencil-outline</v-icon>
                   Edit Profile
+                </v-btn>
+                <v-btn
+                  v-else
+                  color="success"
+                  rounded
+                  large
+                  @click="saveProfile"
+                  :loading="saving"
+                  :disabled="saving"
+                  type="submit"
+                >
+                  <v-icon left>mdi-content-save-outline</v-icon>
+                  Save Changes
                 </v-btn>
               </v-card-actions>
             </v-card>
