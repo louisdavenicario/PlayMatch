@@ -952,6 +952,8 @@ const fetchAllOwnerData = async () => {
         const day = item.day_of_week
         if (newRegularHours[day]) {
           // Determine if the day is open (start_time is not null)
+          // Since we are now DELETING closed days, start_time should generally exist for fetched data,
+          // but checking for null is good for robustness (e.g., if a day was upserted with nulls before the fix).
           const isOpen = !!item.start_time
           newRegularHours[day] = {
             isOpen: isOpen,
@@ -959,6 +961,13 @@ const fetchAllOwnerData = async () => {
             closeTime: item.end_time || '17:00', // Use '17:00' as a default if null
           }
         }
+      })
+      // Any day not returned by the DB query but present in regularHours.value
+      // will retain its default (or previous) closed state, which is correct.
+    } else {
+      // If no hours are returned, reset all days to the default closed state.
+      daysOfWeek.forEach((day) => {
+        newRegularHours[day] = { isOpen: false, openTime: '08:00', closeTime: '17:00' }
       })
     }
 
@@ -1057,8 +1066,8 @@ const selectDay = (dateString) => {
   )
 }
 
+// 💥 THE FIX IS HERE: Separating UPSERT for open days and DELETE for closed days.
 const saveRegularHours = async () => {
-  // 🛑 FIX Applied by user previously (Good Check)
   if (!facilityDetails.value || !facilityDetails.value.id) {
     alertMessage('Failed to save regular hours: Facility data is not yet loaded.', 'error')
     return
@@ -1066,28 +1075,56 @@ const saveRegularHours = async () => {
 
   try {
     const facilityId = facilityDetails.value.id
+    const promises = []
 
-    // 1. Prepare an array of promises for 7 days (Upsert logic is correct here)
-    const updates = Object.keys(regularHours.value).map((day) => {
+    for (const day of daysOfWeek) {
       const data = regularHours.value[day]
 
-      const scheduleData = {
-        facility_id: facilityId, // Use the extracted ID
-        type: 'regular',
-        day_of_week: day,
-        start_time: data.isOpen ? data.openTime : null,
-        end_time: data.isOpen ? data.closeTime : null,
+      if (data.isOpen) {
+        // --- 1. UPSERT (Update or Insert) for OPEN days ---
+        const scheduleData = {
+          facility_id: facilityId,
+          type: 'regular',
+          day_of_week: day,
+          start_time: data.openTime,
+          end_time: data.closeTime,
+        }
+
+        // Add the UPSERT operation to the promises array
+        promises.push(
+          supabase.from('schedules').upsert(scheduleData, {
+            onConflict: 'facility_id, type, day_of_week',
+          }),
+        )
+      } else {
+        // --- 2. DELETE for CLOSED days (The requested fix) ---
+        // If the day is unchecked, we explicitly delete the corresponding record from the database.
+        promises.push(
+          supabase
+            .from('schedules')
+            .delete()
+            .eq('facility_id', facilityId)
+            .eq('type', 'regular')
+            .eq('day_of_week', day),
+        )
       }
+    }
 
-      return supabase.from('schedules').upsert(scheduleData, {
-        onConflict: 'facility_id, type, day_of_week',
+    // 3. Run all database operations concurrently
+    const results = await Promise.all(promises)
+
+    // Check for any errors in the results (optional, but good practice)
+    const hasError = results.some((result) => result.error)
+    if (hasError) {
+      // Log the specific errors
+      results.forEach((result) => {
+        if (result.error) console.error('Error during hours save/delete:', result.error.message)
       })
-    })
+      // Throw a general error to trigger the catch block
+      throw new Error('One or more database operations failed during hours save.')
+    }
 
-    // 5. Run all 7 database operations concurrently
-    const results = await Promise.all(updates)
-
-    alertMessage('Regular hours saved successfully!', 'success')
+    alertMessage('Regular hours saved successfully! Closed days were removed.', 'success')
     // Refresh data to update the display
     fetchAllOwnerData()
   } catch (error) {

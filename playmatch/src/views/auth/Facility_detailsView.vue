@@ -1,20 +1,49 @@
 <template>
   <v-container fluid class="gradient-background">
+    <!-- Back Button -->
     <v-btn text small color="blue" class="mb-4" @click="goBack">
       <v-icon left>mdi-arrow-left</v-icon> Back
     </v-btn>
 
+    <!-- Facility Card with Carousel -->
     <v-card class="pa-4" rounded="lg" elevation="2">
+      <v-carousel
+        v-if="allPhotos.length > 0"
+        cycle
+        height="500"
+        hide-delimiter-background
+        show-arrows-on-hover
+        class="mb-4 mx-auto"
+        style="max-width: 1000px"
+        rounded="lg"
+        delimiter-icon="mdi-circle-small"
+        delimiter-size="10"
+      >
+        <v-carousel-item
+          v-for="(photoUrl, i) in allPhotos"
+          :key="i"
+          :src="photoUrl"
+          contain
+          style="cursor: pointer"
+          @click="openZoom(photoUrl)"
+          title="Click to Zoom"
+        >
+        </v-carousel-item>
+      </v-carousel>
+
       <v-img
-        :src="facility.image_url || '/images/default-facility.jpg'"
+        v-else
+        src="/images/default-facility.jpg"
         height="500"
         width="auto"
         class="mb-4 mx-auto"
+        rounded="lg"
       ></v-img>
 
       <h2 class="font-weight-bold">{{ facility.facility_name }}</h2>
       <p class="grey--text mb-2">{{ facility.address }}</p>
 
+      <!-- Ratings -->
       <div class="d-flex align-center mb-3">
         <div class="d-flex align-center mr-2">
           <v-icon
@@ -40,6 +69,39 @@
       <p class="grey--text">{{ facility.briefdescription || 'No description available.' }}</p>
     </v-card>
 
+    <!-- Zoom Dialog -->
+    <v-dialog v-model="zoomDialog" fullscreen transition="dialog-bottom-transition">
+      <v-card dark color="black">
+        <v-toolbar dense flat color="white">
+          <v-spacer></v-spacer>
+          <v-btn icon @click="zoomDialog = false">
+            <v-icon color="#1a65a2">mdi-close</v-icon>
+          </v-btn>
+        </v-toolbar>
+
+        <v-container fluid fill-height>
+          <v-row align="center" justify="center">
+            <v-col cols="12" class="text-center">
+              <v-carousel
+                v-model="zoomCarouselIndex"
+                hide-delimiter-background
+                height="90vh"
+                show-arrows-on-hover
+                delimiter-icon="mdi-circle-small"
+                delimiter-size="12"
+                cycle
+              >
+                <v-carousel-item v-for="(photoUrl, index) in allPhotos" :key="index">
+                  <v-img :src="photoUrl" contain max-height="90vh" class="mx-auto"></v-img>
+                </v-carousel-item>
+              </v-carousel>
+            </v-col>
+          </v-row>
+        </v-container>
+      </v-card>
+    </v-dialog>
+
+    <!-- Booking Section -->
     <v-card class="pa-4 mt-6" rounded="lg" elevation="2">
       <h3 class="text-h6 font-weight-medium mb-3">Book this Facility</h3>
 
@@ -99,6 +161,7 @@
           <div class="font-weight-bold">Selected Booking Time:</div>
           {{ selectedDate }} at {{ formattedSelectedTime }}
         </v-alert>
+
         <v-btn
           block
           color="blue"
@@ -136,11 +199,15 @@ export default {
     SLOT_DURATION_MINUTES: 60,
     DAYS_TO_GENERATE: 90,
 
-    // ⭐ Added for rating
+    // Ratings
     userRating: 0,
     averageRating: '0.0',
     totalRatings: 0,
     currentUserId: null,
+
+    // Carousel & Zoom
+    zoomDialog: false,
+    zoomCarouselIndex: 0,
   }),
   async mounted() {
     await this.getCurrentUser()
@@ -150,6 +217,14 @@ export default {
     this.autoSelectFirstAvailableDate()
   },
   computed: {
+    allPhotos() {
+      const photos = []
+      if (this.facility.image_url) photos.push(this.facility.image_url)
+      if (this.facility.additional_photos && Array.isArray(this.facility.additional_photos)) {
+        photos.push(...this.facility.additional_photos.filter((url) => url))
+      }
+      return photos
+    },
     formattedSelectedTime() {
       if (!this.selectedSchedule) return ''
       return new Date(this.selectedSchedule).toLocaleTimeString([], {
@@ -163,26 +238,39 @@ export default {
     goBack() {
       this.$router.push({ name: 'customer-dashboard' })
     },
-
     async getCurrentUser() {
       const { data } = await supabase.auth.getUser()
       this.currentUserId = data?.user?.id || null
     },
-
     async fetchFacility() {
       const { data, error } = await supabase
         .from('facilities')
-        .select('*')
+        .select('*, additional_photos')
         .eq('id', this.id)
         .single()
-      if (!error) this.facility = data
-      else console.error('Error fetching facility:', error.message)
+
+      if (!error) {
+        this.facility = data
+        if (typeof this.facility.additional_photos === 'string') {
+          try {
+            this.facility.additional_photos = JSON.parse(this.facility.additional_photos)
+          } catch (e) {
+            this.facility.additional_photos = []
+          }
+        } else if (!Array.isArray(this.facility.additional_photos)) {
+          this.facility.additional_photos = []
+        }
+      } else console.error('Error fetching facility:', error.message)
+    },
+    openZoom(photoUrl) {
+      const index = this.allPhotos.findIndex((p) => p === photoUrl)
+      this.zoomCarouselIndex = index >= 0 ? index : 0
+      this.zoomDialog = true
     },
 
-    // ⭐ FIX 1: Fetch ALL ratings for correct average calculation and user rating detection
+    // Ratings
     async fetchRatings() {
       try {
-        // Fetch ALL ratings for the facility
         const { data: allRatings, error: allError } = await supabase
           .from('ratings')
           .select('rating_value, user_id')
@@ -193,109 +281,72 @@ export default {
         const ratings = allRatings || []
         const ratingValues = ratings.map((r) => r.rating_value)
 
-        // Calculate average and total from ALL ratings
         this.totalRatings = ratingValues.length
         this.averageRating =
           ratingValues.length > 0
             ? (ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length).toFixed(1)
             : '0.0'
 
-        // Find the current user’s own rating
         this.userRating = 0
         if (this.currentUserId) {
           const userRatingRecord = ratings.find((r) => r.user_id === this.currentUserId)
-          if (userRatingRecord) {
-            this.userRating = userRatingRecord.rating_value
-          }
+          if (userRatingRecord) this.userRating = userRatingRecord.rating_value
         }
       } catch (err) {
         console.error('Error fetching ratings:', err.message)
       }
     },
-
-    // ⭐ FIX 2: Use .limit(1) to check for existing rating and prevent JSON error
     async rateFacility(star) {
       if (!this.currentUserId) {
         alert('Please log in to rate this facility.')
         return
       }
-
       try {
         this.userRating = star
-
-        // Check if user has rated before
-        const { data: existing, error: fetchError } = await supabase
+        const { data: existing } = await supabase
           .from('ratings')
           .select('id')
           .eq('user_id', this.currentUserId)
           .eq('facility_id', this.id)
-          .limit(1) // CRITICAL FIX: Use limit(1) instead of maybeSingle()
+          .limit(1)
 
-        if (fetchError) throw fetchError
-
-        const existingRatingId = existing && existing.length > 0 ? existing[0].id : null
-
+        const existingRatingId = existing?.[0]?.id || null
         if (existingRatingId) {
-          // Update rating
-          const { error: updateError } = await supabase
-            .from('ratings')
-            .update({ rating_value: star })
-            .eq('id', existingRatingId)
-
-          if (updateError) throw updateError
+          await supabase.from('ratings').update({ rating_value: star }).eq('id', existingRatingId)
         } else {
-          // New rating
-          const { error: insertError } = await supabase.from('ratings').insert([
-            {
-              facility_id: this.id,
-              user_id: this.currentUserId,
-              rating_value: star,
-            },
-          ])
-          if (insertError) throw insertError
+          await supabase
+            .from('ratings')
+            .insert([{ facility_id: this.id, user_id: this.currentUserId, rating_value: star }])
         }
 
-        // Refresh displayed average
         await this.fetchRatings()
       } catch (err) {
         console.error('Error submitting rating:', err.message)
-        if (err.message.includes('permission denied')) {
-          alert(
-            'Failed to submit rating. Please check your Supabase Row Level Security (RLS) policies for the ratings table. You need SELECT, INSERT, and UPDATE policies.',
-          )
-        } else {
-          alert('Failed to submit rating. Please try again.')
-        }
       }
     },
 
-    // --- existing booking methods below ---
+    // Booking
     async fetchSchedulesAndBookings() {
       this.loadingSchedules = true
       try {
-        const { data: schedulesData, error: schedulesError } = await supabase
+        const { data: schedulesData } = await supabase
           .from('schedules')
           .select('*')
           .eq('facility_id', this.id)
-        if (schedulesError) throw schedulesError
         this.schedules = schedulesData || []
 
-        const { data: bookingsData, error: bookingsError } = await supabase
+        const { data: bookingsData } = await supabase
           .from('bookings')
           .select('start_time')
           .eq('facility_id', this.id)
-        if (bookingsError) throw bookingsError
-
         const reservedStarts = new Set(
           bookingsData.map((b) => new Date(b.start_time).toISOString()),
         )
 
         const generatedSlots = this.generateFutureSlots()
-
-        this.availableSchedules = generatedSlots.filter((slot) => {
-          const slotStartTimeISO = new Date(slot.start_time).toISOString()
-          return !reservedStarts.has(slotStartTimeISO)
-        })
+        this.availableSchedules = generatedSlots.filter(
+          (slot) => !reservedStarts.has(new Date(slot.start_time).toISOString()),
+        )
 
         this.groupAvailableSchedules()
       } catch (err) {
@@ -314,7 +365,6 @@ export default {
       for (let i = 0; i < this.DAYS_TO_GENERATE; i++) {
         const date = new Date(today)
         date.setDate(today.getDate() + i)
-
         const dayOfWeekName = days[date.getDay()]
         const dateString = date.toISOString().split('T')[0]
 
@@ -325,30 +375,21 @@ export default {
           (s) => s.type === 'regular' && s.day_of_week === dayOfWeekName,
         )
         const effectiveSchedule = customSchedule || regularSchedule
-
-        if (!effectiveSchedule || !effectiveSchedule.start_time || !effectiveSchedule.end_time) {
+        if (!effectiveSchedule || !effectiveSchedule.start_time || !effectiveSchedule.end_time)
           continue
-        }
 
         const [startHour, startMinute] = effectiveSchedule.start_time.split(':').map(Number)
         const [endHour, endMinute] = effectiveSchedule.end_time.split(':').map(Number)
 
         let currentSlotTime = new Date(date)
         currentSlotTime.setHours(startHour, startMinute, 0, 0)
-
         const closingTime = new Date(date)
         closingTime.setHours(endHour, endMinute, 0, 0)
-
-        if (closingTime < currentSlotTime) {
-          closingTime.setDate(closingTime.getDate() + 1)
-        }
+        if (closingTime < currentSlotTime) closingTime.setDate(closingTime.getDate() + 1)
 
         while (currentSlotTime < closingTime) {
-          if (currentSlotTime > new Date()) {
-            slots.push({
-              start_time: currentSlotTime.toISOString(),
-            })
-          }
+          if (currentSlotTime > new Date())
+            slots.push({ start_time: currentSlotTime.toISOString() })
           currentSlotTime = new Date(currentSlotTime.getTime() + this.SLOT_DURATION_MINUTES * 60000)
         }
       }
@@ -363,7 +404,6 @@ export default {
           month: 'long',
           day: 'numeric',
         })
-
         if (!grouped[dateKey]) grouped[dateKey] = []
         grouped[dateKey].push(slot)
       })
@@ -394,7 +434,6 @@ export default {
         alert('Please select a valid available schedule.')
         return
       }
-
       this.loading = true
       try {
         const user = (await supabase.auth.getUser()).data.user
@@ -413,7 +452,6 @@ export default {
           },
         ])
         if (error) throw error
-
         alert('Booking successful! Your booking is now pending.')
         this.selectedSchedule = ''
         await this.fetchSchedulesAndBookings()
