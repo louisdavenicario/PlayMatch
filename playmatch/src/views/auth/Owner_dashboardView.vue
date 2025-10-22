@@ -103,38 +103,61 @@
 
         <div v-if="currentPage === 'dashboard'">
           <v-row>
-            <v-col cols="12" sm="4">
+            <v-col cols="12" sm="6" lg="3">
               <v-card class="pa-4 dashboard-card" rounded="lg">
-                <v-card-title class="d-flex justify-space-between align-center">
-                  Today's Bookings
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <div class="text-subtitle-1 font-weight-medium">Today's Bookings</div>
                   <v-icon size="30" color="primary">mdi-calendar-today</v-icon>
-                </v-card-title>
-                <v-card-text class="text-h4 font-weight-bold">
+                </div>
+                <v-card-text class="pa-0 text-h4 font-weight-bold">
                   {{ dashboardData.todayBookings }}
                 </v-card-text>
               </v-card>
             </v-col>
 
-            <v-col cols="12" sm="4">
+            <v-col cols="12" sm="6" lg="3">
               <v-card class="pa-4 dashboard-card" rounded="lg">
-                <v-card-title class="d-flex justify-space-between align-center">
-                  Monthly Revenue
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <div class="text-subtitle-1 font-weight-medium">Monthly Revenue</div>
                   <v-icon size="30" color="green-darken-2">mdi-currency-php</v-icon>
-                </v-card-title>
-                <v-card-text class="text-h4 font-weight-bold">
+                </div>
+                <v-card-text class="pa-0 text-h4 font-weight-bold">
                   ₱{{ dashboardData.monthlyRevenue.toFixed(2) }}
                 </v-card-text>
               </v-card>
             </v-col>
 
-            <v-col cols="12" sm="4">
+            <v-col cols="12" sm="6" lg="3">
               <v-card class="pa-4 dashboard-card" rounded="lg">
-                <v-card-title class="d-flex justify-space-between align-center">
-                  Pending Requests
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <div class="text-subtitle-1 font-weight-medium">Pending Requests</div>
                   <v-icon size="30" color="orange-darken-2">mdi-alert-circle-outline</v-icon>
-                </v-card-title>
-                <v-card-text class="text-h4 font-weight-bold">
+                </div>
+                <v-card-text class="pa-0 text-h4 font-weight-bold">
                   {{ dashboardData.pendingRequests }}
+                </v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12" sm="6" lg="3">
+              <v-card class="pa-4 dashboard-card" rounded="lg">
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <div class="text-subtitle-1 font-weight-medium">Facility Rating</div>
+                  <v-icon size="30" color="amber-darken-2">mdi-star</v-icon>
+                </div>
+                <v-card-text class="pa-0 text-h6 font-weight-bold">
+                  <template v-if="facilityRating.average > 0">
+                    <div class="d-flex align-center">
+                      <v-icon size="24" color="amber-darken-2" class="mr-2">mdi-star</v-icon>
+                      <span class="text-h4 mr-2">
+                        {{ facilityRating.average.toFixed(1) }}
+                      </span>
+                      <span class="ml-2 text-caption text-medium-emphasis">
+                        ({{ facilityRating.totalReviews }} reviews)
+                      </span>
+                    </div>
+                  </template>
+                  <template v-else> No ratings yet </template>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -149,9 +172,11 @@
                     <v-icon>mdi-pencil</v-icon>
                   </v-btn>
                 </v-card-title>
+
                 <v-card-text>
                   <v-row>
-                    <v-col cols="20" md="10">
+                    <!-- LEFT SIDE: Facility Information -->
+                    <v-col cols="12" md="8">
                       <p class="mt-5">
                         <strong>Facility Name:</strong> {{ facilityDetails?.facility_name }}
                       </p>
@@ -168,103 +193,108 @@
                       <p class="mt-5">
                         <strong>Description:</strong> {{ facilityDetails?.briefdescription }}
                       </p>
-                      <p class="mt-5 mb-2"><strong>Regular Operating Hours:</strong></p>
-                      <v-col cols="20" md="20">
-                        <v-table density="compact" class="elevation-1 rounded-lg">
-                          <thead>
-                            <tr>
-                              <th class="text-left text-body-2 font-weight-bold">Day</th>
-                              <th class="text-left text-body-2 font-weight-bold">Open</th>
-                              <th class="text-left text-body-2 font-weight-bold">Close</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr v-for="hour in displayRegularHours" :key="hour.day">
-                              <td>{{ hour.day }}</td>
-                              <td :class="{ 'text-error': hour.openTime === '--' }">
-                                {{ hour.openTime }}
-                              </td>
-                              <td :class="{ 'text-error': hour.closeTime === '--' }">
-                                {{ hour.closeTime }}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </v-table>
-                      </v-col>
-                      <p class="mt-5 mb-2"><strong>Custom Schedule(s):</strong></p>
-                      <v-col cols="20" md="20">
-                        <v-table
-                          density="compact"
-                          class="elevation-1 rounded-lg"
-                          style="width: 100%"
-                        >
-                          <thead>
-                            <tr>
-                              <th class="text-left text-body-2 font-weight-bold">Date</th>
-                              <th class="text-left text-body-2 font-weight-bold">Start Time</th>
-                              <th class="text-left text-body-2 font-weight-bold">End Time</th>
-                              <th class="text-left text-body-2 font-weight-bold">Reason</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr v-for="(schedule, index) in upcomingCustomSchedules" :key="index">
-                              <td
-                                :colspan="schedule.isPlaceholder ? 4 : 1"
-                                :class="{ 'text-center font-italic': schedule.isPlaceholder }"
-                              >
-                                <template v-if="schedule.isPlaceholder">
-                                  {{ schedule.reason }}
-                                </template>
-                                <template v-else>
-                                  {{ schedule.date }}
-                                </template>
-                              </td>
 
-                              <template v-if="!schedule.isPlaceholder">
-                                <td>{{ schedule.startTime }}</td>
-                                <td>{{ schedule.endTime }}</td>
-                                <td style="white-space: normal">{{ schedule.reason }}</td>
+                      <!-- Regular Operating Hours -->
+                      <p class="mt-5 mb-2"><strong>Regular Operating Hours:</strong></p>
+                      <v-table density="compact" class="elevation-1 rounded-lg">
+                        <thead>
+                          <tr>
+                            <th class="text-left text-body-2 font-weight-bold">Day</th>
+                            <th class="text-left text-body-2 font-weight-bold">Open</th>
+                            <th class="text-left text-body-2 font-weight-bold">Close</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="hour in displayRegularHours" :key="hour.day">
+                            <td>{{ hour.day }}</td>
+                            <td :class="{ 'text-error': hour.openTime === '--' }">
+                              {{ hour.openTime }}
+                            </td>
+                            <td :class="{ 'text-error': hour.closeTime === '--' }">
+                              {{ hour.closeTime }}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </v-table>
+
+                      <!-- Custom Schedules -->
+                      <p class="mt-5 mb-2"><strong>Custom Schedule(s):</strong></p>
+                      <v-table density="compact" class="elevation-1 rounded-lg" style="width: 100%">
+                        <thead>
+                          <tr>
+                            <th class="text-left text-body-2 font-weight-bold">Date</th>
+                            <th class="text-left text-body-2 font-weight-bold">Start Time</th>
+                            <th class="text-left text-body-2 font-weight-bold">End Time</th>
+                            <th class="text-left text-body-2 font-weight-bold">Reason</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr v-for="(schedule, index) in upcomingCustomSchedules" :key="index">
+                            <td
+                              :colspan="schedule.isPlaceholder ? 4 : 1"
+                              :class="{ 'text-center font-italic': schedule.isPlaceholder }"
+                            >
+                              <template v-if="schedule.isPlaceholder">
+                                {{ schedule.reason }}
                               </template>
-                            </tr>
-                          </tbody>
-                        </v-table>
-                      </v-col>
+                              <template v-else>
+                                {{ schedule.date }}
+                              </template>
+                            </td>
+
+                            <template v-if="!schedule.isPlaceholder">
+                              <td>{{ schedule.startTime }}</td>
+                              <td>{{ schedule.endTime }}</td>
+                              <td style="white-space: normal">{{ schedule.reason }}</td>
+                            </template>
+                          </tr>
+                        </tbody>
+                      </v-table>
                     </v-col>
+
+                    <!-- RIGHT SIDE: All Photos (Primary + Gallery) -->
                     <v-col cols="12" md="4">
+                      <!-- Primary Photo -->
                       <p class="mt-5"><strong>Primary Photo:</strong></p>
                       <v-img
                         v-if="facilityDetails?.image_url"
                         :src="facilityDetails.image_url"
-                        class="rounded-lg"
-                        height="240px"
+                        class="rounded-lg mb-4"
+                        height="250px"
                         cover
                       ></v-img>
                       <div
                         v-else
-                        class="d-flex align-center justify-center grey-background rounded-lg"
-                        style="height: 280px"
+                        class="d-flex align-center justify-center grey-background rounded-lg mb-4"
+                        style="height: 250px"
                       >
                         <v-icon size="50">mdi-image-off</v-icon>
                         <p class="ml-2">No Image Available</p>
                       </div>
-                    </v-col>
 
-                    <v-col cols="12" v-if="facilityDetails?.additional_photos?.length">
-                      <p class="mt-5">
-                        <strong
-                          >Gallery Photos ({{ facilityDetails.additional_photos.length }}):</strong
+                      <!-- Gallery Photos -->
+                      <template v-if="facilityDetails?.additional_photos?.length">
+                        <p class="mt-5 mb-3">
+                          <strong
+                            >Gallery Photos ({{
+                              facilityDetails.additional_photos.length
+                            }}):</strong
+                          >
+                        </p>
+                        <div
+                          class="d-flex flex-column"
+                          style="gap: 12px; max-height: 800px; overflow-y: auto"
                         >
-                      </p>
-                      <div class="d-flex flex-wrap" style="gap: 12px">
-                        <v-img
-                          v-for="(url, index) in facilityDetails.additional_photos"
-                          :key="index"
-                          :src="url"
-                          class="rounded-lg border"
-                          style="width: 280px; height: 240px"
-                          cover
-                        ></v-img>
-                      </div>
+                          <v-img
+                            v-for="(url, index) in facilityDetails.additional_photos"
+                            :key="index"
+                            :src="url"
+                            class="rounded-lg border"
+                            style="width: 100%; height: 200px"
+                            cover
+                          ></v-img>
+                        </div>
+                      </template>
                     </v-col>
                   </v-row>
                 </v-card-text>
@@ -730,12 +760,22 @@ const router = useRouter()
 const userId = ref(null)
 const currentPage = ref('dashboard')
 const showEditModal = ref(false)
+
+// 💥 UPDATED DASHBOARD DATA (from your new script)
 const dashboardData = reactive({
   todayBookings: 0,
   monthlyRevenue: 0,
   pendingRequests: 0,
 })
+
 const facilityDetails = ref(null)
+
+// 💥 NEW/REPLACED: Facility Rating data structure
+const facilityRating = reactive({
+  average: 0,
+  totalReviews: 0,
+})
+
 const editedFacility = reactive({
   id: null,
   facility_name: '',
@@ -761,7 +801,6 @@ const regularHours = ref({
   sunday: { isOpen: false, openTime: '08:00', closeTime: '17:00' },
 })
 const daysOfWeek = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-// NOTE: customSchedules is already defined above
 const newCustomSchedule = reactive({
   date: '',
   startTime: '08:00',
@@ -772,10 +811,59 @@ const alertMessageText = ref(null)
 const alertColor = ref(null)
 const loadingState = ref(false) // 🌟 Added loading state for the modal button
 
-// 🌟 NEW FUNCTION: Opens the custom confirmation modal
+// --- RATING LOGIC START ---
+
+// 💥 NEW: Fetch ratings for this owner’s facility
+const fetchRatings = async () => {
+  if (!facilityDetails.value || !facilityDetails.value.id) return
+
+  try {
+    // Assuming a 'ratings' table with a 'facility_id' and 'rating_value' column
+    const { data, error } = await supabase
+      .from('ratings')
+      .select('rating_value')
+      .eq('facility_id', facilityDetails.value.id)
+
+    if (error) throw error
+
+    if (data && data.length > 0) {
+      const total = data.reduce((sum, r) => sum + (r.rating_value || 0), 0)
+      // Use the average value directly for v-rating
+      facilityRating.average = total / data.length
+      // Use toFixed(1) only when displaying, keep float for v-model
+      facilityRating.totalReviews = data.length
+    } else {
+      facilityRating.average = 0
+      facilityRating.totalReviews = 0
+    }
+  } catch (error) {
+    console.error('Error fetching ratings:', error.message)
+  }
+}
+
+// 💥 NEW: Utility to get the owner's facility details once
+const getOwnerFacility = async () => {
+  try {
+    const { data: user } = await supabase.auth.getUser()
+    if (!user || !user.user) return null
+
+    const { data, error } = await supabase
+      .from('facilities')
+      .select('*')
+      .eq('owner_id', user.user.id)
+      .single()
+
+    if (error) throw error
+    facilityDetails.value = data
+  } catch (error) {
+    console.error('Error fetching facility:', error.message)
+  }
+}
+
+// --- RATING LOGIC END ---
+
 const openDeleteModal = (schedule) => {
   scheduleToDeleteId.value = schedule.id
-  // Format the date for a friendly message in the modal
   if (schedule.date) {
     scheduleToDeleteDate.value = new Date(schedule.date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -788,88 +876,72 @@ const openDeleteModal = (schedule) => {
   showDeleteConfirmModal.value = true
 }
 
-// 🌟 MODIFIED FUNCTION: Executes the deletion after confirmation from the modal
-// This function no longer takes an 'id' but uses the stored 'scheduleToDeleteId'
 const removeCustomSchedule = async () => {
-  if (!scheduleToDeleteId.value) return // Exit if no ID is set
+  if (!scheduleToDeleteId.value) return
 
-  loadingState.value = true // Start loading spinner
+  loadingState.value = true
 
   try {
-    // --- Deletion Logic ---
     const { error } = await supabase.from('schedules').delete().eq('id', scheduleToDeleteId.value)
 
     if (error) throw error
 
-    // --- Success Cleanup ---
     alertMessage('Custom schedule removed.', 'success')
-    fetchAllOwnerData() // Refresh the list
+    fetchAllOwnerData()
   } catch (error) {
     console.error('Error removing custom schedule: ', error.message)
     alertMessage('Failed to remove custom schedule.', 'error')
   } finally {
-    // --- Always close modal and reset state ---
-    loadingState.value = false // Stop loading spinner
+    loadingState.value = false
     showDeleteConfirmModal.value = false
     scheduleToDeleteId.value = null
     scheduleToDeleteDate.value = ''
   }
 }
 
-// 🌟 NEW COMPUTED PROPERTY: Filters out days that are closed (NULL times in DB)
-// This is the array you will now use in your HTML template to list the operating hours.
 const openRegularHours = computed(() => {
-  // Convert the reactive object into an array of [dayName, data] entries
   return Object.entries(regularHours.value)
-    .filter(([, data]) => data.isOpen) // Keep only days where 'isOpen' is true
+    .filter(([, data]) => data.isOpen)
     .map(([day, data]) => ({
-      // Map it into a cleaner object structure
-      day: day.charAt(0).toUpperCase() + day.slice(1), // Capitalize the day name
+      day: day.charAt(0).toUpperCase() + day.slice(1),
       openTime: data.openTime,
       closeTime: data.closeTime,
     }))
 })
 
-// 🌟 NEW COMPUTED PROPERTY 1: Displays all days (open/closed) for the main dashboard.
 const displayRegularHours = computed(() => {
-  // Start with the daysOfWeek array to ensure correct order
   return daysOfWeek.map((dayKey) => {
     const data = regularHours.value[dayKey]
     const dayName = dayKey.charAt(0).toUpperCase() + dayKey.slice(1)
 
     return {
       day: dayName,
-      // If isOpen is false, use '--' for times, otherwise use the actual times
       openTime: data.isOpen ? data.openTime : '--',
       closeTime: data.isOpen ? data.closeTime : '--',
     }
   })
 })
 
-// 🌟 NEW COMPUTED PROPERTY 2: Finds the next upcoming custom schedule or returns placeholder.
 const upcomingCustomSchedules = computed(() => {
   if (!customSchedules.value || customSchedules.value.length === 0) {
-    // Return an array with a single placeholder object if none exist
     return [
       {
         date: '--',
         startTime: '--',
         endTime: '--',
         reason: 'No Custom Schedules Set',
-        isPlaceholder: true, // Helper flag for template formatting
+        isPlaceholder: true,
       },
     ]
   }
 
-  const today = new Date().toISOString().substring(0, 10) // 'YYYY-MM-DD'
+  const today = new Date().toISOString().substring(0, 10)
 
-  // 1. Filter out past schedules
   const upcoming = customSchedules.value
     .filter((s) => s.date >= today)
     .sort((a, b) => new Date(a.date) - new Date(b.date))
 
   if (upcoming.length === 0) {
-    // Return placeholder if all schedules are in the past
     return [
       {
         date: '--',
@@ -881,7 +953,6 @@ const upcomingCustomSchedules = computed(() => {
     ]
   }
 
-  // 2. Format the date for all upcoming schedules
   return upcoming.map((schedule) => {
     const formattedDate = new Date(schedule.date).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -900,85 +971,63 @@ const upcomingCustomSchedules = computed(() => {
 })
 
 const fetchAllOwnerData = async () => {
-  if (!userId.value) return
+  // 1. Fetch Facility Details first
+  await getOwnerFacility()
+
+  if (!facilityDetails.value) {
+    // If no facility, reset rating and exit
+    facilityRating.average = 0
+    facilityRating.totalReviews = 0
+    return
+  }
+
   try {
-    let { data: facilityData, error: facilityError } = await supabase
-      .from('facilities')
-      .select('*')
-      .eq('owner_id', userId.value)
-      .single()
+    // The rest of the logic remains largely the same, but simplified for clarity
+    const facilityId = facilityDetails.value.id
 
-    if (facilityError && facilityError.code !== 'PGRST116') {
-      console.error('Error fetching facility data:', facilityError.message)
-      throw facilityError
-    }
+    // Fetch hours, bookings, etc.
+    // ... (Your original fetch logic for schedules, bookings, etc. goes here)
+    // NOTE: I'm skipping the full schedule/booking fetch for brevity in this response,
+    // but the final included code snippet has it all.
 
-    if (facilityData) {
-      facilityDetails.value = facilityData
-      Object.assign(editedFacility, {
-        id: facilityData.id,
-        facility_name: facilityData.facility_name,
-        facility_type: facilityData.facility_type, // FIX: Added
-        amenities: facilityData.amenities,
-        price_per_hour: facilityData.price_per_hour,
-        open_time: facilityData.open_time, // FIX: Added
-        closing_time: facilityData.closing_time, // FIX: Added
-        briefdescription: facilityData.briefdescription,
-        address: facilityData.address,
-      })
-    } else {
-      console.log('No facility data found for this owner. The user can now create one.')
-      facilityDetails.value = null
-      // *** CRITICAL FIX: Exit early if facility is null ***
-      return
-    }
-
-    // START: Logic for fetching regular hours (Requires facilityDetails.value.id)
+    // START: Logic for fetching regular hours
     let { data: hoursData, error: hoursError } = await supabase
       .from('schedules')
       .select('day_of_week, start_time, end_time')
-      .eq('facility_id', facilityDetails.value.id)
+      .eq('facility_id', facilityId)
       .eq('type', 'regular')
 
     if (hoursError) {
       console.error('Error fetching regular hours:', hoursError.message)
     }
 
-    // Initialize regularHours with defaults
     const newRegularHours = { ...regularHours.value }
 
     if (hoursData && hoursData.length > 0) {
       hoursData.forEach((item) => {
         const day = item.day_of_week
         if (newRegularHours[day]) {
-          // Determine if the day is open (start_time is not null)
-          // Since we are now DELETING closed days, start_time should generally exist for fetched data,
-          // but checking for null is good for robustness (e.g., if a day was upserted with nulls before the fix).
           const isOpen = !!item.start_time
           newRegularHours[day] = {
             isOpen: isOpen,
-            openTime: item.start_time || '08:00', // Use '08:00' as a default if null
-            closeTime: item.end_time || '17:00', // Use '17:00' as a default if null
+            openTime: item.start_time || '08:00',
+            closeTime: item.end_time || '17:00',
           }
         }
       })
-      // Any day not returned by the DB query but present in regularHours.value
-      // will retain its default (or previous) closed state, which is correct.
     } else {
-      // If no hours are returned, reset all days to the default closed state.
       daysOfWeek.forEach((day) => {
         newRegularHours[day] = { isOpen: false, openTime: '08:00', closeTime: '17:00' }
       })
     }
 
-    // Update the main reactive ref with the fetched/processed data
     regularHours.value = newRegularHours
     // END: Logic for handling fetched regular hours
 
     let { data: customData, error: customError } = await supabase
       .from('schedules')
       .select('*')
-      .eq('facility_id', facilityDetails.value.id) // Use facility ID for RLS compatibility
+      .eq('facility_id', facilityId)
       .eq('type', 'custom')
     if (customError) console.error('Error fetching custom schedules:', customError.message)
     if (customData) customSchedules.value = customData
@@ -987,16 +1036,19 @@ const fetchAllOwnerData = async () => {
     let { data: bookingsData, error: bookingsError } = await supabase
       .from('bookings')
       .select('*')
-      .eq('facility_id', facilityDetails.value.id)
+      .eq('facility_id', facilityId)
     if (bookingsError) throw bookingsError
 
     const allBookings = bookingsData || []
 
-    // Update both pending and accepted bookings refs
     pendingBookings.value = allBookings.filter((b) => b.status === 'pending')
-    // *** FIX: Update the global acceptedBookings ref on initial fetch ***
     acceptedBookings.value = allBookings.filter((b) => b.status === 'accepted')
+    dashboardData.pendingRequests = pendingBookings.value.length
 
+    // 2. Fetch facility ratings
+    await fetchRatings()
+
+    // 3. Update dashboard metrics based on acceptedBookings (as you did originally)
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const nextDay = new Date(today)
@@ -1004,12 +1056,10 @@ const fetchAllOwnerData = async () => {
     const currentMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
     const nextMonthStart = new Date(today.getFullYear(), today.getMonth() + 1, 1)
 
-    // Use the globally updated acceptedBookings.value for calculations
     const todayAccepted = acceptedBookings.value.filter(
       (b) => new Date(b.start_time) >= today && new Date(b.start_time) < nextDay,
     )
     dashboardData.todayBookings = todayAccepted.length
-    dashboardData.pendingRequests = pendingBookings.value.length
 
     let monthlyRevenueCalc = 0
     acceptedBookings.value.forEach((booking) => {
@@ -1037,7 +1087,7 @@ const fetchAllOwnerData = async () => {
       }
     })
   } catch (error) {
-    console.error('Error fetching data:', error.message)
+    console.error('Error fetching dashboard data:', error.message)
   }
 }
 
@@ -1046,9 +1096,6 @@ const handleBookingStatus = async (bookingId, status) => {
     const { error } = await supabase.from('bookings').update({ status: status }).eq('id', bookingId)
     if (error) throw error
     alertMessage('Booking ' + status + '!', 'success')
-
-    // FIX: Removed manual state updates, relying solely on fetchAllOwnerData()
-    // to refresh all dashboard data (pending, accepted, recent, etc.)
     fetchAllOwnerData()
   } catch (error) {
     console.error(`Error updating booking status: `, error.message)
@@ -1057,16 +1104,12 @@ const handleBookingStatus = async (bookingId, status) => {
 }
 
 const selectDay = (dateString) => {
-  // The dateString is typically in 'YYYY-MM-DD' format from v-date-picker
   selectedDay.value = dateString
-
-  // Filter the global acceptedBookings array for the selected date
   selectedDateBookings.value = acceptedBookings.value.filter(
     (booking) => new Date(booking.start_time).toISOString().substring(0, 10) === dateString,
   )
 }
 
-// 💥 THE FIX IS HERE: Separating UPSERT for open days and DELETE for closed days.
 const saveRegularHours = async () => {
   if (!facilityDetails.value || !facilityDetails.value.id) {
     alertMessage('Failed to save regular hours: Facility data is not yet loaded.', 'error')
@@ -1081,7 +1124,6 @@ const saveRegularHours = async () => {
       const data = regularHours.value[day]
 
       if (data.isOpen) {
-        // --- 1. UPSERT (Update or Insert) for OPEN days ---
         const scheduleData = {
           facility_id: facilityId,
           type: 'regular',
@@ -1089,16 +1131,12 @@ const saveRegularHours = async () => {
           start_time: data.openTime,
           end_time: data.closeTime,
         }
-
-        // Add the UPSERT operation to the promises array
         promises.push(
           supabase.from('schedules').upsert(scheduleData, {
             onConflict: 'facility_id, type, day_of_week',
           }),
         )
       } else {
-        // --- 2. DELETE for CLOSED days (The requested fix) ---
-        // If the day is unchecked, we explicitly delete the corresponding record from the database.
         promises.push(
           supabase
             .from('schedules')
@@ -1110,22 +1148,17 @@ const saveRegularHours = async () => {
       }
     }
 
-    // 3. Run all database operations concurrently
     const results = await Promise.all(promises)
 
-    // Check for any errors in the results (optional, but good practice)
     const hasError = results.some((result) => result.error)
     if (hasError) {
-      // Log the specific errors
       results.forEach((result) => {
         if (result.error) console.error('Error during hours save/delete:', result.error.message)
       })
-      // Throw a general error to trigger the catch block
       throw new Error('One or more database operations failed during hours save.')
     }
 
     alertMessage('Regular hours saved successfully! Closed days were removed.', 'success')
-    // Refresh data to update the display
     fetchAllOwnerData()
   } catch (error) {
     console.error('Error saving regular hours: ', error.message)
@@ -1139,7 +1172,6 @@ const addCustomSchedule = async () => {
     return
   }
 
-  // 🛑 FIX Applied by user previously (Good Check)
   if (!facilityDetails.value || !facilityDetails.value.id) {
     alertMessage('Failed to add custom schedule: Facility data is not yet loaded.', 'error')
     return
@@ -1147,7 +1179,7 @@ const addCustomSchedule = async () => {
 
   try {
     const { error } = await supabase.from('schedules').insert({
-      facility_id: facilityDetails.value.id, // Now safe to access
+      facility_id: facilityDetails.value.id,
       date: newCustomSchedule.date,
       start_time: newCustomSchedule.startTime,
       end_time: newCustomSchedule.endTime,
@@ -1158,13 +1190,12 @@ const addCustomSchedule = async () => {
 
     alertMessage('Custom schedule added successfully!', 'success')
     Object.assign(newCustomSchedule, {
-      // Clear the input fields
       date: '',
       startTime: '08:00',
       endTime: '17:00',
       reason: '',
     })
-    fetchAllOwnerData() // Refresh data to see the new custom schedule
+    fetchAllOwnerData()
   } catch (error) {
     console.error('Error adding custom schedule: ', error.message)
     alertMessage(
@@ -1175,55 +1206,43 @@ const addCustomSchedule = async () => {
 }
 
 const handleGalleryFileChange = (event) => {
-  // Add all selected files to the newGalleryFiles array
   newGalleryFiles.value.push(...Array.from(event.target.files))
-  // Clear the input value so the same file can be selected again if needed
   event.target.value = null
 }
 
 const removeNewGalleryFile = (index) => {
-  // Removes a file that was just selected but hasn't been uploaded yet
   newGalleryFiles.value.splice(index, 1)
 }
 
 const removePrimaryPhoto = () => {
-  // Clear the URL, which will be saved as null to the DB on form submission
   editedFacility.image_url = null
-  // Clear the file input in case a new one was selected
   primaryPhotoFile.value = null
   alertMessage('Primary photo cleared. Click Save to confirm removal.', 'info')
 }
 
 const removeExistingPhoto = (index) => {
-  // This removes the URL from the existingPhotoUrls array.
-  // Since this array is saved to the DB, the photo will disappear upon saving.
   existingPhotoUrls.value.splice(index, 1)
-  // NOTE: The actual file remains in Supabase Storage.
 }
 
 const saveFacilityDetails = async () => {
   try {
     let finalImageUrl = editedFacility.image_url
-    // Start with existing URLs (those loaded from the DB and not removed by the owner)
     let galleryUrlsToSave = [...existingPhotoUrls.value]
 
-    // --- NEW STEP: 1. HANDLE PRIMARY PHOTO UPLOAD ---
     if (primaryPhotoFile.value) {
-      const file = primaryPhotoFile.value[0] || primaryPhotoFile.value // Handle v-file-input returning array/single
+      const file = primaryPhotoFile.value[0] || primaryPhotoFile.value
       const filePath = `${userId.value}/primary/${Date.now()}_${file.name}`
 
       const { error: storageError } = await supabase.storage
-        .from('facility-photos') // **USE YOUR CORRECT BUCKET NAME**
+        .from('facility-photos')
         .upload(filePath, file, { upsert: true })
 
       if (storageError) {
         console.error(`Primary photo upload failed:`, storageError.message)
         alertMessage(`Failed to upload primary photo: ${storageError.message}`, 'error')
-        // STOP THE SAVE HERE if the primary photo fails, or proceed with old URL
-        return // or continue, depending on your error tolerance
+        return
       }
 
-      // Get the public URL for the new image
       const { data: publicUrlData } = supabase.storage
         .from('facility-photos')
         .getPublicUrl(filePath)
@@ -1232,17 +1251,14 @@ const saveFacilityDetails = async () => {
         finalImageUrl = publicUrlData.publicUrl
       }
     }
-    // --- END PRIMARY PHOTO UPLOAD ---
-    // --- 1. HANDLE ADDITIONAL PHOTOS UPLOAD ---
+
     if (newGalleryFiles.value.length > 0) {
       const newUrls = []
-
       for (const file of newGalleryFiles.value) {
-        // Use a unique file path for each new gallery image
         const filePath = `${userId.value}/gallery/${Date.now()}_${file.name}`
 
         const { error: storageError } = await supabase.storage
-          .from('facility-photos') // Use your correct bucket name!
+          .from('facility-photos')
           .upload(filePath, file, { upsert: true })
 
         if (storageError) {
@@ -1251,7 +1267,6 @@ const saveFacilityDetails = async () => {
           continue
         }
 
-        // Get the public URL for the new image
         const { data: publicUrlData } = supabase.storage
           .from('facility-photos')
           .getPublicUrl(filePath)
@@ -1260,27 +1275,23 @@ const saveFacilityDetails = async () => {
           newUrls.push(publicUrlData.publicUrl)
         }
       }
-
-      // Add all successfully uploaded new URLs to the array to be saved
       galleryUrlsToSave.push(...newUrls)
     }
 
-    // --- 2. DATABASE UPDATE ---
     const { error: updateError } = await supabase.from('facilities').upsert(
       {
         id: editedFacility.id,
         owner_id: userId.value,
         facility_name: editedFacility.facility_name,
-        facility_type: editedFacility.facility_type, // FIX: Included
+        facility_type: editedFacility.facility_type,
         amenities: editedFacility.amenities,
         price_per_hour: editedFacility.price_per_hour,
-        open_time: editedFacility.open_time, // FIX: Included
-        closing_time: editedFacility.closing_time, // FIX: Included
+        open_time: editedFacility.open_time,
+        closing_time: editedFacility.closing_time,
         address: editedFacility.address,
         phone_number: editedFacility.phone_number,
         briefdescription: editedFacility.briefdescription,
         image_url: finalImageUrl,
-        // CRITICAL: Save the combined array of URLs to the new array column
         additional_photos: galleryUrlsToSave,
       },
       { onConflict: 'id' },
@@ -1288,11 +1299,10 @@ const saveFacilityDetails = async () => {
 
     if (updateError) throw updateError
 
-    // --- 3. SUCCESS CLEANUP ---
     alertMessage('Facility updated successfully!', 'success')
     showEditModal.value = false
-    await fetchAllOwnerData() // Ensure dashboard refreshes with new data
-    newGalleryFiles.value = [] // Now safe to clear the files after success
+    await fetchAllOwnerData()
+    newGalleryFiles.value = []
   } catch (error) {
     console.error('Error updating facility:', error.message)
     alertMessage('Failed to update facility.', 'error')
@@ -1329,10 +1339,8 @@ onMounted(async () => {
     } = await supabase.auth.getSession()
     if (session) {
       userId.value = session.user.id
-      console.log('User authenticated with ID:', userId.value)
       await fetchAllOwnerData()
     } else {
-      console.log('No active session found.')
       router.push({ name: 'signin' })
     }
   } catch (error) {
@@ -1345,31 +1353,25 @@ const openEditModal = () => {
     alertMessage('Cannot edit facility: Facility data not loaded.', 'error')
     return
   }
-  // 1. Copy the current facility details to the reactive 'editedFacility' object
+
   Object.assign(editedFacility, {
     id: facilityDetails.value.id,
     facility_name: facilityDetails.value.facility_name,
-    facility_type: facilityDetails.value.facility_type, // FIX: Included
+    facility_type: facilityDetails.value.facility_type,
     amenities: facilityDetails.value.amenities,
     price_per_hour: facilityDetails.value.price_per_hour,
-    open_time: facilityDetails.value.open_time, // FIX: Included
-    closing_time: facilityDetails.value.closing_time, // FIX: Included
+    open_time: facilityDetails.value.open_time,
+    closing_time: facilityDetails.value.closing_time,
     address: facilityDetails.value.address,
     phone_number: facilityDetails.value.phone_number,
     briefdescription: facilityDetails.value.briefdescription,
     image_url: facilityDetails.value.image_url,
   })
 
-  // 2. Initialize the state for the additional (gallery) photos
-  // Get existing URLs from the new database column ('additional_photos').
-  // Ensure it defaults to an empty array if the DB value is null.
   existingPhotoUrls.value = facilityDetails.value.additional_photos || []
-
-  // Clear the array that holds any *new* files the user might select during this session.
   newGalleryFiles.value = []
-  primaryPhotoFile.value = null // Clear any file selected in a previous attempt
+  primaryPhotoFile.value = null
 
-  // 3. Show the modal
   showEditModal.value = true
 }
 </script>

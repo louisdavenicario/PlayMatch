@@ -5,46 +5,128 @@
       <v-icon left>mdi-arrow-left</v-icon> Back
     </v-btn>
 
-    <!-- Facility Card with Carousel -->
+    <!-- Facility Card -->
     <v-card class="pa-4" rounded="lg" elevation="2">
-      <v-carousel
-        v-if="allPhotos.length > 0"
-        cycle
-        height="500"
-        hide-delimiter-background
-        show-arrows-on-hover
-        class="mb-4 mx-auto"
-        style="max-width: 1000px"
-        rounded="lg"
-        delimiter-icon="mdi-circle-small"
-        delimiter-size="10"
-      >
-        <v-carousel-item
-          v-for="(photoUrl, i) in allPhotos"
-          :key="i"
-          :src="photoUrl"
-          contain
-          style="cursor: pointer"
-          @click="openZoom(photoUrl)"
-          title="Click to Zoom"
-        >
-        </v-carousel-item>
-      </v-carousel>
+      <!-- 1 PHOTO -->
+      <v-row v-if="allPhotos.length === 1" class="mb-4 mx-auto" style="max-width: 1200px">
+        <v-col cols="12" class="pa-1">
+          <v-img
+            :src="allPhotos[0]"
+            aspect-ratio="16/9"
+            cover
+            class="rounded-lg"
+            style="cursor: pointer"
+            @click="openZoom(allPhotos[0])"
+            title="Click to Zoom"
+          />
+        </v-col>
+      </v-row>
 
+      <!-- 2-4 PHOTOS -->
+      <v-row
+        v-else-if="allPhotos.length >= 2 && allPhotos.length <= 4"
+        class="mb-4 mx-auto"
+        style="max-width: 1200px"
+      >
+        <v-col v-for="(photoUrl, i) in allPhotos" :key="i" cols="12" sm="6" md="6" class="pa-1">
+          <v-img
+            :src="photoUrl"
+            aspect-ratio="4/3"
+            cover
+            class="rounded-lg h-100"
+            style="cursor: pointer"
+            @click="openZoom(photoUrl)"
+            title="Click to Zoom"
+          />
+        </v-col>
+      </v-row>
+
+      <!-- 5 OR MORE PHOTOS (Airbnb-style layout) -->
+      <v-row
+        v-else-if="allPhotos.length >= 5"
+        class="mb-4 mx-auto align-stretch"
+        style="max-width: 1200px"
+      >
+        <!-- Left Main Photo -->
+        <v-col cols="12" md="7" class="pa-1">
+          <v-img
+            :src="allPhotos[0]"
+            cover
+            class="rounded-lg h-100"
+            style="cursor: pointer; height: 100%; min-height: 400px"
+            @click="openZoom(allPhotos[0])"
+            title="Click to Zoom"
+          >
+            <div class="d-flex align-end justify-end fill-height">
+              <v-chip
+                color="white"
+                class="ma-3 font-weight-bold"
+                style="opacity: 0.9"
+                @click.stop="openZoom(allPhotos[0])"
+              >
+                <v-icon left>mdi-image-multiple</v-icon> See all photos
+              </v-chip>
+            </div>
+          </v-img>
+        </v-col>
+
+        <!-- Right stacked photos -->
+        <v-col cols="12" md="5" class="pa-1 d-flex flex-column">
+          <v-row no-gutters class="flex-grow-1">
+            <v-col
+              v-for="(photoUrl, i) in allPhotos.slice(1, 3)"
+              :key="i + 1"
+              cols="6"
+              class="pa-1"
+            >
+              <v-img
+                :src="photoUrl"
+                aspect-ratio="1/1"
+                cover
+                class="rounded-lg h-100"
+                style="cursor: pointer"
+                @click="openZoom(photoUrl)"
+                title="Click to Zoom"
+              />
+            </v-col>
+          </v-row>
+
+          <v-row no-gutters class="flex-grow-1">
+            <v-col
+              v-for="(photoUrl, i) in allPhotos.slice(3, 5)"
+              :key="i + 3"
+              cols="6"
+              class="pa-1"
+            >
+              <v-img
+                :src="photoUrl"
+                aspect-ratio="1/1"
+                cover
+                class="rounded-lg h-100"
+                style="cursor: pointer"
+                @click="openZoom(photoUrl)"
+                title="Click to Zoom"
+              />
+            </v-col>
+          </v-row>
+        </v-col>
+      </v-row>
+
+      <!-- DEFAULT FALLBACK -->
       <v-img
         v-else
         src="/images/default-facility.jpg"
-        height="500"
-        width="auto"
+        height="400"
         class="mb-4 mx-auto"
         rounded="lg"
-      ></v-img>
+      />
 
+      <!-- Facility Info -->
       <h2 class="font-weight-bold">{{ facility.facility_name }}</h2>
       <p class="grey--text mb-2">{{ facility.address }}</p>
 
-      <!-- Ratings -->
-      <div class="d-flex align-center mb-3">
+      <!-- Rating -->
+      <div class="d-flex align-center mb-3 flex-wrap">
         <div class="d-flex align-center mr-2">
           <v-icon
             v-for="star in 5"
@@ -64,7 +146,7 @@
 
       <v-chip color="green darken-1" dark> ₱{{ facility.price_per_hour || 'N/A' }} / hour </v-chip>
 
-      <v-divider class="my-4"></v-divider>
+      <v-divider class="my-4" />
 
       <p class="grey--text">{{ facility.briefdescription || 'No description available.' }}</p>
     </v-card>
@@ -92,7 +174,7 @@
                 cycle
               >
                 <v-carousel-item v-for="(photoUrl, index) in allPhotos" :key="index">
-                  <v-img :src="photoUrl" contain max-height="90vh" class="mx-auto"></v-img>
+                  <v-img :src="photoUrl" contain max-height="90vh" class="mx-auto" />
                 </v-carousel-item>
               </v-carousel>
             </v-col>
@@ -101,7 +183,7 @@
       </v-card>
     </v-dialog>
 
-    <!-- Booking Section -->
+    <!-- Booking Card -->
     <v-card class="pa-4 mt-6" rounded="lg" elevation="2">
       <h3 class="text-h6 font-weight-medium mb-3">Book this Facility</h3>
 
@@ -122,10 +204,7 @@
             Available Slots for {{ selectedDate }}
           </h4>
 
-          <div
-            v-if="groupedSchedules[selectedDate] && groupedSchedules[selectedDate].length > 0"
-            class="d-flex flex-wrap"
-          >
+          <div v-if="groupedSchedules[selectedDate]?.length" class="d-flex flex-wrap">
             <v-btn
               v-for="slot in groupedSchedules[selectedDate]"
               :key="slot.start_time"
@@ -198,14 +277,10 @@ export default {
     loadingSchedules: false,
     SLOT_DURATION_MINUTES: 60,
     DAYS_TO_GENERATE: 90,
-
-    // Ratings
     userRating: 0,
     averageRating: '0.0',
     totalRatings: 0,
     currentUserId: null,
-
-    // Carousel & Zoom
     zoomDialog: false,
     zoomCarouselIndex: 0,
   }),
@@ -254,46 +329,32 @@ export default {
         if (typeof this.facility.additional_photos === 'string') {
           try {
             this.facility.additional_photos = JSON.parse(this.facility.additional_photos)
-          } catch (e) {
+          } catch {
             this.facility.additional_photos = []
           }
         } else if (!Array.isArray(this.facility.additional_photos)) {
           this.facility.additional_photos = []
         }
-      } else console.error('Error fetching facility:', error.message)
+      }
     },
     openZoom(photoUrl) {
       const index = this.allPhotos.findIndex((p) => p === photoUrl)
       this.zoomCarouselIndex = index >= 0 ? index : 0
       this.zoomDialog = true
     },
-
-    // Ratings
     async fetchRatings() {
-      try {
-        const { data: allRatings, error: allError } = await supabase
-          .from('ratings')
-          .select('rating_value, user_id')
-          .eq('facility_id', this.id)
+      const { data: ratings } = await supabase
+        .from('ratings')
+        .select('rating_value, user_id')
+        .eq('facility_id', this.id)
 
-        if (allError) throw allError
-
-        const ratings = allRatings || []
-        const ratingValues = ratings.map((r) => r.rating_value)
-
-        this.totalRatings = ratingValues.length
-        this.averageRating =
-          ratingValues.length > 0
-            ? (ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length).toFixed(1)
-            : '0.0'
-
-        this.userRating = 0
-        if (this.currentUserId) {
-          const userRatingRecord = ratings.find((r) => r.user_id === this.currentUserId)
-          if (userRatingRecord) this.userRating = userRatingRecord.rating_value
-        }
-      } catch (err) {
-        console.error('Error fetching ratings:', err.message)
+      const values = ratings?.map((r) => r.rating_value) || []
+      this.totalRatings = values.length
+      this.averageRating =
+        values.length > 0 ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(1) : '0.0'
+      if (this.currentUserId) {
+        const userRating = ratings.find((r) => r.user_id === this.currentUserId)
+        this.userRating = userRating ? userRating.rating_value : 0
       }
     },
     async rateFacility(star) {
@@ -301,31 +362,23 @@ export default {
         alert('Please log in to rate this facility.')
         return
       }
-      try {
-        this.userRating = star
-        const { data: existing } = await supabase
+      this.userRating = star
+      const { data: existing } = await supabase
+        .from('ratings')
+        .select('id')
+        .eq('user_id', this.currentUserId)
+        .eq('facility_id', this.id)
+        .limit(1)
+
+      if (existing?.length) {
+        await supabase.from('ratings').update({ rating_value: star }).eq('id', existing[0].id)
+      } else {
+        await supabase
           .from('ratings')
-          .select('id')
-          .eq('user_id', this.currentUserId)
-          .eq('facility_id', this.id)
-          .limit(1)
-
-        const existingRatingId = existing?.[0]?.id || null
-        if (existingRatingId) {
-          await supabase.from('ratings').update({ rating_value: star }).eq('id', existingRatingId)
-        } else {
-          await supabase
-            .from('ratings')
-            .insert([{ facility_id: this.id, user_id: this.currentUserId, rating_value: star }])
-        }
-
-        await this.fetchRatings()
-      } catch (err) {
-        console.error('Error submitting rating:', err.message)
+          .insert([{ facility_id: this.id, user_id: this.currentUserId, rating_value: star }])
       }
+      await this.fetchRatings()
     },
-
-    // Booking
     async fetchSchedulesAndBookings() {
       this.loadingSchedules = true
       try {
@@ -334,83 +387,62 @@ export default {
           .select('*')
           .eq('facility_id', this.id)
         this.schedules = schedulesData || []
-
         const { data: bookingsData } = await supabase
           .from('bookings')
           .select('start_time')
           .eq('facility_id', this.id)
-        const reservedStarts = new Set(
-          bookingsData.map((b) => new Date(b.start_time).toISOString()),
+        const reserved = new Set(bookingsData.map((b) => new Date(b.start_time).toISOString()))
+        const generated = this.generateFutureSlots()
+        this.availableSchedules = generated.filter(
+          (slot) => !reserved.has(new Date(slot.start_time).toISOString()),
         )
-
-        const generatedSlots = this.generateFutureSlots()
-        this.availableSchedules = generatedSlots.filter(
-          (slot) => !reservedStarts.has(new Date(slot.start_time).toISOString()),
-        )
-
         this.groupAvailableSchedules()
-      } catch (err) {
-        console.error('Error fetching schedules or bookings:', err.message)
       } finally {
         this.loadingSchedules = false
       }
     },
-
     generateFutureSlots() {
       const slots = []
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-
       for (let i = 0; i < this.DAYS_TO_GENERATE; i++) {
         const date = new Date(today)
         date.setDate(today.getDate() + i)
-        const dayOfWeekName = days[date.getDay()]
-        const dateString = date.toISOString().split('T')[0]
-
-        const customSchedule = this.schedules.find(
-          (s) => s.type === 'custom' && s.date === dateString,
-        )
-        const regularSchedule = this.schedules.find(
-          (s) => s.type === 'regular' && s.day_of_week === dayOfWeekName,
-        )
-        const effectiveSchedule = customSchedule || regularSchedule
-        if (!effectiveSchedule || !effectiveSchedule.start_time || !effectiveSchedule.end_time)
-          continue
-
-        const [startHour, startMinute] = effectiveSchedule.start_time.split(':').map(Number)
-        const [endHour, endMinute] = effectiveSchedule.end_time.split(':').map(Number)
-
-        let currentSlotTime = new Date(date)
-        currentSlotTime.setHours(startHour, startMinute, 0, 0)
-        const closingTime = new Date(date)
-        closingTime.setHours(endHour, endMinute, 0, 0)
-        if (closingTime < currentSlotTime) closingTime.setDate(closingTime.getDate() + 1)
-
-        while (currentSlotTime < closingTime) {
-          if (currentSlotTime > new Date())
-            slots.push({ start_time: currentSlotTime.toISOString() })
-          currentSlotTime = new Date(currentSlotTime.getTime() + this.SLOT_DURATION_MINUTES * 60000)
+        const dow = days[date.getDay()]
+        const dateStr = date.toISOString().split('T')[0]
+        const custom = this.schedules.find((s) => s.type === 'custom' && s.date === dateStr)
+        const regular = this.schedules.find((s) => s.type === 'regular' && s.day_of_week === dow)
+        const sched = custom || regular
+        if (!sched || !sched.start_time || !sched.end_time) continue
+        const [sh, sm] = sched.start_time.split(':').map(Number)
+        const [eh, em] = sched.end_time.split(':').map(Number)
+        let cur = new Date(date)
+        cur.setHours(sh, sm, 0, 0)
+        const end = new Date(date)
+        end.setHours(eh, em, 0, 0)
+        if (end < cur) end.setDate(end.getDate() + 1)
+        while (cur < end) {
+          if (cur > new Date()) slots.push({ start_time: cur.toISOString() })
+          cur = new Date(cur.getTime() + this.SLOT_DURATION_MINUTES * 60000)
         }
       }
       return slots
     },
-
     groupAvailableSchedules() {
       const grouped = {}
       this.availableSchedules.forEach((slot) => {
-        const dateKey = new Date(slot.start_time).toLocaleDateString(undefined, {
+        const key = new Date(slot.start_time).toLocaleDateString(undefined, {
           year: 'numeric',
           month: 'long',
           day: 'numeric',
         })
-        if (!grouped[dateKey]) grouped[dateKey] = []
-        grouped[dateKey].push(slot)
+        if (!grouped[key]) grouped[key] = []
+        grouped[key].push(slot)
       })
       this.groupedSchedules = grouped
       this.availableDates = Object.keys(grouped)
     },
-
     allowedDates(date) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
@@ -424,26 +456,16 @@ export default {
       })
       return !!this.groupedSchedules[formatted]
     },
-
     autoSelectFirstAvailableDate() {
       if (this.availableDates.length > 0) this.selectedDate = this.availableDates[0]
     },
-
     async bookFacility() {
-      if (!this.selectedSchedule) {
-        alert('Please select a valid available schedule.')
-        return
-      }
+      if (!this.selectedSchedule) return alert('Please select a schedule.')
       this.loading = true
       try {
         const user = (await supabase.auth.getUser()).data.user
-        if (!user) {
-          alert('Please log in to make a booking.')
-          this.loading = false
-          return
-        }
-
-        const { error } = await supabase.from('bookings').insert([
+        if (!user) return alert('Please log in to book.')
+        await supabase.from('bookings').insert([
           {
             facility_id: this.facility.id,
             start_time: this.selectedSchedule,
@@ -451,14 +473,10 @@ export default {
             user_id: user.id,
           },
         ])
-        if (error) throw error
-        alert('Booking successful! Your booking is now pending.')
+        alert('Booking successful! Your booking is pending.')
         this.selectedSchedule = ''
         await this.fetchSchedulesAndBookings()
         this.autoSelectFirstAvailableDate()
-      } catch (err) {
-        console.error('Booking error:', err.message)
-        alert('Failed to book facility. Please try again.')
       } finally {
         this.loading = false
       }
@@ -476,5 +494,22 @@ export default {
 }
 .v-card {
   background-color: white !important;
+}
+.h-100 {
+  height: 100%;
+}
+
+/* 📱 Responsive adjustments */
+@media (max-width: 960px) {
+  .v-row[style*='max-width: 1200px'] {
+    max-width: 100% !important;
+  }
+  .v-img {
+    aspect-ratio: 4/3 !important;
+  }
+  .v-col.md-7,
+  .v-col.md-5 {
+    width: 100% !important;
+  }
 }
 </style>
