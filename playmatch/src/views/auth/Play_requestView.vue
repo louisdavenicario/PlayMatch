@@ -373,6 +373,14 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+    <v-bottom-navigation app fixed color="white" light>
+      <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
+        <v-icon color="blue">mdi-home</v-icon>
+      </v-btn>
+      <v-btn @click="goToPlaymateRequests"><v-icon>mdi-account-group</v-icon></v-btn>
+      <v-btn @click="$router.push({ name: 'favorites' })"><v-icon>mdi-heart</v-icon></v-btn>
+      <v-btn value="profile" to="/customer_profile"> <v-icon>mdi-account</v-icon></v-btn>
+    </v-bottom-navigation>
   </v-app>
 </template>
 

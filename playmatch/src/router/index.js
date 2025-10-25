@@ -12,6 +12,8 @@ import Facility_detailsView from '@/views/auth/Facility_detailsView.vue'
 import Customer_profileView from '@/views/auth/Customer_profileView.vue'
 import Play_requestView from '@/views/auth/Play_requestView.vue'
 import FavoritesView from '@/views/auth/FavoritesView.vue'
+import CustomerBookingsView from '@/views/auth/CustomerBookingsView.vue'
+
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -71,6 +73,11 @@ const router = createRouter({
       path: '/favorites',
       name: 'favorites',
       component: FavoritesView,
+    },
+    {
+      path: '/customer-bookings',
+      name: 'customer-bookings',
+      component: CustomerBookingsView,
     },
   ],
 })

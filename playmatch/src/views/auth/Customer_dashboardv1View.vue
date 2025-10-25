@@ -4,6 +4,7 @@ import { supabase } from '@/supabaseClient'
 export default {
   name: 'ReservoSportBookingHome',
   data: () => ({
+    activeNav: 'home',
     currentUserId: null,
     playmateRequests: [],
     playmateLoading: false,
@@ -383,17 +384,22 @@ export default {
       }"
       flat
     >
-      <v-toolbar-title class="font-weight-bold ml-3 text-white">RESERVO</v-toolbar-title>
+      <v-toolbar-title class="font-weight-bold ml-3 text-white">PlayMatch</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn icon><v-icon>mdi-magnify</v-icon></v-btn>
       <v-btn icon @click="logout"><v-icon color="red">mdi-logout</v-icon></v-btn>
     </v-app-bar>
 
-    <v-main>
+    <v-main
+      :style="{
+        background:
+          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.2), rgba(119, 154, 229, 0.4))',
+      }"
+    >
       <v-container fluid class="pa-0">
         <v-row no-gutters class="px-4 pt-10">
           <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
-            <h2 class="text-h6 font-weight-medium">Find Playmates</h2>
+            <h2 class="text-h6 font-weight-medium">Available Playmate Requests</h2>
             <v-btn text small color="blue" @click="goToPlaymateRequests">
               View All <v-icon right small>mdi-chevron-right</v-icon>
             </v-btn>
@@ -547,13 +553,32 @@ export default {
         </v-card-actions>
       </v-card>
     </v-dialog>
-    <v-bottom-navigation app fixed color="white" light>
-      <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
-        <v-icon color="blue">mdi-home</v-icon>
-      </v-btn>
-      <v-btn @click="goToPlaymateRequests"><v-icon>mdi-account-group</v-icon></v-btn>
-      <v-btn @click="$router.push({ name: 'favorites' })"><v-icon>mdi-heart</v-icon></v-btn>
-      <v-btn value="profile" to="/customer_profile"> <v-icon>mdi-account</v-icon></v-btn>
+    <v-bottom-navigation app fixed color="white" light
+      v-model="activeNav">
+        <v-btn 
+          value="home" 
+          @click="$router.push({ name: 'customer-dashboard' })"
+        >
+          <v-icon :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
+        </v-btn>
+        <v-btn 
+          value="bookings" 
+          @click="$router.push({ name: 'customer-bookings' })"
+        >
+          <v-icon :color="activeNav === 'bookings' ? 'blue' : 'black'">mdi-calendar-check</v-icon>
+        </v-btn>
+        <v-btn 
+          value="favorites" 
+          @click="$router.push({ name: 'favorites' })"
+        >
+          <v-icon :color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
+        </v-btn>
+        <v-btn 
+          value="profile" 
+          @click="$router.push({ name: 'customer-profile' })"
+        >
+          <v-icon :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
+        </v-btn>
     </v-bottom-navigation>
   </v-app>
 </template>
@@ -571,7 +596,7 @@ export default {
   background-color: white;
 }
 .floating-search-card .white--text {
-  color: #007acc !important;
+  color: rgb(0, 122, 204) !important;
 }
 .facility-scroll-container {
   -ms-overflow-style: none;

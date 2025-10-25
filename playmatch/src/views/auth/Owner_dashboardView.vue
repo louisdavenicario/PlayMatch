@@ -88,8 +88,9 @@
         </div>
       </template>
     </v-navigation-drawer>
+    
     <v-main>
-      <v-container fluid class="main-content">
+      <v-container>
         <v-row class="header-row">
           <v-col>
             <h1 class="text-h4 font-weight-bold text-black">
@@ -102,64 +103,60 @@
         </v-row>
 
         <div v-if="currentPage === 'dashboard'">
-          <v-row>
+          <v-row align="stretch"> 
             <v-col cols="12" sm="6" lg="3">
-              <v-card class="pa-4 dashboard-card" rounded="lg">
-                <div class="d-flex justify-space-between align-center mb-2">
-                  <div class="text-subtitle-1 font-weight-medium">Today's Bookings</div>
-                  <v-icon size="30" color="primary">mdi-calendar-today</v-icon>
-                </div>
-                <v-card-text class="pa-0 text-h4 font-weight-bold">
-                  {{ dashboardData.todayBookings }}
-                </v-card-text>
-              </v-card>
-            </v-col>
-
-            <v-col cols="12" sm="6" lg="3">
-              <v-card class="pa-4 dashboard-card" rounded="lg">
-                <div class="d-flex justify-space-between align-center mb-2">
-                  <div class="text-subtitle-1 font-weight-medium">Monthly Revenue</div>
-                  <v-icon size="30" color="green-darken-2">mdi-currency-php</v-icon>
-                </div>
-                <v-card-text class="pa-0 text-h4 font-weight-bold">
-                  ₱{{ dashboardData.monthlyRevenue.toFixed(2) }}
-                </v-card-text>
-              </v-card>
-            </v-col>
-
-            <v-col cols="12" sm="6" lg="3">
-              <v-card class="pa-4 dashboard-card" rounded="lg">
-                <div class="d-flex justify-space-between align-center mb-2">
-                  <div class="text-subtitle-1 font-weight-medium">Pending Requests</div>
-                  <v-icon size="30" color="orange-darken-2">mdi-alert-circle-outline</v-icon>
-                </div>
-                <v-card-text class="pa-0 text-h4 font-weight-bold">
-                  {{ dashboardData.pendingRequests }}
-                </v-card-text>
-              </v-card>
-            </v-col>
-
-            <v-col cols="12" sm="6" lg="3">
-              <v-card class="pa-4 dashboard-card" rounded="lg">
-                <div class="d-flex justify-space-between align-center mb-2">
-                  <div class="text-subtitle-1 font-weight-medium">Facility Rating</div>
-                  <v-icon size="30" color="amber-darken-2">mdi-star</v-icon>
-                </div>
-                <v-card-text class="pa-0 text-h6 font-weight-bold">
-                  <template v-if="facilityRating.average > 0">
-                    <div class="d-flex align-center">
-                      <v-icon size="24" color="amber-darken-2" class="mr-2">mdi-star</v-icon>
-                      <span class="text-h4 mr-2">
-                        {{ facilityRating.average.toFixed(1) }}
-                      </span>
-                      <span class="ml-2 text-caption text-medium-emphasis">
-                        ({{ facilityRating.totalReviews }} reviews)
-                      </span>
+                <v-card class="pa-4 dashboard-card fill-height" rounded="lg"> <div class="d-flex justify-space-between align-center mb-2">
+                        <div class="text-subtitle-1 font-weight-medium">Today's Bookings</div>
+                        <v-icon size="30" color="primary">mdi-calendar-today</v-icon>
                     </div>
-                  </template>
-                  <template v-else> No ratings yet </template>
-                </v-card-text>
-              </v-card>
+                    <v-card-text class="pa-0 text-h4 font-weight-bold">
+                        {{ dashboardData.todayBookings }}
+                    </v-card-text>
+                </v-card>
+            </v-col>
+
+            <v-col cols="12" sm="6" lg="3">
+                <v-card class="pa-4 dashboard-card fill-height" rounded="lg"> <div class="d-flex justify-space-between align-center mb-2">
+                        <div class="text-subtitle-1 font-weight-medium">Monthly Revenue</div>
+                        <v-icon size="30" color="green-darken-2">mdi-currency-php</v-icon>
+                    </div>
+                    <v-card-text class="pa-0 text-h4 font-weight-bold">
+                        ₱{{ dashboardData.monthlyRevenue.toFixed(2) }}
+                    </v-card-text>
+                </v-card>
+            </v-col>
+
+            <v-col cols="12" sm="6" lg="3">
+                <v-card class="pa-4 dashboard-card fill-height" rounded="lg"> <div class="d-flex justify-space-between align-center mb-2">
+                        <div class="text-subtitle-1 font-weight-medium">Pending Requests</div>
+                        <v-icon size="30" color="orange-darken-2">mdi-alert-circle-outline</v-icon>
+                    </div>
+                    <v-card-text class="pa-0 text-h4 font-weight-bold">
+                        {{ dashboardData.pendingRequests }}
+                    </v-card-text>
+                </v-card>
+            </v-col>
+
+            <v-col cols="12" sm="6" lg="3">
+                <v-card class="pa-4 dashboard-card fill-height" rounded="lg"> <div class="d-flex justify-space-between align-center mb-2">
+                        <div class="text-subtitle-1 font-weight-medium">Facility Rating</div>
+                        <v-icon size="30" color="amber-darken-2">mdi-star</v-icon>
+                    </div>
+                    
+                    <v-card-text class="pa-0 text-h4 font-weight-bold"> 
+                        <template v-if="facilityRating.average > 0">
+                            <div class="d-flex align-center">
+                                <v-icon size="24" color="amber-darken-2" class="mr-2">mdi-star</v-icon>
+                                <span class="mr-2"> {{ facilityRating.average.toFixed(1) }}
+                                </span>
+                                <span class="ml-2 text-caption text-medium-emphasis">
+                                    ({{ facilityRating.totalReviews }} reviews)
+                                </span>
+                            </div>
+                        </template>
+                        <template v-else> No ratings yet </template>
+                    </v-card-text>
+                </v-card>
             </v-col>
           </v-row>
 
@@ -325,36 +322,35 @@
         <div v-if="currentPage === 'bookings'">
           <v-row>
             <v-col cols="12">
-              <v-card class="pa-4" rounded="lg">
-                <v-card-title class="font-weight-bold">Accepted Bookings Calendar</v-card-title>
-                <v-card-text>
-                  <v-date-picker
-                    v-model="calendarDate"
-                    color="primary"
-                    full-width
-                    header-color="primary"
-                    :show-adjacent-months="false"
-                    @update:model-value="selectDay"
-                    width="100%"
-                    height="100%"
-                    view-mode="calendar"
-                    :day-class="getDayClass"
-                  >
-                  </v-date-picker>
-
-                  <v-btn
-                    v-if="selectedDay"
-                    @click="selectedDay = null"
-                    color="secondary"
-                    variant="text"
-                    class="mt-3"
-                  >
-                    Clear Selected Day
-                  </v-btn>
-                </v-card-text>
-              </v-card>
+                <v-card class="pa-4" rounded="lg">
+                    <v-card-title class="font-weight-bold text-left">Accepted Bookings Calendar</v-card-title>
+                    <v-card-text>
+                        <v-row> 
+                            <v-col cols="12" sm="10" md="8" lg="6"> 
+                              <v-date-picker
+                                    v-model="calendarDate"
+                                    color="primary"
+                                    @update:model-value="selectDay"
+                                    view-mode="calendar"
+                                    :day-class="getDayClass"
+                              />
+                            </v-col>
+                        </v-row>
+                        
+                        <v-btn
+                            v-if="selectedDay"
+                            @click="selectedDay = null"
+                            color="secondary"
+                            variant="text"
+                            class="mt-3"
+                        >
+                            Clear Selected Day
+                        </v-btn>
+                    </v-card-text>
+                </v-card>
             </v-col>
           </v-row>
+
           <v-row v-if="selectedDay">
             <v-col cols="12">
               <v-card class="pa-4 mt-4" rounded="lg" color="blue-grey-lighten-5">
@@ -397,7 +393,10 @@
                           {{ new Date(booking.end_time).toLocaleTimeString() }}
                         </v-list-item-subtitle>
                         <v-list-item-subtitle>
-                          From User: {{ booking.user_id }}
+                          From User: {{ booking.profiles.full_name}}
+                        </v-list-item-subtitle>
+                        <v-list-item-subtitle>
+                          Duration: {{ booking.duration_hours }}
                         </v-list-item-subtitle>
                       </v-list-item-content>
                       <v-list-item-action>
@@ -973,6 +972,7 @@ const upcomingCustomSchedules = computed(() => {
 const fetchAllOwnerData = async () => {
   // 1. Fetch Facility Details first
   await getOwnerFacility()
+  await new Promise(resolve => setTimeout(resolve, 500))
 
   if (!facilityDetails.value) {
     // If no facility, reset rating and exit
@@ -1035,7 +1035,7 @@ const fetchAllOwnerData = async () => {
     // Fetch Bookings (Requires facilityDetails.value.id)
     let { data: bookingsData, error: bookingsError } = await supabase
       .from('bookings')
-      .select('*')
+      .select('*, profiles(full_name)')
       .eq('facility_id', facilityId)
     if (bookingsError) throw bookingsError
 
@@ -1045,6 +1045,10 @@ const fetchAllOwnerData = async () => {
     acceptedBookings.value = allBookings.filter((b) => b.status === 'accepted')
     dashboardData.pendingRequests = pendingBookings.value.length
 
+    if (selectedDay.value) {
+            selectDay(selectedDay.value);
+        }
+        // 🌟 END FIX 🌟
     // 2. Fetch facility ratings
     await fetchRatings()
 
@@ -1083,6 +1087,7 @@ const fetchAllOwnerData = async () => {
         ...booking,
         time_range: `${start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - ${end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
         hours: hours,
+        user_name: booking.profiles.full_name,
         price: hours * (facilityDetails.value ? facilityDetails.value.price_per_hour : 0),
       }
     })
@@ -1093,21 +1098,58 @@ const fetchAllOwnerData = async () => {
 
 const handleBookingStatus = async (bookingId, status) => {
   try {
-    const { error } = await supabase.from('bookings').update({ status: status }).eq('id', bookingId)
+    const { error } = await supabase
+      .from('bookings')
+      .update({ status })
+      .eq('id', bookingId)
+      .select()
     if (error) throw error
+
     alertMessage('Booking ' + status + '!', 'success')
-    fetchAllOwnerData()
+
+    // Immediately update UI
+    if (status === 'accepted') {
+      const accepted = pendingBookings.value.find(b => b.id === bookingId)
+      if (accepted) {
+        pendingBookings.value = pendingBookings.value.filter(b => b.id !== bookingId)
+        acceptedBookings.value.push({ ...accepted, status: 'accepted' })
+      }
+    } else if (status === 'rejected') {
+      pendingBookings.value = pendingBookings.value.filter(b => b.id !== bookingId)
+    }
+
+    // Wait a bit for Supabase to commit before fetching again
+    await new Promise(resolve => setTimeout(resolve, 500))
+    await fetchAllOwnerData()
   } catch (error) {
     console.error(`Error updating booking status: `, error.message)
     alertMessage('Failed to update booking status.', 'error')
   }
 }
 
+
+// 🌟 FIX 1: Helper function to accurately extract YYYY-MM-DD from a UTC timestamp
+const getUTCDateString = (d) => {
+    const year = d.getUTCFullYear()
+    // getUTCMonth() is 0-indexed (Jan=0), so we add 1
+    const month = String(d.getUTCMonth() + 1).padStart(2, '0') 
+    const day = String(d.getUTCDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
+
+// Replace your current `selectDay` function with this:
 const selectDay = (dateString) => {
-  selectedDay.value = dateString
-  selectedDateBookings.value = acceptedBookings.value.filter(
-    (booking) => new Date(booking.start_time).toISOString().substring(0, 10) === dateString,
-  )
+    selectedDay.value = dateString
+
+    // Filter accepted bookings using the safe UTC comparison
+    selectedDateBookings.value = acceptedBookings.value.filter((booking) => {
+    const bookingDate = new Date(booking.start_time)
+    const localDate = bookingDate.getFullYear() + '-' +
+      String(bookingDate.getMonth() + 1).padStart(2, '0') + '-' +
+      String(bookingDate.getDate()).padStart(2, '0')
+    return localDate === dateString
+  })
 }
 
 const saveRegularHours = async () => {
