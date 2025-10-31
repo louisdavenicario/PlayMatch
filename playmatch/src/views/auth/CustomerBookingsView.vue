@@ -8,7 +8,7 @@ export default {
     currentUserId: null,
     // Tabs for filtering bookings
     tab: 0, 
-    tabs: ['Accepted', 'Pending', 'History'],
+    tabs: ['Accepted', 'Pending', 'Cancelled', 'Rejected', 'Completed'],
     
     // Booking data
     bookings: [],
@@ -17,24 +17,50 @@ export default {
   }),
 
   computed: {
-    // 💡 Filters the bookings based on the selected tab
-    filteredBookings() {
-      const statusMap = {
-        0: 'accepted', // 'Accepted' tab
-        1: 'pending',  // 'Pending' tab
-        2: ['completed', 'declined', 'cancelled'], // 'History' tab
-      }
-      const selectedStatus = statusMap[this.tab]
+    // 🔑 FIX: Implement Sorting Function to be used by all lists
+    sortedByDateTime() {
+        // Create a copy to sort and ensure both date and time are used
+        return [...this.bookings].sort((a, b) => {
+            const dateA = new Date(a.full_start_timestamp).getTime();
+            const dateB = new Date(b.full_start_timestamp).getTime();
+            
+            // Sort ascending (nearest date/time first)
+            return dateA - dateB;
+        });
+    },
 
-      if (Array.isArray(selectedStatus)) {
-        return this.bookings.filter(b => selectedStatus.includes(b.status))
+    filteredBookings() {
+      const selectedTabIndex = this.tab;
+
+      // Use the globally sorted array as the base
+      const list = this.sortedByDateTime;
+
+      // 0 = Accepted, 1 = Pending, 2 = Cancelled, 3 = Rejected
+      if (selectedTabIndex === 0) {
+        return list.filter(b => b.status === 'accepted').reverse();
       }
-      return this.bookings.filter(b => b.status === selectedStatus)
+      if (selectedTabIndex === 1) {
+        return list.filter(b => b.status === 'pending');
+      }
+      if (selectedTabIndex === 2) {
+        return list.filter(b => b.status === 'cancelled').reverse();
+      }
+      if (selectedTabIndex === 3) {
+        // Accept both 'rejected' and 'declined' DB values if present
+        return list.filter(b => ['rejected', 'declined'].includes(b.status));
+      }
+
+      if (selectedTabIndex === 4) {
+        return list
+          .filter(b => b.status === 'completed')
+          .sort((a, b) => new Date(b.full_end_timestamp) - new Date(a.full_end_timestamp));
+      }
+
+      return [];
     },
     
-    // Simple display for the current tab title
     currentTabTitle() {
-      return this.tabs[this.tab]
+        return this.tabs[this.tab]
     }
   },
 
@@ -42,6 +68,7 @@ export default {
     await this.getCurrentUser()
     if (this.currentUserId) {
       await this.fetchBookings()
+      await this.markCompletedBookings()
       this.subscribeBookingsRealtime()
     }
   },
@@ -63,6 +90,62 @@ export default {
       }
     },
 
+    isHistory(booking) {
+      if (!booking) return false;
+      try {
+        if (booking.status === 'history') return true;
+        const end = new Date(booking.full_end_timestamp).getTime();
+        const cutoff = end + 24 * 60 * 60 * 1000;
+        return Date.now() > cutoff;
+      } catch (e) {
+        return false;
+      }
+    },
+
+    async markCompletedBookings() {
+      const now = new Date();
+
+      const completedIds = this.bookings
+        .filter(b => new Date(b.full_end_timestamp) < now && b.status === 'accepted')
+        .map(b => b.id);
+
+      if (completedIds.length > 0) {
+        const { error } = await supabase
+          .from('bookings')
+          .update({ status: 'completed' })
+          .in('id', completedIds);
+
+        if (error) {
+          console.error('Failed to mark completed bookings:', error.message);
+        } else {
+          console.log('✅ Completed bookings updated successfully.');
+        }
+      }
+
+      const historyCutoffIds = this.bookings
+        .filter(b => {
+          const endTime = new Date(b.full_end_timestamp).getTime();
+          const historyCutoff = endTime + 24 * 60 * 60 * 1000; // 1 day later
+          return now.getTime() > historyCutoff && ['accepted', 'completed'].includes(b.status);
+        })
+        .map(b => b.id);
+
+      if (historyCutoffIds.length > 0) {
+        const { error } = await supabase
+          .from('bookings')
+          .update({ status: 'history' })
+          .in('id', historyCutoffIds);
+
+        if (error) {
+          console.error('Failed to move to history:', error.message);
+        }
+      }
+
+      if (completedIds.length > 0 || historyCutoffIds.length > 0) {
+        await this.fetchBookings();
+      }
+    },
+
     // 📅 Fetch all customer bookings
     async fetchBookings() {
       if (!this.currentUserId) return
@@ -70,47 +153,69 @@ export default {
       this.error = null
 
       try {
-        const { data, error } = await supabase
-          .from('bookings')
-          .select(`
-            id,
-            booking_date,
-            start_time,
-            end_time,
-            status,
-            facilities (facility_name, address, price_per_hour, image_url)
-          `)
-          .eq('user_id', this.currentUserId)
-          .order('booking_date', { ascending: false })
-          .order('start_time', { ascending: false })
+          const { data, error } = await supabase
+              .from('bookings')
+              .select(`
+                  id,
+                  facility_id,
+                  booking_date,
+                  start_time,
+                  end_time,
+                  status,
+                  facilities (facility_name, address, price_per_hour, image_url)
+              `)
+              .eq('user_id', this.currentUserId)
+              // ❌ REMOVED .order() CALLS. We let the computed property handle all sorting.
 
-        if (error) throw error
-        
-        // Map data to a cleaner format and create the required full timestamps
-        this.bookings = data.map(b => {
-            // FIX: Create full TIMESTAMP strings (e.g., '2025-10-27T09:00:00')
-            const startTimestamp = `${b.booking_date}T${b.start_time}`;
-            const endTimestamp = `${b.booking_date}T${b.end_time}`;
-            
-            return {
-                ...b,
-                facility_name: b.facilities.facility_name,
-                address: b.facilities.address,
-                price_per_hour: b.facilities.price_per_hour,
-                image_url: b.facilities.image_url,
-                facilities: undefined, // remove nested object
-                
-                // New properties used in the template
-                full_start_timestamp: startTimestamp,
-                full_end_timestamp: endTimestamp,
-            };
-        });
-        
+          if (error) throw error
+          
+          // Map data to a cleaner format and create the required full timestamps
+          this.bookings = data.map(b => {
+              // This mapping is crucial for client-side date comparison
+              const startTimestamp = `${b.booking_date}T${b.start_time}`;
+              const endTimestamp = `${b.booking_date}T${b.end_time}`;
+              
+              return {
+                  ...b,
+                  facility_id: b.facility_id,
+                  facility_name: b.facilities.facility_name,
+                  address: b.facilities.address,
+                  price_per_hour: b.facilities.price_per_hour,
+                  image_url: b.facilities.image_url,
+                  facilities: undefined,
+                  full_start_timestamp: startTimestamp,
+                  full_end_timestamp: endTimestamp,
+              };
+          });
+          
+        } catch (err) {
+            this.error = 'Failed to load bookings.'
+            console.error('Error fetching bookings:', err.message)
+        } finally {
+            this.loading = false
+        }
+    },
+
+    async markAsCompleted(bookingId) {
+      try {
+        this.loading = true;
+        const { error } = await supabase
+          .from('bookings')
+          .update({ status: 'completed' })
+          .eq('id', bookingId)
+          .eq('user_id', this.currentUserId);
+
+        if (error) throw error;
+
+        // Refresh list so the booking moves to Completed tab
+        await this.fetchBookings();
+
+        alert('Booking marked as completed.');
       } catch (err) {
-          this.error = 'Failed to load bookings.'
-          console.error('Error fetching bookings:', err.message)
+        console.error('Error marking booking as completed:', err.message);
+        alert('Failed to mark booking as completed.');
       } finally {
-          this.loading = false
+        this.loading = false;
       }
     },
     
@@ -178,11 +283,11 @@ export default {
           return 'green'
         case 'pending':
           return 'orange'
-        case 'declined':
+        case 'rejected':
         case 'cancelled':
           return 'red'
         case 'completed':
-          return 'blue-grey'
+          return 'green'
         default:
           return 'grey'
       }
@@ -190,28 +295,32 @@ export default {
     
     // 🗑 Handle cancellation logic
     async cancelBooking(bookingId) {
-        if (!confirm('Are you sure you want to cancel this booking?')) return;
-        
-        try {
-            this.loading = true;
-            const { error } = await supabase
-                .from('bookings')
-                .update({ status: 'cancelled' })
-                .eq('id', bookingId)
-                .eq('user_id', this.currentUserId); 
-                
-            if (error) throw error;
-            
-            alert('Booking cancelled successfully.');
-            await this.fetchBookings(); 
-        } catch (err) {
-            console.error('Error cancelling booking:', err.message);
-            alert('Failed to cancel booking. Please try again.');
-        } finally {
-            this.loading = false;
-        }
-    }
-  }
+      if (!confirm('Are you sure you want to cancel this booking?')) return;
+
+      try {
+        this.loading = true;
+        const { error } = await supabase
+          .from('bookings')
+          .update({ status: 'cancelled' })
+          .eq('id', bookingId)
+          .eq('user_id', this.currentUserId);
+
+        if (error) throw error;
+
+        // refresh local list
+        await this.fetchBookings();
+
+        // NOTE: facility details page frees the slot because it excludes 'cancelled' bookings
+        // when building reservedSlots (your facility page already uses .neq('status','cancelled'))
+        alert('Booking cancelled successfully.');
+      } catch (err) {
+        console.error('Error cancelling booking:', err.message);
+        alert('Failed to cancel booking. Please try again.');
+      } finally {
+        this.loading = false;
+      }
+    },
+  },
 }
 </script>
 
@@ -290,7 +399,7 @@ export default {
                               <v-img 
                                   :src="booking.image_url || '/images/default-facility.jpg'" 
                                   height="100" 
-                                  width="100" 
+                                  width="100%" 
                                   class="rounded-lg grey lighten-3"
                                   cover
                               >
@@ -323,15 +432,28 @@ export default {
                               <v-list-item-subtitle class="text-caption">
                                   <div class="d-flex align-center ml-auto mt-2">
                                       <v-btn
-                                          v-if="booking.status === 'accepted'"
+                                          v-if="['accepted', 'pending'].includes(booking.status)"
                                           small
                                           text
                                           color="red darken-1"
                                           @click="cancelBooking(booking.id)"
+                                          class="btn-cancel"
                                       >
                                           Cancel
                                       </v-btn>
-                                      
+
+                                      <!-- ✅ New Completed Button -->
+                                      <v-btn
+                                        v-if="booking.status === 'accepted'"
+                                        small
+                                        text
+                                        color="green darken-2"
+                                        class="ml-2"
+                                        @click="markAsCompleted(booking.id)"
+                                      >
+                                        Completed
+                                      </v-btn>
+                                                                        
                                       <v-chip
                                           v-else-if="booking.status === 'pending'"
                                           small
@@ -351,13 +473,14 @@ export default {
                                           Rate
                                       </v-btn>
 
-                                      <v-chip 
-                                          v-else-if="['declined', 'cancelled'].includes(booking.status)"
-                                          small
-                                          outlined
-                                          color="red"
+                                      <!-- Cancelled or Rejected: show static chip -->
+                                      <v-chip
+                                        v-else-if="['cancelled', 'rejected', 'declined'].includes(booking.status)"
+                                        small
+                                        outlined
+                                        color="grey"
                                       >
-                                          View History
+                                        {{ booking.status.charAt(0).toUpperCase() + booking.status.slice(1) }}
                                       </v-chip>
                                   </div>
                               </v-list-item-subtitle>

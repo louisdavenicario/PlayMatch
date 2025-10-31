@@ -302,9 +302,15 @@
             <v-col cols="12">
               <v-card class="pa-4" rounded="lg">
                 <v-card-title class="font-weight-bold">Recent Bookings</v-card-title>
+                <v-card-subtitle>
+                  Latest 5 accepted bookings for your facility
+                </v-card-subtitle>
                 <v-card-text>
                   <v-list v-if="recentBookings.length">
                     <v-list-item v-for="booking in recentBookings" :key="booking.id">
+                      <v-list-item-title>
+                        {{ new Date(booking.start_time).toLocaleDateString() }}
+                      </v-list-item-title>
                       <v-list-item-title>{{ booking.time_range }}</v-list-item-title>
                       <v-list-item-subtitle>
                         Booked for {{ booking.hours }} hours - Price: ₱{{
@@ -360,6 +366,12 @@
                 <v-card-text>
                   <v-list v-if="selectedDateBookings.length" density="compact">
                     <v-list-item v-for="booking in selectedDateBookings" :key="booking.id">
+                      <v-list-item-title>
+                        Date: {{ new Date(booking.start_time).toLocaleDateString() }}
+                      </v-list-item-title>
+                      <v-list-item-title>
+                        Facility: {{ booking.facilities.facility_name }}
+                      </v-list-item-title>
                       <v-list-item-title class="font-weight-medium">
                         {{ new Date(booking.start_time).toLocaleTimeString() }} -
                         {{ new Date(booking.end_time).toLocaleTimeString() }}
@@ -749,7 +761,7 @@ const selectedDay = ref(null) // The specific date the user clicks for the custo
 // Utility to check which dates have accepted bookings for the calendar indicator
 const bookingDates = computed(() => {
   // Return an array of date strings ('YYYY-MM-DD') that have accepted bookings
-  return acceptedBookings.value.map((b) => new Date(b.start_time).toISOString().substring(0, 10))
+  return acceptedBookings.value.map((b) => b.booking_date)
 })
 const primaryPhotoFile = ref(null) // Holds the single file selected for the primary photo
 const drawer = ref(true) // Start as open on desktop, but collapsible on mobile
@@ -1035,19 +1047,31 @@ const fetchAllOwnerData = async () => {
     // Fetch Bookings (Requires facilityDetails.value.id)
     let { data: bookingsData, error: bookingsError } = await supabase
       .from('bookings')
-      .select('*, profiles(full_name)')
+      .select('*, profiles(full_name), facilities(facility_name)')
       .eq('facility_id', facilityId)
     if (bookingsError) throw bookingsError
 
-    const allBookings = bookingsData || []
+    const allBookings = (bookingsData || []).map(b => {
+      const startTime = new Date(b.start_time);
+      const bookingDate = startTime.getFullYear() + '-' +
+        String(startTime.getMonth() + 1).padStart(2, '0') + '-' +
+        String(startTime.getDate()).padStart(2, '0');
 
-    pendingBookings.value = allBookings.filter((b) => b.status === 'pending')
-    acceptedBookings.value = allBookings.filter((b) => b.status === 'accepted')
-    dashboardData.pendingRequests = pendingBookings.value.length
+      return {
+        ...b,
+        duration_hours: (new Date(b.end_time) - new Date(b.start_time)) / 3600000,
+        booking_date: bookingDate, // 🌟 NEW FIELD for easier date filtering
+      }
+    })
 
-    if (selectedDay.value) {
-            selectDay(selectedDay.value);
-        }
+    pendingBookings.value = allBookings.filter((b) => b.status === 'pending')
+    acceptedBookings.value = allBookings.filter((b) => b.status === 'accepted')
+    dashboardData.pendingRequests = pendingBookings.value.length
+
+    // This block is crucial for ensuring the calendar list updates if a day is selected
+    if (selectedDay.value) {
+      selectDay(selectedDay.value);
+    }
         // 🌟 END FIX 🌟
     // 2. Fetch facility ratings
     await fetchRatings()
@@ -1098,32 +1122,64 @@ const fetchAllOwnerData = async () => {
 
 const handleBookingStatus = async (bookingId, status) => {
   try {
-    const { error } = await supabase
+    // Update booking status in the database
+    const { data, error } = await supabase
       .from('bookings')
       .update({ status })
       .eq('id', bookingId)
       .select()
-    if (error) throw error
 
-    alertMessage('Booking ' + status + '!', 'success')
-
-    // Immediately update UI
-    if (status === 'accepted') {
-      const accepted = pendingBookings.value.find(b => b.id === bookingId)
-      if (accepted) {
-        pendingBookings.value = pendingBookings.value.filter(b => b.id !== bookingId)
-        acceptedBookings.value.push({ ...accepted, status: 'accepted' })
-      }
-    } else if (status === 'rejected') {
-      pendingBookings.value = pendingBookings.value.filter(b => b.id !== bookingId)
+    if (error) {
+      console.error('Error updating booking status:', error.message)
+      alertMessage('Failed to update booking status.', 'error')
+      return
     }
 
-    // Wait a bit for Supabase to commit before fetching again
-    await new Promise(resolve => setTimeout(resolve, 500))
-    await fetchAllOwnerData()
-  } catch (error) {
-    console.error(`Error updating booking status: `, error.message)
-    alertMessage('Failed to update booking status.', 'error')
+    // ✅ If status is ACCEPTED
+    if (status === 'accepted') {
+      const updatedBooking = data[0]
+      pendingBookings.value = pendingBookings.value.filter(b => b.id !== bookingId)
+      acceptedBookings.value.push(updatedBooking)
+      alertMessage('Booking accepted successfully!', 'success')
+    }
+
+    // ❌ If status is REJECTED
+    else if (status === 'rejected') {
+      // Find and remove from pending
+      const rejected = pendingBookings.value.find(b => b.id === bookingId)
+      pendingBookings.value = pendingBookings.value.filter(b => b.id !== bookingId)
+
+      // Optional: Also remove from accepted list just in case
+      acceptedBookings.value = acceptedBookings.value.filter(b => b.id !== bookingId)
+
+      // 🧹 Delete or archive the booking to free up that time slot
+      const { error: deleteError } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', bookingId)
+
+      if (deleteError) {
+        console.error('Error deleting rejected booking:', deleteError.message)
+        alertMessage('Failed to remove rejected booking from availability.', 'error')
+      } else {
+        alertMessage('Booking rejected and time slot released!', 'success')
+      }
+
+      // Update dashboard count
+      dashboardData.pendingRequests = pendingBookings.value.length
+
+      // Refresh owner dashboard data
+      await fetchAllOwnerData()
+      window.location.reload()
+
+      if (facilityDetails.value && selectedDay.value && typeof fetchAvailableSlots === 'function') {
+        await fetchAvailableSlots(facilityDetails.value.id, selectedDay.value)
+      }
+    }
+
+  } catch (err) {
+    console.error('Unexpected error:', err.message)
+    alertMessage('An unexpected error occurred while updating booking.', 'error')
   }
 }
 
@@ -1140,17 +1196,24 @@ const getUTCDateString = (d) => {
 
 // Replace your current `selectDay` function with this:
 const selectDay = (dateString) => {
-    selectedDay.value = dateString
+  selectedDay.value = dateString
 
-    // Filter accepted bookings using the safe UTC comparison
-    selectedDateBookings.value = acceptedBookings.value.filter((booking) => {
-    const bookingDate = new Date(booking.start_time)
-    const localDate = bookingDate.getFullYear() + '-' +
-      String(bookingDate.getMonth() + 1).padStart(2, '0') + '-' +
-      String(bookingDate.getDate()).padStart(2, '0')
-    return localDate === dateString
+  // Normalize both the calendar date and the booking date to YYYY-MM-DD
+  const normalizeDate = (date) => {
+    const d = new Date(date)
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  selectedDateBookings.value = acceptedBookings.value.filter((booking) => {
+    const normalizedBookingDate = normalizeDate(booking.start_time)
+    const normalizedSelectedDate = normalizeDate(dateString)
+    return normalizedBookingDate === normalizedSelectedDate
   })
 }
+
 
 const saveRegularHours = async () => {
   if (!facilityDetails.value || !facilityDetails.value.id) {

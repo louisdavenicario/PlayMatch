@@ -212,6 +212,19 @@
               class="mb-4"
             />
 
+            <!-- 🧩 Custom Schedule Alert -->
+            <v-alert
+              v-if="selectedDateHasCustomSchedule"
+              type="info"
+              color="blue-lighten-4"
+              border="start"
+              border-color="blue-darken-2"
+              icon="mdi-information"
+              class="mb-4"
+            >
+              ⚠️ {{ schedule.reason }}
+            </v-alert>
+
             <div v-if="selectedDate">
               <h4 class="text-subtitle-1 font-weight-bold mb-2">
                 Available Slots for {{ selectedDate }} (Select Start Time)
@@ -270,7 +283,7 @@
               class="mt-4"
             >
               <div class="font-weight-bold">Selected Booking:</div>
-              Date: {{ formatSelectedDateForDisplay }}<br />
+              Date: {{ selectedDate }}<br />
               Time: {{ formattedSelectedTime }} - {{ formattedEndTime }} ({{ selectedDuration }} hours)<br />
               Total Cost: ₱{{ totalBookingCost }}
             </v-alert>
@@ -308,465 +321,512 @@
 <script>
   import { supabase } from '@/supabaseClient'
   export default {
-    name: 'Facility_details',
-    props: ['id'],
-    data: () => ({
-      facility: {},
-      schedules: [],
-      bookings: [],
-      availableSchedules: [],
-      groupedSchedules: {},
-      availableDates: [], 
-      selectedDate: null, 
+    name: 'Facility_details',
+    props: ['id'],
+    data: () => ({
+      facility: {},
+      schedules: [],
+      bookings: [],
+      availableSchedules: [],
+      groupedSchedules: {},
+      availableDates: [], 
+      selectedDate: null, 
+      customSchedules: [],
+      // Multi-Hour Booking Data
+      selectedStartSlot: null, 
+      selectedDuration: 1, 
+      MAX_BOOKING_HOURS: 4, 
+      durationError: '', 
+      // ---
+      loading: false,
+      loadingSchedules: false,
+      SLOT_DURATION_MINUTES: 60,
+      DAYS_TO_GENERATE: 90,
+      // Ratings
+      userRating: 0,
+      averageRating: '0.0',
+      totalRatings: 0,
+      currentUserId: null,
+      // Carousel & Zoom
+      zoomDialog: false,
+      zoomCarouselIndex: 0,
+    }),
 
-      // Multi-Hour Booking Data
-      selectedStartSlot: null, 
-      selectedDuration: 1, 
-      MAX_BOOKING_HOURS: 4, 
-      durationError: '', 
-      // ---
-      
-      loading: false,
-      loadingSchedules: false,
-      SLOT_DURATION_MINUTES: 60,
-      DAYS_TO_GENERATE: 90,
-
-      // Ratings
-      userRating: 0,
-      averageRating: '0.0',
-      totalRatings: 0,
-      currentUserId: null,
-
-      // Carousel & Zoom
-      zoomDialog: false,
-      zoomCarouselIndex: 0,
-    }),
-    async mounted() {
-      await this.getCurrentUser()
-      await this.fetchFacility()
-      await this.fetchRatings()
-      await this.fetchSchedulesAndBookings()
-      this.autoSelectFirstAvailableDate()
+    async mounted() {
+      await this.getCurrentUser()
+      await this.fetchFacility()
+      await this.fetchCustomSchedules()
+      await this.fetchSchedulesAndBookings()
+      await this.fetchRatings()
+      this.autoSelectFirstAvailableDate()
+    },
+    
+    computed: {
+      allPhotos() {
+        const photos = []
+        if (this.facility.image_url) photos.push(this.facility.image_url)
+        if (this.facility.additional_photos && Array.isArray(this.facility.additional_photos)) {
+          photos.push(...this.facility.additional_photos.filter((url) => url))
+        }
+        return photos
+      },
+      formattedSelectedTime() {
+        if (!this.selectedStartSlot) return ''
+        // The slot is UTC but we display it as local time
+        return new Date(this.selectedStartSlot).toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        })
+      },
+      formattedEndTime() {
+        if (!this.selectedStartSlot || this.selectedDuration <= 0) return '';
+        const start = new Date(this.selectedStartSlot);
+        const end = new Date(start.getTime() + this.selectedDuration * this.SLOT_DURATION_MINUTES * 60000);
+        // The end time is also UTC but displayed locally
+        return end.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        })
+      },
+      formattedEndTime() {
+        if (!this.selectedStartSlot || this.selectedDuration <= 0) return '';
+        const start = new Date(this.selectedStartSlot);
+        const end = new Date(start.getTime() + this.selectedDuration * this.SLOT_DURATION_MINUTES * 60000);
+        // The end time is also UTC but displayed locally
+        return end.toLocaleTimeString([], {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
+      },
+      totalBookingCost() {
+        const price = this.facility.price_per_hour || 0;
+        return (price * this.selectedDuration).toFixed(2);
+      },
+      // 🧩 NEW — detect and display custom schedule reason
+      selectedCustomSchedule() {
+        if (!this.customSchedules || !this.selectedDate) return null
+        return this.customSchedules.find(s => s.date === this.selectedDate)
+      },
+      selectedDateHasCustomSchedule() {
+        return !!this.selectedCustomSchedule
+      }, 
     },
-    computed: {
-      allPhotos() {
-        const photos = []
-        if (this.facility.image_url) photos.push(this.facility.image_url)
-        if (this.facility.additional_photos && Array.isArray(this.facility.additional_photos)) {
-          photos.push(...this.facility.additional_photos.filter((url) => url))
-        }
-        return photos
-      },
-      formattedSelectedTime() {
-        if (!this.selectedStartSlot) return ''
-        // The slot is UTC but we display it as local time
-        return new Date(this.selectedStartSlot).toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-          hour12: true,
-        })
-      },
-      formattedEndTime() {
-          if (!this.selectedStartSlot || this.selectedDuration <= 0) return '';
-          const start = new Date(this.selectedStartSlot);
-          const end = new Date(start.getTime() + this.selectedDuration * this.SLOT_DURATION_MINUTES * 60000);
-          // The end time is also UTC but displayed locally
-          return end.toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-              hour12: true,
-          });
-      },
-      totalBookingCost() {
-          const price = this.facility.price_per_hour || 0;
-          return (price * this.selectedDuration).toFixed(2);
-      }, 
-    },
-    watch: {
+  
+    watch: {
+      selectedDate(newDate) {
+        if (newDate && newDate instanceof Date) {
+          // Convert Date object to 'YYYY-MM-DD' string
+          const year = newDate.getFullYear();
+          const month = String(newDate.getMonth() + 1).padStart(2, '0');
+          const day = String(newDate.getDate()).padStart(2, '0');
+          this.selectedDate = `${year}-${month}-${day}`;
+          return; 
+        }
+        // If it's already a string, or null, proceed with state reset
+        this.handleDateSelection(); 
+      },
+      // Reset duration and clear error whenever the start slot changes
+      selectedStartSlot() {
+        this.selectedDuration = 1;
+        this.durationError = ''; // Clear error on slot change
+      }, 
+      // Watch duration input to perform validation immediately
+      selectedDuration(newDuration) {
+        if (this.selectedStartSlot) {
+          this.validateDuration(newDuration);
+        } else {
+          this.durationError = '';
+        }
+      }
+    },
+    
+    methods: {
+      goBack() {
+        this.$router.push({ name: 'customer-dashboard' })
+      },
 
-      selectedDate(newDate) {
-        if (newDate && newDate instanceof Date) {
-          // Convert Date object to 'YYYY-MM-DD' string
-          const year = newDate.getFullYear();
-          const month = String(newDate.getMonth() + 1).padStart(2, '0');
-          const day = String(newDate.getDate()).padStart(2, '0');
-          this.selectedDate = `${year}-${month}-${day}`;
-          return; 
-        }
-        
-        // If it's already a string, or null, proceed with state reset
-        this.handleDateSelection(); 
-      },
-      // Reset duration and clear error whenever the start slot changes
-      selectedStartSlot() {
-        this.selectedDuration = 1;
-        this.durationError = ''; // Clear error on slot change
-      },
-      // Watch duration input to perform validation immediately
-      selectedDuration(newDuration) {
-          if (this.selectedStartSlot) {
-              this.validateDuration(newDuration);
-          } else {
-              this.durationError = '';
-          }
-      }
-    },
-    methods: {
-      goBack() {
-        this.$router.push({ name: 'customer-dashboard' })
-      },
-      async getCurrentUser() {
-        const { data } = await supabase.auth.getUser()
-        this.currentUserId = data?.user?.id || null
-      },
-      async fetchFacility() {
-        const { data, error } = await supabase
-          .from('facilities')
-          .select('*, additional_photos')
-          .eq('id', this.id)
-          .single()
+      async getCurrentUser() {
+        const { data } = await supabase.auth.getUser()
+        this.currentUserId = data?.user?.id || null
+      },
+      
+      async fetchFacility() {
+        const { data, error } = await supabase
+          .from('facilities')
+          .select('*, additional_photos')
+          .eq('id', this.id)
+          .single()
+        
+      if (!error) {
+        this.facility = data
+          if (typeof this.facility.additional_photos === 'string') {
+            try {
+              this.facility.additional_photos = JSON.parse(this.facility.additional_photos)
+            } catch (e) {
+              this.facility.additional_photos = []
+            }
+          } else if (!Array.isArray(this.facility.additional_photos)) {
+            this.facility.additional_photos = []
+          }
+        } else console.error('Error fetching facility:', error.message)
+      },
+      
+      openZoom(photoUrl) {
+        const index = this.allPhotos.findIndex((p) => p === photoUrl)
+        this.zoomCarouselIndex = index >= 0 ? index : 0
+        this.zoomDialog = true
+      },
+      
+      async fetchRatings() {
+        try {
+          const { data: allRatings, error: allError } = await supabase
+            .from('ratings')
+            .select('rating_value, user_id')
+            .eq('facility_id', this.id)
 
-        if (!error) {
-          this.facility = data
-          if (typeof this.facility.additional_photos === 'string') {
-            try {
-              this.facility.additional_photos = JSON.parse(this.facility.additional_photos)
-            } catch (e) {
-              this.facility.additional_photos = []
-            }
-          } else if (!Array.isArray(this.facility.additional_photos)) {
-            this.facility.additional_photos = []
-          }
-        } else console.error('Error fetching facility:', error.message)
-      },
-      openZoom(photoUrl) {
-        const index = this.allPhotos.findIndex((p) => p === photoUrl)
-        this.zoomCarouselIndex = index >= 0 ? index : 0
-        this.zoomDialog = true
-      },
-      async fetchRatings() {
-        try {
-          const { data: allRatings, error: allError } = await supabase
-            .from('ratings')
-            .select('rating_value, user_id')
-            .eq('facility_id', this.id)
+          if (allError) throw allError
+          const ratings = allRatings || []
+          const ratingValues = ratings.map((r) => r.rating_value)
+          
+          this.totalRatings = ratingValues.length
+          this.averageRating =
+            ratingValues.length > 0
+              ? (ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length).toFixed(1)
+              : '0.0'
+              
+          this.userRating = 0
+          if (this.currentUserId) {
+            const userRatingRecord = ratings.find((r) => r.user_id === this.currentUserId)
+            if (userRatingRecord) this.userRating = userRatingRecord.rating_value
+          }
+        } catch (err) {
+          console.error('Error fetching ratings:', err.message)
+        }
+      },
+      
+      async rateFacility(star) {
+        if (!this.currentUserId) {
+          alert('Please log in to rate this facility.')
+          return
+        }
+        try {
+          this.userRating = star
+          const { data: existing } = await supabase
+            .from('ratings')
+            .select('id')
+            .eq('user_id', this.currentUserId)
+            .eq('facility_id', this.id)
+            .limit(1)
+            
+          const existingRatingId = existing?.[0]?.id || null
+          if (existingRatingId) {
+            await supabase.from('ratings').update({ rating_value: star }).eq('id', existingRatingId)
+          } else {
+            await supabase
+              .from('ratings')
+              .insert([{ facility_id: this.id, user_id: this.currentUserId, rating_value: star }])
+            }
+            
+          await this.fetchRatings()
+        } catch (err) {
+          console.error('Error submitting rating:', err.message)
+        }
+      },
+      
+      async fetchSchedulesAndBookings() {
+        this.loadingSchedules = true
+        try {
+          const { data: schedulesData } = await supabase
+            .from('schedules')
+            .select('*')
+            .eq('facility_id', this.id)
+            .eq('type', 'regular')
+          this.schedules = schedulesData || []
+          
+          // Fetch bookings: Now selecting 'status' to exclude 'cancelled' bookings
+          const { data: bookingsData } = await supabase
+            .from('bookings')
+            .select('start_time, duration_hours, status') 
+            .eq('facility_id', this.id)
+            .not('status', 'in', '("cancelled","rejected")')
+            
+          const activeBookings = Array.isArray(bookingsData) ? bookingsData : []
+          // --- CORE FIX: Calculate ALL occupied 1-hour slot UTC ISO strings ---
+          const reservedSlots = new Set()
+          activeBookings.forEach(booking => {
+              // Use the database time, which is the UTC ISO string saved from generateFutureSlots
+              // The database saves this: 2025-10-23T08:00:00.000Z 
+              const start = new Date(booking.start_time) 
+              const duration = booking.duration_hours || 1 
+              
+              for (let i = 0; i < duration; i++) {
+                const reservedTime = new Date(start.getTime() + i * this.SLOT_DURATION_MINUTES * 60000)
+                
+                  // CRITICAL: The ISO string must match the one generated in generateFutureSlots
+                  reservedSlots.add(reservedTime.toISOString())
+              }
+            })
+            
+            // -----------------------------------------------------------------
+            
+          const generatedSlots = this.generateFutureSlots()
+          
+          // Filter: Compare the generated slot's ISO string (start_time) directly 
+          // against the reservedSlots Set.
+          this.availableSchedules = generatedSlots.filter(
+            (slot) => !reservedSlots.has(slot.start_time)
+          )
+          
+          this.groupAvailableSchedules()
+        } catch (err) {
+          console.error('Error fetching schedules or bookings:', err.message)
+        } finally {
+          this.loadingSchedules = false
+        }
+      },
+      
+      generateFutureSlots() {
+        const slots = []
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+        
+        for (let i = 0; i < this.DAYS_TO_GENERATE; i++) {
+          const date = new Date(today)
+          date.setDate(today.getDate() + i)
+          const dayOfWeekName = days[date.getDay()]
+          const dateString = date.toISOString().split('T')[0] // YYYY-MM-DD
+          
+          // Determine if a custom schedule exists for this exact date
+          const customSchedule = this.customSchedules.find(s => s.date === dateString && s.type === 'custom' && s.facility_id === this.id);
 
-          if (allError) throw allError
+          // If custom exists for this date, use it. Otherwise use the regular one for the weekday
+          const regularSchedule = this.schedules.find(
+            s => s.type === 'regular' && s.day_of_week === dayOfWeekName
+          );
 
-          const ratings = allRatings || []
-          const ratingValues = ratings.map((r) => r.rating_value)
+          const effectiveSchedule = customSchedule || regularSchedule;
 
-          this.totalRatings = ratingValues.length
-          this.averageRating =
-            ratingValues.length > 0
-              ? (ratingValues.reduce((a, b) => a + b, 0) / ratingValues.length).toFixed(1)
-              : '0.0'
+          if (!effectiveSchedule || !effectiveSchedule.start_time || !effectiveSchedule.end_time)
+            continue
+            
+          const [startHour, startMinute] = effectiveSchedule.start_time.split(':').map(Number)
+          const [endHour, endMinute] = effectiveSchedule.end_time.split(':').map(Number)
+          
+          let currentSlotTime = new Date(date)
+          currentSlotTime.setHours(startHour, startMinute, 0, 0)
+          const closingTime = new Date(date)
+          closingTime.setHours(endHour, endMinute, 0, 0)
+          if (closingTime < currentSlotTime) closingTime.setDate(closingTime.getDate() + 1)
+          
+          while (currentSlotTime < closingTime) {
+            if (currentSlotTime > new Date()) {
+              slots.push({ 
+                  // Store the UTC ISO string (e.g., 2025-10-23T00:00:00.000Z)
+                  start_time: currentSlotTime.toISOString(),
+                  formatted_time: currentSlotTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) 
+              })
+            }
+            currentSlotTime = new Date(currentSlotTime.getTime() + this.SLOT_DURATION_MINUTES * 60000)
+          }
+        }
+        return slots
+      },
 
-          this.userRating = 0
-          if (this.currentUserId) {
-            const userRatingRecord = ratings.find((r) => r.user_id === this.currentUserId)
-            if (userRatingRecord) this.userRating = userRatingRecord.rating_value
-          }
-        } catch (err) {
-          console.error('Error fetching ratings:', err.message)
-        }
-      },
-      async rateFacility(star) {
-        if (!this.currentUserId) {
-          alert('Please log in to rate this facility.')
-          return
-        }
-        try {
-          this.userRating = star
-          const { data: existing } = await supabase
-            .from('ratings')
-            .select('id')
-            .eq('user_id', this.currentUserId)
-            .eq('facility_id', this.id)
-            .limit(1)
+      async fetchCustomSchedules() {
+        try {
+          if (!this.id) {
+            console.warn('No facility ID provided for fetchCustomSchedules');
+            return;
+          }
 
-          const existingRatingId = existing?.[0]?.id || null
-          if (existingRatingId) {
-            await supabase.from('ratings').update({ rating_value: star }).eq('id', existingRatingId)
-          } else {
-            await supabase
-              .from('ratings')
-              .insert([{ facility_id: this.id, user_id: this.currentUserId, rating_value: star }])
-          }
+          const { data, error } = await supabase
+            .from('schedules')
+            .select('*')
+            .eq('facility_id', this.id)     // use prop `id`, not this.facility.id
+            .eq('type', 'custom');
 
-          await this.fetchRatings()
-        } catch (err) {
-          console.error('Error submitting rating:', err.message)
-        }
-      },
-      
-      async fetchSchedulesAndBookings() {
-        this.loadingSchedules = true
-        try {
-          const { data: schedulesData } = await supabase
-            .from('schedules')
-            .select('*')
-            .eq('facility_id', this.id)
-          this.schedules = schedulesData || []
-
-          // Fetch bookings: Now selecting 'status' to exclude 'cancelled' bookings
-          const { data: bookingsData } = await supabase
-            .from('bookings')
-            .select('start_time, duration_hours, status') 
-            .eq('facility_id', this.id)
-            .neq('status', 'cancelled') // CRITICAL: Only filter out active bookings
-          
-          const activeBookings = Array.isArray(bookingsData) ? bookingsData : []
-          
-          // --- CORE FIX: Calculate ALL occupied 1-hour slot UTC ISO strings ---
-          const reservedSlots = new Set()
-          activeBookings.forEach(booking => {
-              // Use the database time, which is the UTC ISO string saved from generateFutureSlots
-              // The database saves this: 2025-10-23T08:00:00.000Z 
-              const start = new Date(booking.start_time) 
-              const duration = booking.duration_hours || 1 
-
-              for (let i = 0; i < duration; i++) {
-                  const reservedTime = new Date(start.getTime() + i * this.SLOT_DURATION_MINUTES * 60000)
-                  
-                  // CRITICAL: The ISO string must match the one generated in generateFutureSlots
-                  reservedSlots.add(reservedTime.toISOString())
-              }
-          })
-          // -----------------------------------------------------------------
-
-          const generatedSlots = this.generateFutureSlots()
-          
-          // Filter: Compare the generated slot's ISO string (start_time) directly 
-          // against the reservedSlots Set.
-          this.availableSchedules = generatedSlots.filter(
-            (slot) => !reservedSlots.has(slot.start_time)
-          )
-
-          this.groupAvailableSchedules()
-        } catch (err) {
-          console.error('Error fetching schedules or bookings:', err.message)
-        } finally {
-          this.loadingSchedules = false
-        }
-      },
-
-      generateFutureSlots() {
-        const slots = []
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-
-        for (let i = 0; i < this.DAYS_TO_GENERATE; i++) {
-          const date = new Date(today)
-          date.setDate(today.getDate() + i)
-          const dayOfWeekName = days[date.getDay()]
-          const dateString = date.toISOString().split('T')[0] // YYYY-MM-DD
-
-          const customSchedule = this.schedules.find(
-            (s) => s.type === 'custom' && s.date === dateString,
-          )
-          const regularSchedule = this.schedules.find(
-            (s) => s.type === 'regular' && s.day_of_week === dayOfWeekName,
-          )
-          const effectiveSchedule = customSchedule || regularSchedule
-          if (!effectiveSchedule || !effectiveSchedule.start_time || !effectiveSchedule.end_time)
-            continue
-
-          const [startHour, startMinute] = effectiveSchedule.start_time.split(':').map(Number)
-          const [endHour, endMinute] = effectiveSchedule.end_time.split(':').map(Number)
-
-          let currentSlotTime = new Date(date)
-          currentSlotTime.setHours(startHour, startMinute, 0, 0)
-          const closingTime = new Date(date)
-          closingTime.setHours(endHour, endMinute, 0, 0)
-          if (closingTime < currentSlotTime) closingTime.setDate(closingTime.getDate() + 1)
-
-          while (currentSlotTime < closingTime) {
-            if (currentSlotTime > new Date()) {
-              slots.push({ 
-                  // Store the UTC ISO string (e.g., 2025-10-23T00:00:00.000Z)
-                  start_time: currentSlotTime.toISOString(),
-                  formatted_time: currentSlotTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true }) 
-              })
-            }
-            currentSlotTime = new Date(currentSlotTime.getTime() + this.SLOT_DURATION_MINUTES * 60000)
-          }
-        }
-        return slots
-      },
-
-      groupAvailableSchedules() {
-        const grouped = {}
-        this.availableSchedules.forEach((slot) => {
-          const dateKey = new Date(slot.start_time).toISOString().split('T')[0]
-          
-          if (!grouped[dateKey]) grouped[dateKey] = []
-          grouped[dateKey].push(slot)
-        })
-        this.groupedSchedules = grouped
-        this.availableDates = Object.keys(grouped)
-      },
-
-      /**
-       * Allows any date from today onward to be selected.
-       */
-      allowedDates(date) {
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const picked = new Date(date)
-        picked.setHours(0, 0, 0, 0)
-        
-        return picked >= today
-      },
-      
-      // Logic to reset time slots, triggered by selectedDate watcher
-      handleDateSelection() {
-          this.selectedStartSlot = null;
-          this.selectedDuration = 1;
-          this.durationError = '';
-      },
-
-      autoSelectFirstAvailableDate() {
-        if (this.availableDates.length > 0) this.selectedDate = this.availableDates[0]
-        // Watcher handles the state reset after this assignment
-      },
-      
-      handleTimeSlotSelection(startTime) {
-          if (this.selectedStartSlot === startTime) {
-              this.selectedStartSlot = null;
-              this.selectedDuration = 1;
-              this.durationError = ''; 
-          } else {
-              this.selectedStartSlot = startTime;
-              this.selectedDuration = 1;
-              this.durationError = ''; 
-          }
-      },
-      
-      isSlotSelected(slotTime) {
-          return this.selectedStartSlot === slotTime;
-      },
-      
-      isDurationPossible(duration) {
-        if (!this.selectedStartSlot || duration <= 0) return false;
-        return this._checkSlotAvailability(duration);
-      },
-
-      isDurationValid(duration) {
-        const numDuration = parseInt(duration);
-        if (!this.selectedStartSlot || numDuration <= 0 || isNaN(numDuration) || numDuration > this.MAX_BOOKING_HOURS) {
-          return false;
-        }
-        return this._checkSlotAvailability(numDuration);
-      },
-      
-      validateDuration(duration) {
-        this.durationError = '';
-        const numDuration = parseInt(duration);
-
-        if (!this.selectedStartSlot) {
-          return; 
-        }
-
-        if (isNaN(numDuration) || numDuration <= 0) {
-          this.durationError = 'Duration must be a positive number of hours.';
-          return;
-        }
-        
-        if (numDuration > this.MAX_BOOKING_HOURS) {
-          this.durationError = `Maximum booking duration is ${this.MAX_BOOKING_HOURS} hours.`;
-          return;
-        }
-
-        if (!this._checkSlotAvailability(numDuration)) {
-          this.durationError = `A ${numDuration}-hour booking starting at ${this.formattedSelectedTime} is not fully available. Please choose a shorter duration.`;
-        }
-      },
-
-      _checkSlotAvailability(duration) {
-          const slotDurationMs = this.SLOT_DURATION_MINUTES * 60000;
-          // selectedStartSlot is the UTC ISO string (e.g., 2025-10-23T08:00:00.000Z)
-          const selectedStart = new Date(this.selectedStartSlot); 
-          const currentSlots = this.groupedSchedules[this.selectedDate] || [];
-          
-          // The availableStartTimes are the UTC ISO strings from the generated slots
-          const availableStartTimes = new Set(currentSlots.map(slot => slot.start_time));
-
-          for (let i = 0; i < duration; i++) {
-              // Calculate the required slot's UTC time
-              const requiredTime = new Date(selectedStart.getTime() + i * slotDurationMs);
-              const requiredTimeISO = requiredTime.toISOString(); // This is the UTC ISO string
-
-              // Compare the UTC ISO string
-              if (!availableStartTimes.has(requiredTimeISO)) {
-                  return false; 
-              }
-          }
-          return true;
-      },
-      
-      async bookFacility() {
-        this.validateDuration(this.selectedDuration);
-        
-        if (!this.selectedStartSlot || !this.isDurationValid(this.selectedDuration)) {
-          alert('Please select a valid start time and available duration.')
-          return
-        }
-        this.loading = true
-
-        // 1. Get the starting moment (already UTC ISO string from selectedStartSlot)
-        const start = new Date(this.selectedStartSlot);
-        
-        // 2. Calculate the end moment in milliseconds
-        const durationInMinutes = this.selectedDuration * this.SLOT_DURATION_MINUTES;
-        const durationInMs = durationInMinutes * 60000;
-        const endTimeMs = start.getTime() + durationInMs;
-
-        // 3. Convert the start and end moments back to the UTC ISO string format 
-        //    to be saved in the TIMESTAMPZ column.
-        const calculatedStartTime = this.selectedStartSlot; // It's already the correct UTC ISO string
-        const calculatedEndTime = new Date(endTimeMs).toISOString(); // New UTC ISO string for end time
-        
-        // Note: Since the database stores the UTC ISO string, we must save the UTC ISO string.
-        
-        try {
-          const user = (await supabase.auth.getUser()).data.user
-          if (!user) {
-            alert('Please log in to make a booking.')
-            this.loading = false
-            return
-          }
-
-          const { error } = await supabase.from('bookings').insert([
-            {
-              facility_id: this.facility.id,
+          if (error) throw error;
+          this.customSchedules = data || [];
+          console.log('Custom schedules loaded:', this.customSchedules);
+        } catch (err) {
+          console.error('Error fetching custom schedules:', err.message);
+        }
+      },
+      
+      groupAvailableSchedules() {
+        const grouped = {}
+        this.availableSchedules.forEach((slot) => {
+          const dateKey = new Date(slot.start_time).toISOString().split('T')[0]
+          
+          if (!grouped[dateKey]) grouped[dateKey] = []
+          grouped[dateKey].push(slot)
+        })
+        this.groupedSchedules = grouped
+        this.availableDates = Object.keys(grouped)
+      },
+      /**
+        * Allows any date from today onward to be selected.
+      */
+      allowedDates(date) {
+        const today = new Date()
+        today.setHours(0, 0, 0, 0)
+        const picked = new Date(date)
+        picked.setHours(0, 0, 0, 0)
+        
+        return picked >= today
+      },
+      
+      // Logic to reset time slots, triggered by selectedDate watcher
+      handleDateSelection() {
+          this.selectedStartSlot = null;
+          this.selectedDuration = 1;
+          this.durationError = '';
+      },
+      
+      autoSelectFirstAvailableDate() {
+        if (this.availableDates.length > 0) this.selectedDate = this.availableDates[0]
+        // Watcher handles the state reset after this assignment
+      },
+      
+      handleTimeSlotSelection(startTime) {
+          if (this.selectedStartSlot === startTime) {
+              this.selectedStartSlot = null;
+              this.selectedDuration = 1;
+              this.durationError = ''; 
+          } else {
+              this.selectedStartSlot = startTime;
+              this.selectedDuration = 1;
+              this.durationError = ''; 
+          }
+      },
+      
+      isSlotSelected(slotTime) {
+          return this.selectedStartSlot === slotTime;
+      },
+      
+      isDurationPossible(duration) {
+        if (!this.selectedStartSlot || duration <= 0) return false;
+        return this._checkSlotAvailability(duration);
+      },
+      
+      isDurationValid(duration) {
+        const numDuration = parseInt(duration);
+        if (!this.selectedStartSlot || numDuration <= 0 || isNaN(numDuration) || numDuration > this.MAX_BOOKING_HOURS) {
+          return false;
+        }
+          return this._checkSlotAvailability(numDuration);
+      },
+      
+      validateDuration(duration) {
+        this.durationError = '';
+        const numDuration = parseInt(duration);
+        
+        if (!this.selectedStartSlot) {
+          return; 
+        }
+        
+        if (isNaN(numDuration) || numDuration <= 0) {
+          this.durationError = 'Duration must be a positive number of hours.';
+          return;
+        }
+        
+        if (numDuration > this.MAX_BOOKING_HOURS) {
+          this.durationError = `Maximum booking duration is ${this.MAX_BOOKING_HOURS} hours.`;
+          return;
+        }
+        
+        if (!this._checkSlotAvailability(numDuration)) {
+          this.durationError = `A ${numDuration}-hour booking starting at ${this.formattedSelectedTime} is not fully available. Please choose a shorter duration.`;
+        }
+      },
+      
+      _checkSlotAvailability(duration) {
+          const slotDurationMs = this.SLOT_DURATION_MINUTES * 60000;
+          // selectedStartSlot is the UTC ISO string (e.g., 2025-10-23T08:00:00.000Z)
+          const selectedStart = new Date(this.selectedStartSlot); 
+          const currentSlots = this.groupedSchedules[this.selectedDate] || [];
+          
+          // The availableStartTimes are the UTC ISO strings from the generated slots
+          const availableStartTimes = new Set(currentSlots.map(slot => slot.start_time));
+          
+          for (let i = 0; i < duration; i++) {
+              // Calculate the required slot's UTC time
+              const requiredTime = new Date(selectedStart.getTime() + i * slotDurationMs);
+              const requiredTimeISO = requiredTime.toISOString(); // This is the UTC ISO string
+              
+              // Compare the UTC ISO string
+              if (!availableStartTimes.has(requiredTimeISO)) {
+                  return false; 
+              }
+          }
+          return true;
+      },
+      
+      async bookFacility() {
+        this.validateDuration(this.selectedDuration);
+        
+        if (!this.selectedStartSlot || !this.isDurationValid(this.selectedDuration)) {
+          alert('Please select a valid start time and available duration.')
+          return
+        }
+        this.loading = true
+        
+        // 1. Get the starting moment (already UTC ISO string from selectedStartSlot)
+        const start = new Date(this.selectedStartSlot);
+        
+        // 2. Calculate the end moment in milliseconds
+        const durationInMinutes = this.selectedDuration * this.SLOT_DURATION_MINUTES;
+        const durationInMs = durationInMinutes * 60000;
+        const endTimeMs = start.getTime() + durationInMs;
+        
+        // 3. Convert the start and end moments back to the UTC ISO string format 
+        //    to be saved in the TIMESTAMPZ column.
+        const calculatedStartTime = this.selectedStartSlot; // It's already the correct UTC ISO string
+        const calculatedEndTime = new Date(endTimeMs).toISOString(); // New UTC ISO string for end time
+        
+        // Note: Since the database stores the UTC ISO string, we must save the UTC ISO string.
+        
+        try {
+          const user = (await supabase.auth.getUser()).data.user
+          if (!user) {
+            alert('Please log in to make a booking.')
+            this.loading = false
+            return
+          }
+          
+          const { error } = await supabase.from('bookings').insert([
+            {
+              facility_id: this.facility.id,
               booking_date: this.selectedDate,
-              start_time: calculatedStartTime, // <<-- Using the UTC ISO string
-              end_time: calculatedEndTime,    // <<-- Using the UTC ISO string
-              duration_hours: this.selectedDuration,
-              total_cost: this.totalBookingCost,
-              status: 'pending',
-              user_id: user.id,
-            },
-          ])
-          if (error) throw error
-          alert(`Booking successful for ${this.selectedDuration} hours! Your booking is now pending. Total: ₱${this.totalBookingCost}`)
-          
-          // Reset state and refresh data
-          this.selectedStartSlot = null
-          this.selectedDuration = 1
-          this.durationError = ''; 
-          await this.fetchSchedulesAndBookings()
-          this.autoSelectFirstAvailableDate()
-        } catch (err) {
-          console.error('Booking error:', err.message)
-          alert('Failed to book facility. Please try again.')
-        } finally {
-          this.loading = false
-        }
-      }
-    },
+              start_time: calculatedStartTime, // <<-- Using the UTC ISO string
+              end_time: calculatedEndTime,    // <<-- Using the UTC ISO string
+              duration_hours: this.selectedDuration,
+              total_cost: this.totalBookingCost,
+              status: 'pending',
+              user_id: user.id,
+            },
+          ])
+          if (error) throw error
+          alert(`Booking successful for ${this.selectedDuration} hours! Your booking is now pending. Total: ₱${this.totalBookingCost}`)
+          
+          // Reset state and refresh data
+          this.selectedStartSlot = null
+          this.selectedDuration = 1
+          this.durationError = ''; 
+          await this.fetchSchedulesAndBookings()
+          this.autoSelectFirstAvailableDate()
+        } catch (err) {
+          console.error('Booking error:', err.message)
+          alert('Failed to book facility. Please try again.')
+        } finally {
+          this.loading = false
+        }
+      }
+    },
   }
 </script>
 
