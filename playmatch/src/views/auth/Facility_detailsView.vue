@@ -222,12 +222,13 @@
               icon="mdi-information"
               class="mb-4"
             >
-              ⚠️ {{ schedule.reason }}
+              {{ selectedCustomSchedule?.reason }}
             </v-alert>
 
-            <div v-if="selectedDate">
+            <!-- Show available slots only when no custom schedule -->
+            <div v-if="selectedDate && groupedSchedules[selectedDate] && groupedSchedules[selectedDate].length > 0">
               <h4 class="text-subtitle-1 font-weight-bold mb-2">
-                Available Slots for {{ selectedDate }} (Select Start Time)
+                Available Slots for {{ selectedDate }} <br />Select Start Time:
               </h4>
 
               <div
@@ -239,19 +240,21 @@
                   column
                   class="d-flex flex-wrap"
                 >
-                <v-chip
-                  v-for="slot in groupedSchedules[selectedDate]"
-                    :key="slot.start_time"
-                    :color="isSlotSelected(slot.start_time) ? 'blue' : 'grey lighten-2'"
-                    :text-color="isSlotSelected(slot.start_time) ? 'white' : 'grey darken-3'"
-                    :outlined="!isSlotSelected(slot.start_time)"
-                    @click="handleTimeSlotSelection(slot.start_time)"
-                    class="ma-1"
-                >
-                  {{ slot.formatted_time }}
-                </v-chip>
+                    <v-chip
+                      v-for="slot in groupedSchedules[selectedDate]"
+                      :key="slot.start_time"
+                      :color="isSlotSelected(slot.start_time) ? 'blue' : (isSlotDisabled(slot.start_time) ? 'red lighten-4' : 'grey lighten-2')"
+                      :text-color="isSlotSelected(slot.start_time) ? 'white' : (isSlotDisabled(slot.start_time) ? 'red darken-3' : 'grey darken-3')"
+                      :outlined="!isSlotSelected(slot.start_time)"
+                      :disabled="isSlotDisabled(slot.start_time)"
+                      @click="!isSlotDisabled(slot.start_time) && handleTimeSlotSelection(slot.start_time)"
+                      class="ma-1"
+                    >
+                    {{ slot.formatted_time }}
+                  </v-chip>
                 </v-chip-group>
               </div>
+
               <div v-else class="grey--text">No available slots for this date</div>
             </div>
 
@@ -448,6 +451,22 @@
         this.$router.push({ name: 'customer-dashboard' })
       },
 
+      isSlotDisabled(slotStartTime) {
+        if (!this.selectedCustomSchedule) return false;
+
+        const slotTime = new Date(slotStartTime);
+        const [customStartHour, customStartMinute] = this.selectedCustomSchedule.start_time.split(':').map(Number);
+        const [customEndHour, customEndMinute] = this.selectedCustomSchedule.end_time.split(':').map(Number);
+
+        const customStart = new Date(slotTime);
+        customStart.setHours(customStartHour, customStartMinute, 0, 0);
+        const customEnd = new Date(slotTime);
+        customEnd.setHours(customEndHour, customEndMinute, 0, 0);
+
+        // Disabled if slotStartTime falls within the custom CLOSED range
+        return slotTime >= customStart && slotTime < customEnd;
+      },
+      
       async getCurrentUser() {
         const { data } = await supabase.auth.getUser()
         this.currentUserId = data?.user?.id || null
