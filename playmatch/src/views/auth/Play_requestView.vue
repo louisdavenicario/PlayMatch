@@ -79,6 +79,14 @@
                     >
                       {{ request.status }}
                     </v-chip>
+                    <v-chip
+                      x-small
+                      :color="request.match_type === 'team' ? 'deep-purple' : 'light-blue'"
+                      dark
+                      class="ml-1"
+                    >
+                      {{ request.match_type === 'team' ? 'Team Match' : 'Seeking Players' }}
+                    </v-chip>
                   </div>
                   <div class="text-caption grey--text">
                     {{ request.creator_name }} wants to play at {{ request.location }}
@@ -98,8 +106,14 @@
                   {{ formatTime(request.start_time) }}
                 </span>
                 <span class="d-flex align-center">
-                  <v-icon small class="mr-1">mdi-account-group</v-icon>
-                  {{ request.joins_count }} / {{ request.max_joins }} joined
+                  <v-icon small class="mr-1">{{
+                    request.match_type === 'team' ? 'mdi-trophy' : 'mdi-account-group'
+                  }}</v-icon>
+                  {{
+                    request.match_type === 'team'
+                      ? `Seeking Team (Max ${request.max_joins} players)`
+                      : `${request.joins_count} / ${request.max_joins} joined`
+                  }}
                 </span>
               </div>
 
@@ -115,7 +129,9 @@
                       ? 'red'
                       : isCreator(request.creator_id)
                         ? 'orange darken-1'
-                        : 'blue'
+                        : request.match_type === 'team'
+                          ? 'deep-purple' // Distinct color for team match join
+                          : 'blue'
                   "
                   dark
                   rounded
@@ -128,9 +144,11 @@
                       ? 'Manage'
                       : isJoined(request.id)
                         ? 'Withdraw'
-                        : request.status === 'full'
+                        : request.status === 'full' && request.match_type === 'individual'
                           ? 'Full'
-                          : 'Join'
+                          : request.match_type === 'team'
+                            ? 'Accept Challenge' // New label for team join
+                            : 'Join'
                   }}
                 </v-btn>
               </v-card-actions>
@@ -164,6 +182,17 @@
               class="mt-0 mb-3"
             ></v-text-field>
 
+            <v-radio-group
+              v-model="newRequest.match_type"
+              label="What are you looking for?"
+              :rules="[(v) => !!v || 'Match type is required']"
+              required
+              row
+              class="mt-0 mb-3"
+            >
+              <v-radio label="Individual Players" value="individual"></v-radio>
+              <v-radio label="An Opponent Team" value="team"></v-radio>
+            </v-radio-group>
             <v-select
               v-model="newRequest.location"
               :items="locationChoices"
@@ -187,7 +216,11 @@
 
             <v-text-field
               v-model.number="newRequest.max_joins"
-              label="Max Participants (excluding creator)"
+              :label="
+                newRequest.match_type === 'team'
+                  ? 'Opponent Team Size (e.g., 5 for 5v5)'
+                  : 'Max Participants (excluding creator)'
+              "
               type="number"
               min="1"
               :rules="[
@@ -241,7 +274,11 @@
         <v-card-title class="text-h5 orange darken-1 white--text">Manage Your Request</v-card-title>
         <v-card-text class="pt-4">
           <v-tabs v-model="manageTab" background-color="transparent" color="orange darken-1">
-            <v-tab>Participants ({{ participants.length }})</v-tab>
+            <v-tab>{{
+              selectedRequest.match_type === 'team'
+                ? 'Opponent Status'
+                : `Participants (${participants.length})`
+            }}</v-tab>
             <v-tab>Edit Details</v-tab>
           </v-tabs>
 
@@ -250,9 +287,11 @@
               <v-list dense>
                 <v-list-item v-if="participants.length === 1">
                   <v-list-item-content>
-                    <v-list-item-title class="grey--text"
-                      >No players have joined yet.</v-list-item-title
-                    >
+                    <v-list-item-title class="grey--text">{{
+                      selectedRequest.match_type === 'team'
+                        ? 'No opponent team has accepted the challenge yet.'
+                        : 'No players have joined yet.'
+                    }}</v-list-item-title>
                   </v-list-item-content>
                 </v-list-item>
                 <v-list-item v-for="p in participants" :key="p.user_id">
@@ -266,17 +305,36 @@
                     <v-list-item-subtitle v-if="p.user_id === currentUserId">
                       (You - Creator)
                     </v-list-item-subtitle>
+                    <v-list-item-subtitle v-else-if="selectedRequest.match_type === 'team'">
+                      (Opponent Team Contact)
+                    </v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
               </v-list>
               <v-alert v-if="selectedRequest.status === 'full'" type="success" class="mt-4" dense>
-                This request is **FULL** ({{ selectedRequest.joins_count }} /
-                {{ selectedRequest.max_joins }}).
+                {{
+                  selectedRequest.match_type === 'team'
+                    ? 'This match has been accepted!'
+                    : 'This request is **FULL**'
+                }}
+                ({{ selectedRequest.joins_count }} / {{ selectedRequest.max_joins }}).
               </v-alert>
             </v-tab-item>
 
             <v-tab-item>
               <v-form ref="editForm" v-if="selectedRequest">
+                <v-text-field
+                  :value="
+                    selectedRequest.match_type === 'team'
+                      ? 'Seeking Opponent Team'
+                      : 'Seeking Individual Players'
+                  "
+                  label="Match Type"
+                  readonly
+                  class="mb-3"
+                  prepend-icon="mdi-information-outline"
+                ></v-text-field>
+
                 <v-text-field
                   v-model="selectedRequest.sport"
                   label="Sport"
@@ -305,7 +363,11 @@
 
                 <v-text-field
                   v-model.number="selectedRequest.max_joins"
-                  label="Max Participants (excluding creator)"
+                  :label="
+                    selectedRequest.match_type === 'team'
+                      ? 'Opponent Team Size (e.g., 5 for 5v5)'
+                      : 'Max Participants (excluding creator)'
+                  "
                   type="number"
                   min="1"
                   :rules="[
@@ -373,14 +435,6 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    <v-bottom-navigation app fixed color="white" light>
-      <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
-        <v-icon color="blue">mdi-home</v-icon>
-      </v-btn>
-      <v-btn @click="goToPlaymateRequests"><v-icon>mdi-account-group</v-icon></v-btn>
-      <v-btn @click="$router.push({ name: 'favorites' })"><v-icon>mdi-heart</v-icon></v-btn>
-      <v-btn value="profile" to="/customer_profile"> <v-icon>mdi-account</v-icon></v-btn>
-    </v-bottom-navigation>
   </v-app>
 </template>
 
@@ -419,10 +473,13 @@ export default {
       date: '',
       start_time: '',
       description: '',
+      // NEW FIELD: Default to individual match
+      match_type: 'individual',
     },
     todayDate: new Date().toISOString().split('T')[0],
   }),
   computed: {
+    // ... (sportChoices, isSportOther, locationChoices, isLocationOther, filteredRequests remain the same)
     sportChoices() {
       return [...this.baseSports, 'Other (Specify)']
     },
@@ -455,6 +512,7 @@ export default {
   },
   methods: {
     // --- Utility Methods ---
+    // ... (formatDate, formatTime, isJoined, isCreator, handleSportChange, handleLocationChange remain the same)
     formatDate(dateString) {
       if (!dateString) return ''
       return new Date(dateString + 'T00:00:00').toLocaleDateString(undefined, {
@@ -489,6 +547,7 @@ export default {
 
     // --- Core Interaction Methods ---
 
+    // ... (getCurrentUser and fetchFacilities remain the same)
     async getCurrentUser() {
       const {
         data: { user },
@@ -519,8 +578,9 @@ export default {
     // Centralized function to check and update request status
     async checkRequestStatus(requestId) {
       const { data, error } = await supabase
+        // ADD 'match_type' TO SELECT FOR LOGIC CHECK
         .from('playmate_requests')
-        .select('max_joins, status, playmate_joins(count)')
+        .select('max_joins, status, playmate_joins(count), match_type')
         .eq('id', requestId)
         .single()
 
@@ -532,14 +592,25 @@ export default {
       const currentJoins = data.playmate_joins[0]?.count || 0
       const maxJoins = data.max_joins
       const currentStatus = data.status
+      const isTeamMatch = data.match_type === 'team'
       let newStatus = currentStatus
 
       if (currentStatus === 'canceled') return
 
-      if (currentJoins >= maxJoins) {
-        newStatus = 'full'
+      // Logic updated to check team match (1 join is "full")
+      if (isTeamMatch) {
+        if (currentJoins >= 1) {
+          newStatus = 'full'
+        } else {
+          newStatus = 'open'
+        }
       } else {
-        newStatus = 'open'
+        // Original logic for individual matches
+        if (currentJoins >= maxJoins) {
+          newStatus = 'full'
+        } else {
+          newStatus = 'open'
+        }
       }
 
       if (newStatus !== currentStatus) {
@@ -560,8 +631,9 @@ export default {
       this.loading = true
       try {
         const { data: requestsData, error: requestsError } = await supabase
+          // ADD 'match_type' TO SELECT LIST
           .from('playmate_requests')
-          .select('*, creator:creator_id (full_name), playmate_joins(count)')
+          .select('*, creator:creator_id (full_name), playmate_joins(count), match_type')
           .gte('date', this.todayDate)
           .order('date', { ascending: true })
           .order('start_time', { ascending: true })
@@ -586,14 +658,29 @@ export default {
         }
 
         // --- Status Management (Initial Load) ---
-        // Bulk correction for full/open status
-        const requestsToOpen = this.playmateRequests
-          .filter((r) => r.status === 'full' && r.joins_count < r.max_joins)
-          .map((r) => r.id)
+        const requestsToUpdate = this.playmateRequests
+          .filter((r) => r.status !== 'canceled')
+          .map((r) => {
+            const isTeamMatch = r.match_type === 'team'
+            const shouldBeOpen =
+              (isTeamMatch && r.joins_count === 0) || (!isTeamMatch && r.joins_count < r.max_joins)
+            const shouldBeFull =
+              (isTeamMatch && r.joins_count >= 1) || (!isTeamMatch && r.joins_count >= r.max_joins)
 
-        const requestsToClose = this.playmateRequests
-          .filter((r) => r.status === 'open' && r.joins_count >= r.max_joins)
-          .map((r) => r.id)
+            let newStatus = r.status
+            if (shouldBeFull && r.status !== 'full') newStatus = 'full'
+            if (shouldBeOpen && r.status !== 'open') newStatus = 'open'
+
+            return { id: r.id, oldStatus: r.status, newStatus }
+          })
+          .filter((u) => u.oldStatus !== u.newStatus)
+
+        const requestsToOpen = requestsToUpdate
+          .filter((u) => u.newStatus === 'open')
+          .map((u) => u.id)
+        const requestsToClose = requestsToUpdate
+          .filter((u) => u.newStatus === 'full')
+          .map((u) => u.id)
 
         if (requestsToOpen.length > 0) {
           await supabase
@@ -624,6 +711,7 @@ export default {
       }
     },
 
+    // ... (fetchJoinsForRequest and openManageDialog remain the same)
     // Fetches participants for the Manage Request modal
     async fetchJoinsForRequest(requestId) {
       this.participants = []
@@ -671,35 +759,52 @@ export default {
       }
 
       const requestId = request.id
+      const isTeamMatch = request.match_type === 'team'
 
       if (!this.currentUserId) {
         alert('Please log in to join or manage requests.')
         return
       }
 
-      if (request.status === 'full' && !this.isJoined(requestId)) {
-        alert('This play request is currently full and cannot be joined.')
+      // Updated logic for team matches: it's "full" if joins_count >= 1
+      if (
+        (isTeamMatch && request.joins_count >= 1 && !this.isJoined(requestId)) ||
+        (!isTeamMatch && request.status === 'full' && !this.isJoined(requestId))
+      ) {
+        alert(`This play request is currently full and cannot be joined.`)
+        return
+      }
+
+      // Safety check: ensure only one "Opponent Team" can join a team match
+      if (isTeamMatch && request.joins_count > 0 && !this.isJoined(requestId)) {
+        alert('An opponent team has already accepted this challenge.')
         return
       }
 
       if (this.isJoined(requestId)) {
         // Withdraw logic
+        const msg = isTeamMatch
+          ? 'Successfully withdrawn the opponent team from the challenge.'
+          : 'Successfully withdrawn from the request.'
         await this.supabaseAction(
           supabase
             .from('playmate_joins')
             .delete()
             .eq('request_id', requestId)
             .eq('user_id', this.currentUserId),
-          'Successfully withdrawn from the request.',
+          msg,
           'Failed to withdraw from request.',
         )
       } else {
         // Join logic
+        const msg = isTeamMatch
+          ? 'You have successfully accepted the team challenge!'
+          : 'Successfully joined the request!'
         await this.supabaseAction(
           supabase
             .from('playmate_joins')
             .insert([{ request_id: requestId, user_id: this.currentUserId }]),
-          'Successfully joined the request!',
+          msg,
           'Failed to join request. It may be full or closed.',
         )
       }
@@ -730,6 +835,7 @@ export default {
             date: this.selectedRequest.date,
             start_time: this.selectedRequest.start_time,
             description: this.selectedRequest.description,
+            // Match type is intentionally not editable after creation
           })
           .eq('id', this.selectedRequest.id)
           .eq('creator_id', this.currentUserId)
@@ -746,6 +852,7 @@ export default {
       }
     },
 
+    // ... (cancelRequest and supabaseAction remain the same)
     // Cancels (updates status to 'canceled') the request
     async cancelRequest() {
       if (!confirm('Are you sure you want to cancel this play request? This cannot be undone.')) {
@@ -834,7 +941,7 @@ export default {
         await this.supabaseAction(
           supabase.from('playmate_requests').insert([
             {
-              creator_id: this.currentUserId, // CRITICAL: This must be passed correctly
+              creator_id: this.currentUserId,
               sport: finalSport,
               location: finalLocation,
               max_joins: this.newRequest.max_joins,
@@ -842,6 +949,8 @@ export default {
               start_time: this.newRequest.start_time,
               description: this.newRequest.description,
               status: 'open',
+              // NEW FIELD INSERT
+              match_type: this.newRequest.match_type,
             },
           ]),
           'Playmate request created successfully!',
@@ -853,6 +962,7 @@ export default {
         this.$refs.form.reset()
         this.newRequest.sport = null
         this.newRequest.location = ''
+        this.newRequest.match_type = 'individual' // Reset new field
         this.otherSportText = ''
         this.otherLocationText = ''
         this.fetchRequestsAndJoins()
