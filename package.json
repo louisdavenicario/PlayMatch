@@ -4,6 +4,7 @@
     "vuetify": "^3.9.6"
   },
   "devDependencies": {
-    "@mdi/font": "^7.4.47"
+    "@mdi/font": "^7.4.47",
+    "vite": "^7.1.12"
   }
 }
