@@ -215,7 +215,6 @@
               class="mb-4"
             />
 
-            <!-- 🧩 Custom Schedule Alert -->
             <v-alert
               v-if="selectedDateHasCustomSchedule"
               type="info"
@@ -228,7 +227,6 @@
               {{ selectedCustomSchedule?.reason }}
             </v-alert>
 
-            <!-- Show available slots only when no custom schedule -->
             <div
               v-if="
                 selectedDate &&
@@ -342,6 +340,51 @@
             </v-btn>
           </div>
         </v-card>
+
+        <v-dialog v-model="receiptDialog" max-width="500">
+          <v-card>
+            <v-toolbar color="blue" dark flat class="px-4">
+              <v-icon left>mdi-calendar-check</v-icon>
+              <v-toolbar-title class="font-weight-bold">Booking Confirmed!</v-toolbar-title>
+            </v-toolbar>
+
+            <v-card-text class="pt-4">
+              <p class="text-h6 font-weight-bold">{{ facility.facility_name }}</p>
+              <v-divider class="my-3"></v-divider>
+              <p>
+                <strong>Status:</strong> <v-chip color="orange" dark small>Pending Approval</v-chip>
+              </p>
+              <p><strong>Date:</strong> {{ receiptDetails.date }}</p>
+              <p>
+                <strong>Time:</strong> {{ receiptDetails.startTime }} -
+                {{ receiptDetails.endTime }} ({{ receiptDetails.duration }} hours)
+              </p>
+              <p><strong>Total Cost:</strong> ₱{{ receiptDetails.cost }}</p>
+
+              <v-alert
+                type="warning"
+                color="orange-lighten-4"
+                border="start"
+                border-color="orange-darken-2"
+                icon="mdi-camera"
+                class="mt-4"
+              >
+                <div class="font-weight-medium">
+                  <v-icon color="orange darken-2" left>mdi-alert-circle</v-icon>
+                  Please take a screenshot as proof of booking.
+                </div>
+              </v-alert>
+              <p class="caption mt-3">
+                You will be notified once the facility manager approves your booking.
+              </p>
+            </v-card-text>
+
+            <v-card-actions>
+              <v-spacer></v-spacer>
+              <v-btn color="blue darken-1" text @click="receiptDialog = false"> Close </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
       </v-container>
     </v-main>
   </v-app>
@@ -379,6 +422,15 @@ export default {
     // Carousel & Zoom
     zoomDialog: false,
     zoomCarouselIndex: 0,
+    // NEW: Receipt Dialog
+    receiptDialog: false,
+    receiptDetails: {
+      date: '',
+      startTime: '',
+      endTime: '',
+      duration: 0,
+      cost: '0.00',
+    },
   }),
 
   async mounted() {
@@ -391,6 +443,7 @@ export default {
   },
 
   computed: {
+    // ... (Rest of computed properties are unchanged)
     allPhotos() {
       const photos = []
       if (this.facility.image_url) photos.push(this.facility.image_url)
@@ -403,19 +456,6 @@ export default {
       if (!this.selectedStartSlot) return ''
       // The slot is UTC but we display it as local time
       return new Date(this.selectedStartSlot).toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      })
-    },
-    formattedEndTime() {
-      if (!this.selectedStartSlot || this.selectedDuration <= 0) return ''
-      const start = new Date(this.selectedStartSlot)
-      const end = new Date(
-        start.getTime() + this.selectedDuration * this.SLOT_DURATION_MINUTES * 60000,
-      )
-      // The end time is also UTC but displayed locally
-      return end.toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
@@ -705,7 +745,7 @@ export default {
         const { data, error } = await supabase
           .from('schedules')
           .select('*')
-          .eq('facility_id', this.id) // use prop `id`, not this.facility.id
+          .eq('facility_id', this.id)
           .eq('type', 'custom')
 
         if (error) throw error
@@ -830,6 +870,7 @@ export default {
       return true
     },
 
+    // MODIFIED: Show receipt dialog on success instead of alert
     async bookFacility() {
       this.validateDuration(this.selectedDuration)
 
@@ -848,11 +889,9 @@ export default {
       const endTimeMs = start.getTime() + durationInMs
 
       // 3. Convert the start and end moments back to the UTC ISO string format
-      //    to be saved in the TIMESTAMPZ column.
+      //    to be saved in the TIMESTAMPZ column.
       const calculatedStartTime = this.selectedStartSlot // It's already the correct UTC ISO string
       const calculatedEndTime = new Date(endTimeMs).toISOString() // New UTC ISO string for end time
-
-      // Note: Since the database stores the UTC ISO string, we must save the UTC ISO string.
 
       try {
         const user = (await supabase.auth.getUser()).data.user
@@ -875,9 +914,17 @@ export default {
           },
         ])
         if (error) throw error
-        alert(
-          `Booking successful for ${this.selectedDuration} hours! Your booking is now pending. Total: ₱${this.totalBookingCost}`,
-        )
+
+        // --- NEW: Populate and Show Receipt Dialog ---
+        this.receiptDetails = {
+          date: this.selectedDate,
+          startTime: this.formattedSelectedTime,
+          endTime: this.formattedEndTime,
+          duration: this.selectedDuration,
+          cost: this.totalBookingCost,
+        }
+        this.receiptDialog = true
+        // --- END NEW ---
 
         // Reset state and refresh data
         this.selectedStartSlot = null
