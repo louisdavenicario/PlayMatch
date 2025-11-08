@@ -932,7 +932,7 @@ const sortedAllBookings = computed(() => {
     case 'Completed Bookings':
       // Show only bookings with status 'accepted' AND end_time is in the past
       filteredList = filteredList.filter(
-        (booking) => booking.status === 'accepted' && new Date(booking.end_time) <= now,
+        (booking) => booking.status === 'completed' && new Date(booking.end_time) <= now,
       )
       break
 
@@ -1324,9 +1324,15 @@ const fetchAllOwnerData = async () => {
     dashboardData.todayBookings = todayAccepted.length
 
     let monthlyRevenueCalc = 0
-    acceptedBookings.value.forEach((booking) => {
+    allBookingsData.forEach((booking) => {
       const bookingDate = new Date(booking.start_time)
-      if (bookingDate >= currentMonthStart && bookingDate < nextMonthStart) {
+      const status = booking.status
+
+      if (
+        (status === 'accepted' || status === 'completed') &&
+        bookingDate >= currentMonthStart &&
+        bookingDate < nextMonthStart
+      ) {
         const durationHours = (new Date(booking.end_time) - new Date(booking.start_time)) / 3600000
         monthlyRevenueCalc +=
           durationHours * (facilityDetails.value ? facilityDetails.value.price_per_hour : 0)

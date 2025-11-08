@@ -287,7 +287,7 @@ export default {
         case 'cancelled':
           return 'red'
         case 'completed':
-          return 'green'
+          return 'blue'
         default:
           return 'grey'
       }
