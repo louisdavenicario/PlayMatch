@@ -88,7 +88,7 @@
         </div>
       </template>
     </v-navigation-drawer>
-    
+
     <v-main>
       <v-container>
         <v-row class="header-row">
@@ -103,60 +103,63 @@
         </v-row>
 
         <div v-if="currentPage === 'dashboard'">
-          <v-row align="stretch"> 
+          <v-row align="stretch">
             <v-col cols="12" sm="6" lg="3">
-                <v-card class="pa-4 dashboard-card fill-height" rounded="lg"> <div class="d-flex justify-space-between align-center mb-2">
-                        <div class="text-subtitle-1 font-weight-medium">Today's Bookings</div>
-                        <v-icon size="30" color="primary">mdi-calendar-today</v-icon>
-                    </div>
-                    <v-card-text class="pa-0 text-h4 font-weight-bold">
-                        {{ dashboardData.todayBookings }}
-                    </v-card-text>
-                </v-card>
+              <v-card class="pa-4 dashboard-card fill-height" rounded="lg">
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <div class="text-subtitle-1 font-weight-medium">Today's Bookings</div>
+                  <v-icon size="30" color="primary">mdi-calendar-today</v-icon>
+                </div>
+                <v-card-text class="pa-0 text-h4 font-weight-bold">
+                  {{ dashboardData.todayBookings }}
+                </v-card-text>
+              </v-card>
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-                <v-card class="pa-4 dashboard-card fill-height" rounded="lg"> <div class="d-flex justify-space-between align-center mb-2">
-                        <div class="text-subtitle-1 font-weight-medium">Monthly Revenue</div>
-                        <v-icon size="30" color="green-darken-2">mdi-currency-php</v-icon>
-                    </div>
-                    <v-card-text class="pa-0 text-h4 font-weight-bold">
-                        ₱{{ dashboardData.monthlyRevenue.toFixed(2) }}
-                    </v-card-text>
-                </v-card>
+              <v-card class="pa-4 dashboard-card fill-height" rounded="lg">
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <div class="text-subtitle-1 font-weight-medium">Monthly Revenue</div>
+                  <v-icon size="30" color="green-darken-2">mdi-currency-php</v-icon>
+                </div>
+                <v-card-text class="pa-0 text-h4 font-weight-bold">
+                  ₱{{ dashboardData.monthlyRevenue.toFixed(2) }}
+                </v-card-text>
+              </v-card>
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-                <v-card class="pa-4 dashboard-card fill-height" rounded="lg"> <div class="d-flex justify-space-between align-center mb-2">
-                        <div class="text-subtitle-1 font-weight-medium">Pending Requests</div>
-                        <v-icon size="30" color="orange-darken-2">mdi-alert-circle-outline</v-icon>
-                    </div>
-                    <v-card-text class="pa-0 text-h4 font-weight-bold">
-                        {{ dashboardData.pendingRequests }}
-                    </v-card-text>
-                </v-card>
+              <v-card class="pa-4 dashboard-card fill-height" rounded="lg">
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <div class="text-subtitle-1 font-weight-medium">Pending Requests</div>
+                  <v-icon size="30" color="orange-darken-2">mdi-alert-circle-outline</v-icon>
+                </div>
+                <v-card-text class="pa-0 text-h4 font-weight-bold">
+                  {{ dashboardData.pendingRequests }}
+                </v-card-text>
+              </v-card>
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-                <v-card class="pa-4 dashboard-card fill-height" rounded="lg"> <div class="d-flex justify-space-between align-center mb-2">
-                        <div class="text-subtitle-1 font-weight-medium">Facility Rating</div>
-                        <v-icon size="30" color="amber-darken-2">mdi-star</v-icon>
+              <v-card class="pa-4 dashboard-card fill-height" rounded="lg">
+                <div class="d-flex justify-space-between align-center mb-2">
+                  <div class="text-subtitle-1 font-weight-medium">Facility Rating</div>
+                  <v-icon size="30" color="amber-darken-2">mdi-star</v-icon>
+                </div>
+
+                <v-card-text class="pa-0 text-h4 font-weight-bold">
+                  <template v-if="facilityRating.average > 0">
+                    <div class="d-flex align-center">
+                      <v-icon size="24" color="amber-darken-2" class="mr-2">mdi-star</v-icon>
+                      <span class="mr-2"> {{ facilityRating.average.toFixed(1) }} </span>
+                      <span class="ml-2 text-caption text-medium-emphasis">
+                        ({{ facilityRating.totalReviews }} reviews)
+                      </span>
                     </div>
-                    
-                    <v-card-text class="pa-0 text-h4 font-weight-bold"> 
-                        <template v-if="facilityRating.average > 0">
-                            <div class="d-flex align-center">
-                                <v-icon size="24" color="amber-darken-2" class="mr-2">mdi-star</v-icon>
-                                <span class="mr-2"> {{ facilityRating.average.toFixed(1) }}
-                                </span>
-                                <span class="ml-2 text-caption text-medium-emphasis">
-                                    ({{ facilityRating.totalReviews }} reviews)
-                                </span>
-                            </div>
-                        </template>
-                        <template v-else> No ratings yet </template>
-                    </v-card-text>
-                </v-card>
+                  </template>
+                  <template v-else> No ratings yet </template>
+                </v-card-text>
+              </v-card>
             </v-col>
           </v-row>
 
@@ -302,9 +305,7 @@
             <v-col cols="12">
               <v-card class="pa-4" rounded="lg">
                 <v-card-title class="font-weight-bold">Recent Bookings</v-card-title>
-                <v-card-subtitle>
-                  Latest 5 accepted bookings for your facility
-                </v-card-subtitle>
+                <v-card-subtitle> Latest 5 accepted bookings for your facility </v-card-subtitle>
                 <v-card-text>
                   <v-list v-if="recentBookings.length">
                     <v-list-item v-for="booking in recentBookings" :key="booking.id">
@@ -328,32 +329,127 @@
         <div v-if="currentPage === 'bookings'">
           <v-row>
             <v-col cols="12">
-                <v-card class="pa-4" rounded="lg">
-                    <v-card-title class="font-weight-bold text-left">Accepted Bookings Calendar</v-card-title>
-                    <v-card-text>
-                        <v-row> 
-                            <v-col cols="12" sm="10" md="8" lg="6"> 
-                              <v-date-picker
-                                    v-model="calendarDate"
-                                    color="primary"
-                                    @update:model-value="selectDay"
-                                    view-mode="calendar"
-                                    :day-class="getDayClass"
-                              />
-                            </v-col>
-                        </v-row>
-                        
+              <v-card class="pa-4" rounded="lg">
+                <v-card-title class="font-weight-bold d-flex justify-space-between align-center">
+                  <span>All Bookings History 📅</span>
+                  <v-btn
+                    color="primary"
+                    variant="flat"
+                    :loading="loadingBookings"
+                    @click="fetchAllBookings"
+                    prepend-icon="mdi-refresh"
+                  >
+                    Refresh
+                  </v-btn>
+                </v-card-title>
+
+                <v-card-subtitle>
+                  Displays all past, present, and future bookings with their status.
+                </v-card-subtitle>
+
+                <v-card-text>
+                  <v-row align="center" class="mb-2">
+                    <v-col cols="12" sm="4">
+                      <v-select
+                        v-model="filterType"
+                        :items="filterOptions"
+                        label="Filter Bookings"
+                        prepend-inner-icon="mdi-filter"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                      ></v-select>
+                    </v-col>
+
+                    <v-col cols="12" sm="4">
+                      <v-select
+                        v-model="sortOrder"
+                        :items="sortOptions"
+                        label="Sort By"
+                        prepend-inner-icon="mdi-sort"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                      ></v-select>
+                    </v-col>
+
+                    <v-col cols="12" sm="4">
+                      <v-select
+                        v-model="itemsPerPageAllBookings"
+                        :items="[5, 10, 25, 50, 100]"
+                        label="Items Per Page"
+                        prepend-inner-icon="mdi-format-list-numbered"
+                        variant="outlined"
+                        density="compact"
+                        hide-details
+                      ></v-select>
+                    </v-col>
+                  </v-row>
+
+                  <v-data-table
+                    :headers="allBookingsHeaders"
+                    :items="paginatedBookings"
+                    :loading="loadingBookings"
+                    item-value="id"
+                    class="elevation-1"
+                    :items-per-page="itemsPerPageAllBookings"
+                    hide-default-footer
+                    hide-default-header
+                  >
+                    <template v-slot:item.status="{ item }">
+                      <v-chip
+                        :color="getStatusColor(item.status)"
+                        label
+                        size="small"
+                        class="font-weight-bold"
+                      >
+                        {{ item.status.charAt(0).toUpperCase() + item.status.slice(1) }}
+                      </v-chip>
+                    </template>
+
+                    <template v-slot:item.price="{ item }"> ₱{{ item.price.toFixed(2) }} </template>
+
+                    <template v-slot:item.actions="{ item }">
+                      <div v-if="item.status === 'pending'">
                         <v-btn
-                            v-if="selectedDay"
-                            @click="selectedDay = null"
-                            color="secondary"
-                            variant="text"
-                            class="mt-3"
+                          color="success"
+                          size="small"
+                          class="mr-2"
+                          @click="handleBookingStatus(item.id, 'accepted')"
                         >
-                            Clear Selected Day
+                          Accept
                         </v-btn>
-                    </v-card-text>
-                </v-card>
+
+                        <v-btn
+                          color="error"
+                          size="small"
+                          @click="handleBookingStatus(item.id, 'rejected')"
+                        >
+                          Reject
+                        </v-btn>
+                      </div>
+
+                      <span v-else>N/A</span>
+                    </template>
+
+                    <template v-slot:no-data>
+                      <v-alert :value="true" type="info" class="mt-4">
+                        No bookings match the current filter and sort criteria.
+                      </v-alert>
+                    </template>
+
+                    <template v-slot:bottom>
+                      <div class="d-flex justify-center pt-4">
+                        <v-pagination
+                          v-model="currentPageAllBookings"
+                          :length="Math.ceil(sortedAllBookings.length / itemsPerPageAllBookings)"
+                          :total-visible="7"
+                        ></v-pagination>
+                      </div>
+                    </template>
+                  </v-data-table>
+                </v-card-text>
+              </v-card>
             </v-col>
           </v-row>
 
@@ -384,47 +480,6 @@
                   <v-alert v-else type="info" class="mt-4">
                     No accepted bookings for {{ selectedDay }}.
                   </v-alert>
-                </v-card-text>
-              </v-card>
-            </v-col>
-          </v-row>
-
-          <v-row>
-            <v-col cols="12">
-              <v-card class="pa-4 mt-4" rounded="lg">
-                <v-card-title class="font-weight-bold">Pending Booking Requests</v-card-title>
-                <v-card-text>
-                  <v-list v-if="pendingBookings.length">
-                    <v-list-item v-for="booking in pendingBookings" :key="booking.id">
-                      <v-list-item-content>
-                        <v-list-item-title>
-                          Date: {{ new Date(booking.start_time).toLocaleDateString() }}
-                        </v-list-item-title>
-                        <v-list-item-subtitle>
-                          Time: {{ new Date(booking.start_time).toLocaleTimeString() }} -
-                          {{ new Date(booking.end_time).toLocaleTimeString() }}
-                        </v-list-item-subtitle>
-                        <v-list-item-subtitle>
-                          From User: {{ booking.profiles.full_name}}
-                        </v-list-item-subtitle>
-                        <v-list-item-subtitle>
-                          Duration: {{ booking.duration_hours }}
-                        </v-list-item-subtitle>
-                      </v-list-item-content>
-                      <v-list-item-action>
-                        <v-btn
-                          color="success"
-                          class="mr-2"
-                          @click="handleBookingStatus(booking.id, 'accepted')"
-                          >Accept</v-btn
-                        >
-                        <v-btn color="error" @click="handleBookingStatus(booking.id, 'rejected')"
-                          >Reject</v-btn
-                        >
-                      </v-list-item-action>
-                    </v-list-item>
-                  </v-list>
-                  <v-alert v-else type="info" class="mt-4">No pending requests.</v-alert>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -748,31 +803,51 @@ import { useRouter } from 'vue-router'
 
 const loading = ref(false)
 const customSchedules = ref([])
-// 🌟 MODAL STATE VARIABLES - KEPT
+// Modal state variables
 const showDeleteConfirmModal = ref(false)
 const scheduleToDeleteId = ref(null)
 const scheduleToDeleteDate = ref('')
-// NOTE: This now holds the full list of accepted bookings from the database on fetch.
-const acceptedBookings = ref([])
-const selectedDateBookings = ref([]) // List of accepted customers for the selected date
-const calendarDate = ref(new Date().toISOString().substring(0, 10)) // The date currently shown by the calendar
-const selectedDay = ref(null) // The specific date the user clicks for the customer list
 
-// Utility to check which dates have accepted bookings for the calendar indicator
+const acceptedBookings = ref([])
+const selectedDateBookings = ref([])
+const calendarDate = ref(new Date().toISOString().substring(0, 10))
+const selectedDay = ref(null)
+
+// --- FILTERING & SORTING STATE ---
+const sortOrder = ref('Newest to Oldest') // Default sort order
+const sortOptions = ref([
+  'Newest to Oldest',
+  'Oldest to Newest',
+  'Price (Low to High)',
+  'Price (High to Low)',
+])
+
+const filterType = ref('All Bookings') // Default filter type
+const filterOptions = ref([
+  // Includes all status types
+  'All Bookings',
+  'Pending Requests',
+  'Accepted Upcoming Bookings',
+  'Completed Bookings',
+  'Cancelled/Rejected Bookings',
+])
+// --- PAGINATION STATE ---
+const currentPageAllBookings = ref(1) // Tracks current page number
+const itemsPerPageAllBookings = ref(10) // User-adjustable items per page
+// ---------------------------------
+
 const bookingDates = computed(() => {
-  // Return an array of date strings ('YYYY-MM-DD') that have accepted bookings
   return acceptedBookings.value.map((b) => b.booking_date)
 })
-const primaryPhotoFile = ref(null) // Holds the single file selected for the primary photo
-const drawer = ref(true) // Start as open on desktop, but collapsible on mobile
-const newGalleryFiles = ref([]) // Holds new files selected in the modal
-const existingPhotoUrls = ref([]) // Holds URLs fetched from `additional_photos`
+const primaryPhotoFile = ref(null)
+const drawer = ref(true)
+const newGalleryFiles = ref([])
+const existingPhotoUrls = ref([])
 const router = useRouter()
 const userId = ref(null)
 const currentPage = ref('dashboard')
 const showEditModal = ref(false)
 
-// 💥 UPDATED DASHBOARD DATA (from your new script)
 const dashboardData = reactive({
   todayBookings: 0,
   monthlyRevenue: 0,
@@ -781,7 +856,6 @@ const dashboardData = reactive({
 
 const facilityDetails = ref(null)
 
-// 💥 NEW/REPLACED: Facility Rating data structure
 const facilityRating = reactive({
   average: 0,
   totalReviews: 0,
@@ -790,11 +864,11 @@ const facilityRating = reactive({
 const editedFacility = reactive({
   id: null,
   facility_name: '',
-  facility_type: '', // Included for save/edit
+  facility_type: '',
   amenities: '',
   price_per_hour: 0,
-  open_time: '', // Included for save/edit
-  closing_time: '', // Included for save/edit
+  open_time: '',
+  closing_time: '',
   address: '',
   phone_number: '',
   briefdescription: '',
@@ -820,16 +894,189 @@ const newCustomSchedule = reactive({
 })
 const alertMessageText = ref(null)
 const alertColor = ref(null)
-const loadingState = ref(false) // 🌟 Added loading state for the modal button
+const loadingState = ref(false)
+
+// --- BOOKINGS PAGE MODIFICATIONS ---
+const allBookings = ref([])
+const loadingBookings = ref(false)
+
+// Define headers for the v-data-table
+const allBookingsHeaders = ref([
+  { title: 'Date', key: 'date_booked' },
+  { title: 'Time Slot', key: 'time_range' },
+  { title: 'Customer', key: 'customer_name' },
+  { title: 'Price', key: 'price' },
+  { title: 'Status', key: 'status' },
+  { title: 'Actions', key: 'actions', sortable: false },
+])
+
+// Computed property to apply comprehensive filtering first, then sorting.
+const sortedAllBookings = computed(() => {
+  const now = new Date()
+  let filteredList = allBookings.value.slice()
+
+  // 1. Apply Filtering
+  switch (filterType.value) {
+    case 'Pending Requests':
+      // Show only bookings with status 'pending'
+      filteredList = filteredList.filter((booking) => booking.status === 'pending')
+      break
+
+    case 'Accepted Upcoming Bookings':
+      // Show only bookings with status 'accepted' AND end_time is in the future
+      filteredList = filteredList.filter(
+        (booking) => booking.status === 'accepted' && new Date(booking.end_time) > now,
+      )
+      break
+
+    case 'Completed Bookings':
+      // Show only bookings with status 'accepted' AND end_time is in the past
+      filteredList = filteredList.filter(
+        (booking) => booking.status === 'accepted' && new Date(booking.end_time) <= now,
+      )
+      break
+
+    case 'Cancelled/Rejected Bookings':
+      // Show bookings with status 'rejected' or 'cancelled'
+      filteredList = filteredList.filter(
+        (booking) => booking.status === 'rejected' || booking.status === 'cancelled',
+      )
+      break
+
+    case 'All Bookings':
+    default:
+      // No filtering applied, show all bookings
+      break
+  }
+
+  // 2. Apply Sorting
+  let sortedList = filteredList.slice()
+  switch (sortOrder.value) {
+    case 'Oldest to Newest':
+      sortedList.sort((a, b) => new Date(a.start_time) - new Date(b.start_time))
+      break
+    case 'Price (Low to High)':
+      sortedList.sort((a, b) => a.price - b.price)
+      break
+    case 'Price (High to Low)':
+      sortedList.sort((a, b) => b.price - a.price)
+      break
+    case 'Newest to Oldest':
+    default:
+      sortedList.sort((a, b) => new Date(b.start_time) - new Date(a.start_time))
+      break
+  }
+
+  return sortedList
+})
+
+// Computed property to apply pagination to the filtered and sorted list.
+const paginatedBookings = computed(() => {
+  // Recalculate max page and reset current page if needed
+  const maxPage = Math.ceil(sortedAllBookings.value.length / itemsPerPageAllBookings.value)
+  if (currentPageAllBookings.value > maxPage && maxPage > 0) {
+    currentPageAllBookings.value = 1
+  }
+
+  const start = (currentPageAllBookings.value - 1) * itemsPerPageAllBookings.value
+  const end = start + itemsPerPageAllBookings.value
+  return sortedAllBookings.value.slice(start, end)
+})
+
+// Function to determine chip color based on status
+function getStatusColor(status) {
+  switch (status) {
+    case 'accepted':
+      return 'success'
+    case 'rejected':
+      return 'error'
+    case 'pending':
+      return 'warning'
+    case 'cancelled':
+      return 'grey'
+    default:
+      return 'info'
+  }
+}
+
+// Function to fetch ALL bookings for the current facility
+async function fetchAllBookings() {
+  if (!facilityDetails.value?.id) {
+    loadingBookings.value = false
+    console.warn('Facility details not available, cannot fetch bookings.')
+    return
+  }
+
+  loadingBookings.value = true
+  try {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select(
+        `
+                *,
+                profiles (full_name),
+                facilities (facility_name)
+            `,
+      )
+      .eq('facility_id', facilityDetails.value.id)
+      .order('start_time', { ascending: false }) // Fetches all, newest first (initial order)
+
+    if (error) throw error // Transform data for display in the table
+
+    allBookings.value = data.map((booking) => {
+      const start = new Date(booking.start_time)
+      const end = new Date(booking.end_time) // Format date
+
+      const dateFormatted = start.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }) // Format time range
+
+      const timeFormatted = `${start.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      })} - ${end.toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      })}`
+
+      return {
+        ...booking,
+        customer_name: booking.profiles?.full_name || 'N/A',
+        date_booked: dateFormatted,
+        time_range: timeFormatted,
+        // Map total_cost (from Supabase schema) to 'price' for the table template
+        price: booking.total_cost || 0,
+        start_time: booking.start_time, // Keep start_time for date filtering/sorting
+        end_time: booking.end_time, // Keep end_time for 'Completed' filtering
+      }
+    })
+  } catch (error) {
+    console.error('Error fetching all bookings:', error.message)
+    alertMessage('Error loading all bookings.', 'error')
+  } finally {
+    loadingBookings.value = false
+  }
+}
+
+// Helper function for alerts
+function showAlert(message, color) {
+  alertMessageText.value = message
+  alertColor.value = color
+  setTimeout(() => {
+    alertMessageText.value = ''
+  }, 5000)
+}
 
 // --- RATING LOGIC START ---
 
-// 💥 NEW: Fetch ratings for this owner’s facility
 const fetchRatings = async () => {
   if (!facilityDetails.value || !facilityDetails.value.id) return
 
   try {
-    // Assuming a 'ratings' table with a 'facility_id' and 'rating_value' column
     const { data, error } = await supabase
       .from('ratings')
       .select('rating_value')
@@ -839,9 +1086,7 @@ const fetchRatings = async () => {
 
     if (data && data.length > 0) {
       const total = data.reduce((sum, r) => sum + (r.rating_value || 0), 0)
-      // Use the average value directly for v-rating
       facilityRating.average = total / data.length
-      // Use toFixed(1) only when displaying, keep float for v-model
       facilityRating.totalReviews = data.length
     } else {
       facilityRating.average = 0
@@ -852,7 +1097,6 @@ const fetchRatings = async () => {
   }
 }
 
-// 💥 NEW: Utility to get the owner's facility details once
 const getOwnerFacility = async () => {
   try {
     const { data: user } = await supabase.auth.getUser()
@@ -984,25 +1228,17 @@ const upcomingCustomSchedules = computed(() => {
 const fetchAllOwnerData = async () => {
   // 1. Fetch Facility Details first
   await getOwnerFacility()
-  await new Promise(resolve => setTimeout(resolve, 500))
+  await new Promise((resolve) => setTimeout(resolve, 500))
 
   if (!facilityDetails.value) {
-    // If no facility, reset rating and exit
     facilityRating.average = 0
     facilityRating.totalReviews = 0
     return
   }
 
   try {
-    // The rest of the logic remains largely the same, but simplified for clarity
-    const facilityId = facilityDetails.value.id
+    const facilityId = facilityDetails.value.id // Fetch regular hours
 
-    // Fetch hours, bookings, etc.
-    // ... (Your original fetch logic for schedules, bookings, etc. goes here)
-    // NOTE: I'm skipping the full schedule/booking fetch for brevity in this response,
-    // but the final included code snippet has it all.
-
-    // START: Logic for fetching regular hours
     let { data: hoursData, error: hoursError } = await supabase
       .from('schedules')
       .select('day_of_week, start_time, end_time')
@@ -1034,7 +1270,6 @@ const fetchAllOwnerData = async () => {
     }
 
     regularHours.value = newRegularHours
-    // END: Logic for handling fetched regular hours
 
     let { data: customData, error: customError } = await supabase
       .from('schedules')
@@ -1042,41 +1277,40 @@ const fetchAllOwnerData = async () => {
       .eq('facility_id', facilityId)
       .eq('type', 'custom')
     if (customError) console.error('Error fetching custom schedules:', customError.message)
-    if (customData) customSchedules.value = customData
+    if (customData) customSchedules.value = customData // Fetch Bookings
 
-    // Fetch Bookings (Requires facilityDetails.value.id)
     let { data: bookingsData, error: bookingsError } = await supabase
       .from('bookings')
       .select('*, profiles(full_name), facilities(facility_name)')
       .eq('facility_id', facilityId)
     if (bookingsError) throw bookingsError
 
-    const allBookings = (bookingsData || []).map(b => {
-      const startTime = new Date(b.start_time);
-      const bookingDate = startTime.getFullYear() + '-' +
-        String(startTime.getMonth() + 1).padStart(2, '0') + '-' +
-        String(startTime.getDate()).padStart(2, '0');
+    const allBookingsData = (bookingsData || []).map((b) => {
+      const startTime = new Date(b.start_time)
+      const bookingDate =
+        startTime.getFullYear() +
+        '-' +
+        String(startTime.getMonth() + 1).padStart(2, '0') +
+        '-' +
+        String(startTime.getDate()).padStart(2, '0')
 
       return {
         ...b,
         duration_hours: (new Date(b.end_time) - new Date(b.start_time)) / 3600000,
-        booking_date: bookingDate, // 🌟 NEW FIELD for easier date filtering
+        booking_date: bookingDate,
       }
     })
 
-    pendingBookings.value = allBookings.filter((b) => b.status === 'pending')
-    acceptedBookings.value = allBookings.filter((b) => b.status === 'accepted')
-    dashboardData.pendingRequests = pendingBookings.value.length
+    pendingBookings.value = allBookingsData.filter((b) => b.status === 'pending')
+    acceptedBookings.value = allBookingsData.filter((b) => b.status === 'accepted')
+    dashboardData.pendingRequests = pendingBookings.value.length
 
-    // This block is crucial for ensuring the calendar list updates if a day is selected
-    if (selectedDay.value) {
-      selectDay(selectedDay.value);
-    }
-        // 🌟 END FIX 🌟
-    // 2. Fetch facility ratings
-    await fetchRatings()
+    if (selectedDay.value) {
+      selectDay(selectedDay.value)
+    } // 2. Fetch facility ratings
 
-    // 3. Update dashboard metrics based on acceptedBookings (as you did originally)
+    await fetchRatings() // 3. Update dashboard metrics
+
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const nextDay = new Date(today)
@@ -1122,7 +1356,6 @@ const fetchAllOwnerData = async () => {
 
 const handleBookingStatus = async (bookingId, status) => {
   try {
-    // Update booking status in the database
     const { data, error } = await supabase
       .from('bookings')
       .update({ status })
@@ -1135,28 +1368,17 @@ const handleBookingStatus = async (bookingId, status) => {
       return
     }
 
-    // ✅ If status is ACCEPTED
     if (status === 'accepted') {
       const updatedBooking = data[0]
-      pendingBookings.value = pendingBookings.value.filter(b => b.id !== bookingId)
+      pendingBookings.value = pendingBookings.value.filter((b) => b.id !== bookingId)
       acceptedBookings.value.push(updatedBooking)
       alertMessage('Booking accepted successfully!', 'success')
-    }
+    } else if (status === 'rejected') {
+      const rejected = pendingBookings.value.find((b) => b.id === bookingId)
+      pendingBookings.value = pendingBookings.value.filter((b) => b.id !== bookingId)
+      acceptedBookings.value = acceptedBookings.value.filter((b) => b.id !== bookingId)
 
-    // ❌ If status is REJECTED
-    else if (status === 'rejected') {
-      // Find and remove from pending
-      const rejected = pendingBookings.value.find(b => b.id === bookingId)
-      pendingBookings.value = pendingBookings.value.filter(b => b.id !== bookingId)
-
-      // Optional: Also remove from accepted list just in case
-      acceptedBookings.value = acceptedBookings.value.filter(b => b.id !== bookingId)
-
-      // 🧹 Delete or archive the booking to free up that time slot
-      const { error: deleteError } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', bookingId)
+      const { error: deleteError } = await supabase.from('bookings').delete().eq('id', bookingId)
 
       if (deleteError) {
         console.error('Error deleting rejected booking:', deleteError.message)
@@ -1165,40 +1387,31 @@ const handleBookingStatus = async (bookingId, status) => {
         alertMessage('Booking rejected and time slot released!', 'success')
       }
 
-      // Update dashboard count
       dashboardData.pendingRequests = pendingBookings.value.length
 
-      // Refresh owner dashboard data
       await fetchAllOwnerData()
-      window.location.reload()
+      await fetchAllBookings()
 
       if (facilityDetails.value && selectedDay.value && typeof fetchAvailableSlots === 'function') {
         await fetchAvailableSlots(facilityDetails.value.id, selectedDay.value)
       }
     }
-
   } catch (err) {
     console.error('Unexpected error:', err.message)
     alertMessage('An unexpected error occurred while updating booking.', 'error')
   }
 }
 
-
-// 🌟 FIX 1: Helper function to accurately extract YYYY-MM-DD from a UTC timestamp
 const getUTCDateString = (d) => {
-    const year = d.getUTCFullYear()
-    // getUTCMonth() is 0-indexed (Jan=0), so we add 1
-    const month = String(d.getUTCMonth() + 1).padStart(2, '0') 
-    const day = String(d.getUTCDate()).padStart(2, '0')
-    return `${year}-${month}-${day}`
+  const year = d.getUTCFullYear()
+  const month = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(d.getUTCDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
-
-// Replace your current `selectDay` function with this:
 const selectDay = (dateString) => {
   selectedDay.value = dateString
 
-  // Normalize both the calendar date and the booking date to YYYY-MM-DD
   const normalizeDate = (date) => {
     const d = new Date(date)
     const year = d.getFullYear()
@@ -1213,7 +1426,6 @@ const selectDay = (dateString) => {
     return normalizedBookingDate === normalizedSelectedDate
   })
 }
-
 
 const saveRegularHours = async () => {
   if (!facilityDetails.value || !facilityDetails.value.id) {
@@ -1445,6 +1657,7 @@ onMounted(async () => {
     if (session) {
       userId.value = session.user.id
       await fetchAllOwnerData()
+      await fetchAllBookings()
     } else {
       router.push({ name: 'signin' })
     }

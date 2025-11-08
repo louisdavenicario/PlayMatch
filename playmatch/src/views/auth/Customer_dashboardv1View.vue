@@ -553,32 +553,19 @@ export default {
         </v-card-actions>
       </v-card>
     </v-dialog>
-    <v-bottom-navigation app fixed color="white" light
-      v-model="activeNav">
-        <v-btn 
-          value="home" 
-          @click="$router.push({ name: 'customer-dashboard' })"
-        >
-          <v-icon :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
-        </v-btn>
-        <v-btn 
-          value="bookings" 
-          @click="$router.push({ name: 'customer-bookings' })"
-        >
-          <v-icon :color="activeNav === 'bookings' ? 'blue' : 'black'">mdi-calendar-check</v-icon>
-        </v-btn>
-        <v-btn 
-          value="favorites" 
-          @click="$router.push({ name: 'favorites' })"
-        >
-          <v-icon :color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
-        </v-btn>
-        <v-btn 
-          value="profile" 
-          @click="$router.push({ name: 'customer-profile' })"
-        >
-          <v-icon :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
-        </v-btn>
+    <v-bottom-navigation app fixed color="white" light v-model="activeNav">
+      <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
+        <v-icon :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
+      </v-btn>
+      <v-btn value="bookings" @click="$router.push({ name: 'customer-bookings' })">
+        <v-icon :color="activeNav === 'bookings' ? 'blue' : 'black'">mdi-calendar-check</v-icon>
+      </v-btn>
+      <v-btn value="favorites" @click="$router.push({ name: 'favorites' })">
+        <v-icon :color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
+      </v-btn>
+      <v-btn value="profile" @click="$router.push({ name: 'customer-profile' })">
+        <v-icon :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
+      </v-btn>
     </v-bottom-navigation>
   </v-app>
 </template>

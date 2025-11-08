@@ -852,33 +852,37 @@ export default {
       }
     },
 
-    // ... (cancelRequest and supabaseAction remain the same)
     // Cancels (updates status to 'canceled') the request
     async cancelRequest() {
-      if (!confirm('Are you sure you want to cancel this play request? This cannot be undone.')) {
-        return
-      }
+      if (!this.selectedRequest?.id) return
 
-      this.creating = true
+      const confirmCancel = confirm(
+        'Are you sure you want to cancel this request? This will permanently delete it.',
+      )
+      if (!confirmCancel) return
+
       try {
+        // ✅ Delete request based on creator_id
         const { error } = await supabase
           .from('playmate_requests')
-          .update({ status: 'canceled' })
+          .delete()
           .eq('id', this.selectedRequest.id)
           .eq('creator_id', this.currentUserId)
 
         if (error) throw error
 
-        alert('Request has been successfully canceled!')
+        // ✅ Remove locally so UI updates immediately
+        this.playmateRequests = this.playmateRequests.filter(
+          (r) => r.id !== this.selectedRequest.id,
+        )
+
         this.manageDialog = false
-        this.fetchRequestsAndJoins()
+        alert('Request permanently deleted.')
       } catch (err) {
-        alert(`Failed to cancel request: ${err.message}`)
-      } finally {
-        this.creating = false
+        console.error('Error deleting request:', err)
+        alert('Failed to delete the request. Please try again.')
       }
     },
-
     // Helper for Supabase actions - MODIFIED FOR BETTER ERROR LOGGING
     async supabaseAction(promise, successMsg, failMsg) {
       this.creating = true
