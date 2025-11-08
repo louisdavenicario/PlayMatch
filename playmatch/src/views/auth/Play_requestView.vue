@@ -41,6 +41,15 @@
           ></v-text-field>
         </v-card>
 
+        <v-card class="pa-3 mb-4" rounded="lg" elevation="1">
+          <v-chip-group v-model="matchTypeFilter" active-class="blue white--text" column mandatory>
+            <v-chip value="all"> All Requests </v-chip>
+            <v-chip value="individual" color="light-blue" text-color="white">
+              Seeking Players
+            </v-chip>
+            <v-chip value="team" color="deep-purple" text-color="white"> Opponent Teams </v-chip>
+          </v-chip-group>
+        </v-card>
         <div v-if="loading" class="text-center py-10">
           <v-progress-circular indeterminate color="blue"></v-progress-circular>
           <p class="mt-2 grey--text">Loading playmate requests...</p>
@@ -48,7 +57,9 @@
 
         <div v-else-if="filteredRequests.length === 0" class="text-center py-10">
           <v-icon large color="grey lighten-1">mdi-account-group-outline</v-icon>
-          <h3 class="mt-2 text-h6 grey--text">No active requests found.</h3>
+          <h3 class="mt-2 text-h6 grey--text">
+            No active requests found for your current filters.
+          </h3>
           <p class="grey--text">Be the first to create a playmate request!</p>
           <v-btn color="blue" dark class="mt-4" rounded @click="dialog = true">
             <v-icon left>mdi-plus-circle-outline</v-icon> Create Request
@@ -451,6 +462,8 @@ export default {
     manageTab: 0, // 0 for Participants, 1 for Edit
     valid: true,
     search: '',
+    // ✅ ADDED: New data property for match type filter
+    matchTypeFilter: 'all', // 'all', 'individual', or 'team'
     currentUserId: null,
     playmateRequests: [],
     userJoins: [],
@@ -479,7 +492,6 @@ export default {
     todayDate: new Date().toISOString().split('T')[0],
   }),
   computed: {
-    // ... (sportChoices, isSportOther, locationChoices, isLocationOther, filteredRequests remain the same)
     sportChoices() {
       return [...this.baseSports, 'Other (Specify)']
     },
@@ -493,15 +505,22 @@ export default {
     isLocationOther() {
       return this.newRequest.location === 'Other (Specify)'
     },
+    // ✅ MODIFIED: Updated filteredRequests to include matchTypeFilter logic
     filteredRequests() {
-      if (!this.search) return this.playmateRequests
+      const searchTerm = this.search ? this.search.toLowerCase() : ''
 
-      const searchLower = this.search.toLowerCase()
-      return this.playmateRequests.filter(
+      // 1. Filter by Match Type
+      const matchTypeFiltered = this.playmateRequests.filter((request) => {
+        if (this.matchTypeFilter === 'all') return true
+        return request.match_type === this.matchTypeFilter
+      })
+
+      // 2. Filter by Search Term
+      return matchTypeFiltered.filter(
         (request) =>
-          request.sport.toLowerCase().includes(searchLower) ||
-          request.location.toLowerCase().includes(searchLower) ||
-          request.creator_name.toLowerCase().includes(searchLower),
+          request.sport.toLowerCase().includes(searchTerm) ||
+          request.location.toLowerCase().includes(searchTerm) ||
+          request.creator_name.toLowerCase().includes(searchTerm),
       )
     },
   },
@@ -512,7 +531,6 @@ export default {
   },
   methods: {
     // --- Utility Methods ---
-    // ... (formatDate, formatTime, isJoined, isCreator, handleSportChange, handleLocationChange remain the same)
     formatDate(dateString) {
       if (!dateString) return ''
       return new Date(dateString + 'T00:00:00').toLocaleDateString(undefined, {
@@ -547,7 +565,6 @@ export default {
 
     // --- Core Interaction Methods ---
 
-    // ... (getCurrentUser and fetchFacilities remain the same)
     async getCurrentUser() {
       const {
         data: { user },
@@ -711,7 +728,6 @@ export default {
       }
     },
 
-    // ... (fetchJoinsForRequest and openManageDialog remain the same)
     // Fetches participants for the Manage Request modal
     async fetchJoinsForRequest(requestId) {
       this.participants = []
@@ -977,13 +993,3 @@ export default {
   },
 }
 </script>
-
-<style scoped>
-.v-card {
-  transition: all 0.2s ease-in-out;
-}
-.v-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1) !important;
-}
-</style>
