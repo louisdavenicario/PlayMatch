@@ -24,10 +24,22 @@ export default {
   }),
 
   async mounted() {
-    await this.getCurrentUser()
-    if (this.currentUserId) {
-      await this.fetchFavorites()
+    // 🔒 Step 1: Check if user is logged in
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    if (!session) {
+      console.warn('⚠️ No session found — redirecting to Sign In.')
+      this.$router.push({ name: 'signin' })
+      return // Stop execution
     }
+
+    // ✅ Step 2: Store current user ID
+    this.currentUserId = session.user.id
+    console.log('✅ Logged-in user ID:', this.currentUserId)
+
+    await this.fetchFavorites()
     await this.fetchFacilities()
     this.fetchPlaymateRequests()
     this.subscribeFavoritesRealtime()
