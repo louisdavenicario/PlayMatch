@@ -13,7 +13,7 @@ export default {
     favoriteIds: [],
     loading: false,
     error: null,
-    isGridView: true,
+    isGridView: false,
 
     // ⭐ Rating dialog state
     ratingDialog: {
@@ -643,7 +643,7 @@ export default {
                   @click.stop="$router.push({ name: 'facility-details', params: { id: facility.id } })"
                 >
                   <!-- 🏞 Facility Image -->
-                  <div class="mr-3 ml-1 d-flex flex-column align-center" style="width: 100px;">
+                  <div class="mr-3 ml-2 mb-2 mt-2 d-flex flex-column align-center" style="width: 100px;">
                     <v-img
                       :src="facility.image || '/images/default-facility.jpg'"
                       height="100"
@@ -655,8 +655,8 @@ export default {
 
                   <!-- 🏟 Facility Info -->
                   <div class="flex-grow-1 text-left">
-                    <div class="font-weight-semibold text-body-1 mb-1">{{ facility.name }}</div>
-                    <div class="text-caption grey--text mb-1">{{ facility.address }}</div>
+                    <div class="font-weight-semibold text-body-1 mb-2 mt-2">{{ facility.name }}</div>
+                    <div class="text-caption grey--text mb-2">{{ facility.address }}</div>
 
                     <!-- ⭐ Rating and 💸 Price -->
                     <div class="d-flex align-center flex-wrap mb-2">
@@ -717,16 +717,16 @@ export default {
     </v-dialog>
     <v-bottom-navigation app fixed color="white" light v-model="activeNav">
       <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
-        <v-icon size="28":color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
+        <v-icon size="29":color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
       </v-btn>
       <v-btn value="bookings" @click="$router.push({ name: 'customer-bookings' })">
-        <v-icon size="26":color="activeNav === 'bookings' ? 'blue' : 'black'">mdi-calendar-check</v-icon>
+        <v-icon size="27":color="activeNav === 'bookings' ? 'blue' : 'black'">mdi-calendar-check</v-icon>
       </v-btn>
       <v-btn value="favorites" @click="$router.push({ name: 'favorites' })">
-        <v-icon size="26":color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
+        <v-icon size="27":color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
       </v-btn>
       <v-btn value="profile" @click="$router.push({ name: 'customer-profile' })">
-        <v-icon size="31" :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
+        <v-icon size="32" :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
       </v-btn>
     </v-bottom-navigation>
   </v-app>
