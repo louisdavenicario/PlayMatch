@@ -13,6 +13,7 @@ export default {
     favoriteIds: [],
     loading: false,
     error: null,
+    isGridView: true,
 
     // ⭐ Rating dialog state
     ratingDialog: {
@@ -39,6 +40,10 @@ export default {
   },
 
   methods: {
+    toggleView() {
+      this.isGridView = !this.isGridView
+    },
+
     // 🧍 Get logged-in user
     async getCurrentUser() {
       try {
@@ -500,7 +505,7 @@ export default {
                   </div>
                 </v-card-text>
 
-                <v-card-actions class="pt-0 pr-3 pb-3 justify-end">
+                <v-card-actions class="pt-0 pr-3 pb-3 justify-center">
                   <v-btn
                     small
                     color="blue"
@@ -522,6 +527,151 @@ export default {
                   </v-btn>
                 </v-card-actions>
               </v-card>
+            </div>
+          </v-col>
+        </v-row>
+
+        <v-row no-gutters class="facilities-section px-4 mt-5 mb-10">
+          <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
+            <h2 class="text-h6 font-weight-medium">More Facilities</h2>
+            <!-- Toggle Button for Grid/List -->
+            <v-btn icon @click="toggleView">
+              <v-icon>{{ isGridView ? 'mdi-view-list' : 'mdi-view-grid' }}</v-icon>
+            </v-btn>
+          </v-col>
+
+          <v-col cols="12">
+            <!-- Loading State -->
+            <div v-if="loading" class="text-center py-4">
+              <v-progress-circular indeterminate color="blue" />
+            </div>
+
+            <!-- Empty State -->
+            <div v-else-if="facilities.length === 0" class="text-center py-4 grey--text">
+              No facilities available.
+            </div>
+
+            <!-- Facilities Display -->
+            <div v-else>
+              <!-- ✅ GRID VIEW -->
+              <v-row v-if="isGridView" dense>
+                <v-col
+                  v-for="facility in facilities"
+                  :key="facility.id"
+                  cols="12" sm="6" md="4" lg="3"
+                >
+                  <v-card
+                    class="facility-card"
+                    rounded="lg"
+                    @click="$router.push({ name: 'facility-details', params: { id: facility.id } })"
+                  >
+                    <v-img :src="facility.image" height="150">
+                      <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
+                        <v-chip x-small dark color="black">{{ facility.type }}</v-chip>
+                        <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
+                          <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
+                            {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                          </v-icon>
+                        </v-btn>
+                      </v-card-text>
+                    </v-img>
+
+                    <v-card-title class="pb-1 text-body-1 font-weight-semibold pt-3">
+                      {{ facility.name }}
+                    </v-card-title>
+
+                    <v-card-text class="py-0">
+                      <div class="text-caption grey--text mb-2">{{ facility.address }}</div>
+                      <div class="d-flex align-center justify-space-between mb-3">
+                        <div class="d-flex align-center">
+                          <v-icon small color="amber">mdi-star</v-icon>
+                          <span class="text-caption ml-1 font-weight-medium">
+                            {{ facility.rating }} ({{ facility.reviews }})
+                          </span>
+                        </div>
+                        <v-chip color="green darken-1" dark small>
+                          ₱{{ facility.price }}/hour
+                        </v-chip>
+                      </div>
+                    </v-card-text>
+                    <v-card-actions class="pt-0 pr-3 pb-3 justify-center">
+                      <v-btn
+                        small
+                        color="blue"
+                        dark
+                        rounded
+                        @click.stop="
+                          $router.push({ name: 'facility-details', params: { id: facility.id } })
+                        "
+                        >View Details</v-btn
+                      >
+                      <v-btn
+                        small
+                        :color="facility.myRating > 0 ? 'orange darken-1' : 'amber'"
+                        dark
+                        rounded
+                        @click.stop="openRatingDialog(facility)"
+                      >
+                        {{ facility.myRating > 0 ? 'Edit Rate' : 'Rate' }}
+                      </v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </v-col>
+              </v-row>
+
+              <!-- ✅ LIST VIEW -->
+              <div v-else>
+                <v-card
+                  v-for="facility in facilities"
+                  :key="facility.id"
+                  class="d-flex pa-3 mb-3 align-start"
+                  elevation="1"
+                  rounded="lg"
+                  width="100%"
+                  @click.stop="$router.push({ name: 'facility-details', params: { id: facility.id } })"
+                >
+                  <!-- 🏞 Facility Image -->
+                  <div class="mr-3 ml-1 d-flex flex-column align-center" style="width: 100px;">
+                    <v-img
+                      :src="facility.image || '/images/default-facility.jpg'"
+                      height="100"
+                      width="100"
+                      class="rounded-lg grey lighten-3"
+                      cover
+                    />
+                  </div>
+
+                  <!-- 🏟 Facility Info -->
+                  <div class="flex-grow-1 text-left">
+                    <div class="font-weight-semibold text-body-1 mb-1">{{ facility.name }}</div>
+                    <div class="text-caption grey--text mb-1">{{ facility.address }}</div>
+
+                    <!-- ⭐ Rating and 💸 Price -->
+                    <div class="d-flex align-center flex-wrap mb-2">
+                      <v-icon small color="amber">mdi-star</v-icon>
+                      <span class="text-caption ml-1">
+                        {{ facility.rating }} ({{ facility.reviews }})
+                      </span>
+                      <v-chip
+                        small
+                        outlined
+                        color="green darken-1"
+                        text-color="green darken-1"
+                        class="ml-3 font-weight-medium"
+                      >
+                        ₱{{ facility.price }}/hour
+                      </v-chip>
+                    </div>
+                  </div>
+
+                  <!-- ❤️ Favorite Button -->
+                  <v-btn icon @click.stop="toggleFavorite(facility.id)">
+                    <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
+                      {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                    </v-icon>
+                  </v-btn>
+                </v-card>
+              </div>
             </div>
           </v-col>
         </v-row>
@@ -555,16 +705,16 @@ export default {
     </v-dialog>
     <v-bottom-navigation app fixed color="white" light v-model="activeNav">
       <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
-        <v-icon :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
+        <v-icon size="28":color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
       </v-btn>
       <v-btn value="bookings" @click="$router.push({ name: 'customer-bookings' })">
-        <v-icon :color="activeNav === 'bookings' ? 'blue' : 'black'">mdi-calendar-check</v-icon>
+        <v-icon size="26":color="activeNav === 'bookings' ? 'blue' : 'black'">mdi-calendar-check</v-icon>
       </v-btn>
       <v-btn value="favorites" @click="$router.push({ name: 'favorites' })">
-        <v-icon :color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
+        <v-icon size="26":color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
       </v-btn>
       <v-btn value="profile" @click="$router.push({ name: 'customer-profile' })">
-        <v-icon :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
+        <v-icon size="31" :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
       </v-btn>
     </v-bottom-navigation>
   </v-app>
@@ -591,5 +741,17 @@ export default {
 }
 .facility-scroll-container::-webkit-scrollbar {
   display: none;
+}
+
+.v-card-actions{
+  align-items: flex-start;
+}
+
+.v-card:hover {
+  transform: scale(1.02);
+}
+
+.v-card {
+  transition: 0.3s ease;
 }
 </style>
