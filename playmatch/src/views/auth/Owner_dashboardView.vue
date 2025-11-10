@@ -845,7 +845,11 @@ const newGalleryFiles = ref([])
 const existingPhotoUrls = ref([])
 const router = useRouter()
 const userId = ref(null)
-const currentPage = ref('dashboard')
+const currentPage = ref(localStorage.getItem('ownerCurrentPage') || 'dashboard')
+
+watch(currentPage, (newVal) => {
+  localStorage.setItem('ownerCurrentPage', newVal)
+})
 const showEditModal = ref(false)
 
 const dashboardData = reactive({
