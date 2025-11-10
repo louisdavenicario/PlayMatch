@@ -797,7 +797,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, reactive, computed } from 'vue'
+import { ref, onMounted, reactive, watch, computed } from 'vue'
 import { supabase } from '@/supabaseClient'
 import { useRouter } from 'vue-router'
 
