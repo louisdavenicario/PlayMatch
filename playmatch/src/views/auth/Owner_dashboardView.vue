@@ -6,14 +6,6 @@
         url('/images/logo.jpg') center/cover no-repeat;
     "
   >
-    <div v-if="$vuetify.display.smAndDown">
-      <v-app-bar app color="blue-grey-lighten-5">
-        <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
-        <v-toolbar-title class="font-weight-bold">
-          {{ facilityDetails?.facility_name }}
-        </v-toolbar-title>
-      </v-app-bar>
-    </div>
 
     <v-navigation-drawer
       v-model="drawer"
@@ -22,54 +14,54 @@
       app
       class="sidebar"
     >
-      <v-list-item class="logo-section d-none d-md-block">
-        <v-list-item-title class="font-weight-bold">
+      <v-list-item class="logo-section">
+        <v-list-item-title class="font-weight-bold text-h6">
           {{ facilityDetails?.facility_name }}
         </v-list-item-title>
       </v-list-item>
+      
       <v-divider
-        class="d-none d-md-block"
         style="border-color: black; border-width: 2px"
       ></v-divider>
 
       <v-list dense nav>
-        <v-list-item
-          :class="{ 'v-list-item--active': currentPage === 'dashboard' }"
-          @click="currentPage = 'dashboard'"
-          link
-        >
+          <v-list-item
+            :class="{ 'v-list-item--active': currentPage === 'dashboard' }"
+            @click="navigate('dashboard')"
+            link
+          >
           <v-list-item-title>
-            <v-icon>mdi-view-dashboard</v-icon>
+            <v-icon class="mr-2">mdi-view-dashboard</v-icon>
             Dashboard
           </v-list-item-title>
         </v-list-item>
         <v-list-item
           :class="{ 'v-list-item--active': currentPage === 'bookings' }"
-          @click="currentPage = 'bookings'"
+          @click="navigate('bookings')"
           link
         >
           <v-list-item-title>
-            <v-icon>mdi-book-check</v-icon>
+            <v-icon class="mr-2">mdi-book-check</v-icon>
             Bookings
           </v-list-item-title>
         </v-list-item>
         <v-list-item
           :class="{ 'v-list-item--active': currentPage === 'availability' }"
-          @click="currentPage = 'availability'"
+          @click="navigate('availability')"
           link
         >
           <v-list-item-title>
-            <v-icon>mdi-calendar-check</v-icon>
+            <v-icon class="mr-2">mdi-calendar-check</v-icon>
             Availability Settings</v-list-item-title
           >
         </v-list-item>
         <v-list-item
           :class="{ 'v-list-item--active': currentPage === 'settings' }"
-          @click="currentPage = 'settings'"
+          @click="navigate('settings')"
           link
         >
           <v-list-item-title>
-            <v-icon>mdi-cog</v-icon>
+            <v-icon class="mr-2">mdi-cog</v-icon>
             Settings</v-list-item-title
           >
         </v-list-item>
@@ -91,12 +83,20 @@
 
     <v-main>
       <v-container>
-        <v-row class="header-row">
-          <v-col>
-            <h1 class="text-h4 font-weight-bold text-black">
+        <v-row class="header-row align-center">
+          <v-col class="d-flex align-center">
+            <!-- Show burger menu only on small screens -->
+            <v-app-bar-nav-icon
+              v-if="$vuetify.display.smAndDown"
+              class="mr-2"
+              @click="drawer = !drawer"
+            ></v-app-bar-nav-icon>
+
+            <h1 class="text-h4 font-weight-bold text-black m-0">
               {{ currentPage.charAt(0).toUpperCase() + currentPage.slice(1) }}
             </h1>
           </v-col>
+
           <v-col class="text-right d-none d-sm-block">
             <span class="text-subtitle-1 text-black">User ID: {{ userId }}</span>
           </v-col>
@@ -846,7 +846,13 @@ const existingPhotoUrls = ref([])
 const router = useRouter()
 const userId = ref(null)
 const currentPage = ref(localStorage.getItem('ownerCurrentPage') || 'dashboard')
-
+function navigate(page) {
+  currentPage.value = page
+  // Automatically close the drawer if on mobile
+  if (window.innerWidth <= 960) { // mimic Vuetify's smAndDown behavior
+    drawer.value = false
+  }
+}
 watch(currentPage, (newVal) => {
   localStorage.setItem('ownerCurrentPage', newVal)
 })
