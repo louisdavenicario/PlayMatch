@@ -137,7 +137,7 @@
           <h2 class="font-weight-bold">{{ facility.facility_name }}</h2>
           <p class="grey--text mb-2">Address: {{ facility.address }}</p>
           <p class="grey--text mb-2">
-            Operating Hours: {{ facility.open_time }} - {{ facility.closing_time }}
+            Operating Hours (Today): {{ currentDayOperatingHours }}
           </p>
           <p class="grey--text mb-2">Contact Number: {{ facility.phone_number }}</p>
           <p class="grey--text mb-2">Amenities: {{ facility.amenities }}</p>
@@ -443,6 +443,20 @@ export default {
   },
 
   computed: {
+    currentDayOperatingHours() {
+      if (!this.schedules || this.schedules.length === 0) return 'N/A'
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+      const todayDayOfWeek = days[new Date().getDay()]
+      
+      const schedules = this.schedules.find(
+        (s) => s.type === 'regular' && s.day_of_week === todayDayOfWeek
+      )
+      
+      if (schedules && schedules.start_time && schedules.end_time) {
+        return `${schedules.start_time} - ${schedules.end_time}`
+      }
+      return 'N/A'
+    },
     // ... (Rest of computed properties are unchanged)
     allPhotos() {
       const photos = []
@@ -759,11 +773,29 @@ export default {
     groupAvailableSchedules() {
       const grouped = {}
       this.availableSchedules.forEach((slot) => {
-        const dateKey = new Date(slot.start_time).toISOString().split('T')[0]
-
-        if (!grouped[dateKey]) grouped[dateKey] = []
-        grouped[dateKey].push(slot)
+      // FIX 1: Use a Date object to extract the date based on the client's local timezone
+      const dateObj = new Date(slot.start_time)
+      
+      // Extract components based on the LOCAL time
+      const year = dateObj.getFullYear()
+      const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+      const day = String(dateObj.getDate()).padStart(2, '0')
+      
+      // This ensures 1:00 AM local time is grouped to the correct local date
+      const dateKey = `${year}-${month}-${day}` 
+      
+      if (!grouped[dateKey]) grouped[dateKey] = []
+            grouped[dateKey].push(slot)
       })
+      
+      // FIX 2: Explicitly sort the slots within each date group
+      for (const dateKey in grouped) {
+        grouped[dateKey].sort((a, b) => {
+          // Sort by the actual Date object time (which is the UTC ISO string value)
+          return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+        })
+      }
+      
       this.groupedSchedules = grouped
       this.availableDates = Object.keys(grouped)
     },
