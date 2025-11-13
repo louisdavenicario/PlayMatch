@@ -14,7 +14,6 @@ import Play_requestView from '@/views/auth/Play_requestView.vue'
 import FavoritesView from '@/views/auth/FavoritesView.vue'
 import CustomerBookingsView from '@/views/auth/CustomerBookingsView.vue'
 
-
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [

@@ -9,13 +9,15 @@ export default {
     playmateRequests: [],
     playmateLoading: false,
     facilities: [],
+    // New array to hold only the popular facilities (rated and sorted)
+    popularFacilities: [],
     favorites: [],
     favoriteIds: [],
     loading: false,
     error: null,
     isGridView: false,
 
-    // ⭐ Rating dialog state
+    // Rating dialog state
     ratingDialog: {
       visible: false,
       facility: null,
@@ -24,7 +26,7 @@ export default {
   }),
 
   async mounted() {
-    // 🔒 Step 1: Check if user is logged in
+    // Check if user is logged in
     const {
       data: { session },
     } = await supabase.auth.getSession()
@@ -35,7 +37,7 @@ export default {
       return // Stop execution
     }
 
-    // ✅ Step 2: Store current user ID
+    // Store current user ID
     this.currentUserId = session.user.id
     console.log('✅ Logged-in user ID:', this.currentUserId)
 
@@ -56,7 +58,7 @@ export default {
       this.isGridView = !this.isGridView
     },
 
-    // 🧍 Get logged-in user
+    // Get logged-in user
     async getCurrentUser() {
       try {
         const { data, error } = await supabase.auth.getUser()
@@ -69,7 +71,7 @@ export default {
       }
     },
 
-    // 🚪 Logout
+    // Logout
     async logout() {
       try {
         const { error } = await supabase.auth.signOut()
@@ -84,7 +86,7 @@ export default {
       }
     },
 
-    // ❤️ Toggle favorites
+    // Toggle favorites
     async toggleFavorite(facilityId) {
       if (!this.currentUserId) {
         alert('Please log in to add favorites.')
@@ -116,12 +118,12 @@ export default {
       }
     },
 
-    // ❤️ Check if facility is favorite
+    //  Check if facility is favorite
     isFavorite(facilityId) {
       return this.favoriteIds.includes(facilityId)
     },
 
-    // 🧠 Fetch favorites
+    // Fetch favorites
     async fetchFavorites() {
       if (!this.currentUserId) return
       this.loading = true
@@ -130,17 +132,17 @@ export default {
           .from('favorites')
           .select(
             `
-             id,
-             created_at,
-             facilities (
-               id,
-               facility_name,
-               address,
-               facility_type,
-               image_url,
-               price_per_hour
-             )
-           `,
+              id,
+              created_at,
+              facilities (
+                id,
+                facility_name,
+                address,
+                facility_type,
+                image_url,
+                price_per_hour
+              )
+            `,
           )
           .eq('user_id', this.currentUserId)
 
@@ -163,7 +165,7 @@ export default {
       }
     },
 
-    // 🔁 Subscribe to real-time favorites
+    // Subscribe to real-time favorites
     async subscribeFavoritesRealtime() {
       if (!this.currentUserId) return
       this.favSubscription = supabase
@@ -184,7 +186,7 @@ export default {
         .subscribe()
     },
 
-    // ⭐ Subscribe to real-time ratings
+    // Subscribe to real-time ratings
     async subscribeRatingsRealtime() {
       this.ratingSubscription = supabase
         .channel('ratings-changes')
@@ -197,14 +199,14 @@ export default {
           },
           async () => {
             console.log('🔄 Ratings updated, refetching facilities...')
-            // This call ensures all users get the consistent, server-calculated average
+            // This call ensures all users get the consistent, calculated average
             await this.fetchFacilities()
           },
         )
         .subscribe()
     },
 
-    // ⭐ Open rating dialog
+    // Open rating dialog
     async openRatingDialog(facility) {
       if (!this.currentUserId) {
         alert('Please log in to rate facilities.')
@@ -216,14 +218,14 @@ export default {
       this.ratingDialog.visible = true
     },
 
-    // 🚪 Close rating dialog
+    // Close rating dialog
     closeRatingDialog() {
       this.ratingDialog.visible = false
       this.ratingDialog.facility = null
       this.ratingDialog.value = 0
     },
 
-    // 💾 Submit or update rating
+    // Submit or update rating
     async submitRating() {
       if (!this.ratingDialog.value) {
         alert('Please select a star rating first.')
@@ -264,10 +266,7 @@ export default {
           if (insertError) throw insertError
         }
 
-        // ❌ REMOVED: The previous manual/optimistic local update logic is removed.
-        // The real-time subscription will now handle the UI refresh (via fetchFacilities),
-        // ensuring the UI is consistently updated with the single source of truth (the database).
-
+        // The real-time subscription will now handle the UI refresh (via fetchFacilities)
         this.closeRatingDialog()
       } catch (err) {
         console.error('Error submitting rating:', err.message)
@@ -275,7 +274,7 @@ export default {
       }
     },
 
-    // 🏟 Fetch facilities with average + user-specific rating
+    // Fetch facilities, calculate ratings, and sort/filter
     async fetchFacilities() {
       this.loading = true
       try {
@@ -283,26 +282,28 @@ export default {
           .from('facilities')
           .select(
             `
-             id,
-             facility_name,
-             facility_type,
-             address,
-             price_per_hour,
-             image_url,
-             ratings:ratings(user_id, rating_value)
-           `,
+              id,
+              facility_name,
+              facility_type,
+              address,
+              price_per_hour,
+              image_url,
+              ratings:ratings(user_id, rating_value)
+            `,
           )
-          .limit(5)
+          .limit(50) // Fetch a decent pool
 
         if (error) throw error
 
-        this.facilities = data.map((f) => {
+        let facilitiesWithRatings = data.map((f) => {
           const ratings = f.ratings || []
           const ratingCount = ratings.length
-          const averageRating =
-            ratingCount > 0
-              ? (ratings.reduce((sum, r) => sum + r.rating_value, 0) / ratingCount).toFixed(1)
-              : '0.0'
+
+          // Calculate average rating as a number for proper sorting
+          const numericAverageRating =
+            ratingCount > 0 ? ratings.reduce((sum, r) => sum + r.rating_value, 0) / ratingCount : 0
+
+          const averageRatingFormatted = numericAverageRating.toFixed(1)
 
           const myRating = this.currentUserId
             ? ratings.find((r) => r.user_id === this.currentUserId)?.rating_value || 0
@@ -315,12 +316,39 @@ export default {
             address: f.address,
             price: f.price_per_hour,
             image: f.image_url,
-            rating: averageRating,
+            rating: averageRatingFormatted,
+            numericRating: numericAverageRating,
             reviews: ratingCount,
-            myRating, // User's own rating
-            ratings, // Retained as the source of truth from DB for new fetches
+            myRating,
+            ratings,
           }
         })
+
+        // 1. Create a copy and filter out facilities with zero reviews for the "Popular" list
+        let ratedFacilities = facilitiesWithRatings.filter((f) => f.reviews > 0)
+
+        // 2. Sort the rated facilities:
+        // Primary sort: highest numericRating first (descending)
+        // Secondary sort: more reviews first for a tie in rating (descending)
+        ratedFacilities.sort((a, b) => {
+          if (b.numericRating !== a.numericRating) {
+            return b.numericRating - a.numericRating
+          }
+          return b.reviews - a.reviews
+        })
+
+        // 3. Assign the full sorted list to the main facilities array
+        // (This array includes unrated facilities, but they will be at the bottom due to numericRating=0)
+        facilitiesWithRatings.sort((a, b) => {
+          if (b.numericRating !== a.numericRating) {
+            return b.numericRating - a.numericRating
+          }
+          return b.reviews - a.reviews
+        })
+        this.facilities = facilitiesWithRatings
+
+        // 4. Assign the top 5 rated (and reviewed) facilities to the popularFacilities array
+        this.popularFacilities = ratedFacilities.slice(0, 5)
       } catch (err) {
         console.error('Error fetching facilities:', err.message)
       } finally {
@@ -328,7 +356,7 @@ export default {
       }
     },
 
-    // 🏃 Playmate helpers
+    // Playmate helpers
     isCreator(creatorId) {
       return this.currentUserId === creatorId
     },
@@ -472,13 +500,13 @@ export default {
               <v-progress-circular indeterminate color="blue" />
             </div>
 
-            <div v-else-if="facilities.length === 0" class="text-center py-4 grey--text">
-              No facilities available.
+            <div v-else-if="popularFacilities.length === 0" class="text-center py-4 grey--text">
+              No rated facilities found to display as popular.
             </div>
 
             <div v-else class="d-flex overflow-x-auto pb-2 facility-scroll-container">
               <v-card
-                v-for="facility in facilities"
+                v-for="facility in popularFacilities"
                 :key="facility.id"
                 class="mr-4 flex-shrink-0"
                 width="280"
@@ -546,31 +574,29 @@ export default {
         <v-row no-gutters class="facilities-section px-4 mt-5 mb-10">
           <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
             <h2 class="text-h6 font-weight-medium">More Facilities</h2>
-            <!-- Toggle Button for Grid/List -->
             <v-btn icon @click="toggleView">
               <v-icon>{{ isGridView ? 'mdi-view-list' : 'mdi-view-grid' }}</v-icon>
             </v-btn>
           </v-col>
 
           <v-col cols="12">
-            <!-- Loading State -->
             <div v-if="loading" class="text-center py-4">
               <v-progress-circular indeterminate color="blue" />
             </div>
 
-            <!-- Empty State -->
             <div v-else-if="facilities.length === 0" class="text-center py-4 grey--text">
               No facilities available.
             </div>
 
-            <!-- Facilities Display -->
             <div v-else>
-              <!-- ✅ GRID VIEW -->
               <v-row v-if="isGridView" dense>
                 <v-col
                   v-for="facility in facilities"
                   :key="facility.id"
-                  cols="12" sm="6" md="4" lg="3"
+                  cols="12"
+                  sm="6"
+                  md="4"
+                  lg="3"
                 >
                   <v-card
                     class="facility-card"
@@ -631,7 +657,6 @@ export default {
                 </v-col>
               </v-row>
 
-              <!-- ✅ LIST VIEW -->
               <div v-else>
                 <v-card
                   v-for="facility in facilities"
@@ -640,10 +665,14 @@ export default {
                   elevation="1"
                   rounded="lg"
                   width="100%"
-                  @click.stop="$router.push({ name: 'facility-details', params: { id: facility.id } })"
+                  @click.stop="
+                    $router.push({ name: 'facility-details', params: { id: facility.id } })
+                  "
                 >
-                  <!-- 🏞 Facility Image -->
-                  <div class="mr-3 ml-2 mb-2 mt-2 d-flex flex-column align-center" style="width: 100px;">
+                  <div
+                    class="mr-3 ml-2 mb-2 mt-2 d-flex flex-column align-center"
+                    style="width: 100px"
+                  >
                     <v-img
                       :src="facility.image || '/images/default-facility.jpg'"
                       height="100"
@@ -653,12 +682,12 @@ export default {
                     />
                   </div>
 
-                  <!-- 🏟 Facility Info -->
                   <div class="flex-grow-1 text-left">
-                    <div class="font-weight-semibold text-body-1 mb-2 mt-2">{{ facility.name }}</div>
+                    <div class="font-weight-semibold text-body-1 mb-2 mt-2">
+                      {{ facility.name }}
+                    </div>
                     <div class="text-caption grey--text mb-2">{{ facility.address }}</div>
 
-                    <!-- ⭐ Rating and 💸 Price -->
                     <div class="d-flex align-center flex-wrap mb-2">
                       <v-icon small color="amber">mdi-star</v-icon>
                       <span class="text-caption ml-1">
@@ -676,7 +705,6 @@ export default {
                     </div>
                   </div>
 
-                  <!-- ❤️ Favorite Button -->
                   <v-btn icon @click.stop="toggleFavorite(facility.id)">
                     <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
                       {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
@@ -717,13 +745,15 @@ export default {
     </v-dialog>
     <v-bottom-navigation app fixed color="white" light v-model="activeNav">
       <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
-        <v-icon size="29":color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
+        <v-icon size="29" :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
       </v-btn>
       <v-btn value="bookings" @click="$router.push({ name: 'customer-bookings' })">
-        <v-icon size="27":color="activeNav === 'bookings' ? 'blue' : 'black'">mdi-calendar-check</v-icon>
+        <v-icon size="27" :color="activeNav === 'bookings' ? 'blue' : 'black'"
+          >mdi-calendar-check</v-icon
+        >
       </v-btn>
       <v-btn value="favorites" @click="$router.push({ name: 'favorites' })">
-        <v-icon size="27":color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
+        <v-icon size="27" :color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
       </v-btn>
       <v-btn value="profile" @click="$router.push({ name: 'customer-profile' })">
         <v-icon size="32" :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
@@ -755,7 +785,7 @@ export default {
   display: none;
 }
 
-.v-card-actions{
+.v-card-actions {
   align-items: flex-start;
 }
 
