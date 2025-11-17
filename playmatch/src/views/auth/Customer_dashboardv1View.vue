@@ -17,6 +17,9 @@ export default {
     error: null,
     isGridView: false,
 
+    // Search Query Data Property
+    searchQuery: '',
+
     // Rating dialog state
     ratingDialog: {
       visible: false,
@@ -24,6 +27,24 @@ export default {
       value: 0,
     },
   }),
+
+  computed: {
+    filteredFacilities() {
+      // If the search query is empty, return the full, sorted list of facilities.
+      if (!this.searchQuery || this.searchQuery.trim() === '') {
+        return this.facilities
+      }
+
+      const query = this.searchQuery.toLowerCase().trim()
+
+      return this.facilities.filter(
+        (facility) =>
+          facility.name.toLowerCase().includes(query) ||
+          facility.type.toLowerCase().includes(query) ||
+          facility.address.toLowerCase().includes(query),
+      )
+    },
+  },
 
   async mounted() {
     // Check if user is logged in
@@ -118,7 +139,7 @@ export default {
       }
     },
 
-    //  Check if facility is favorite
+    //  Check if facility is favorite
     isFavorite(facilityId) {
       return this.favoriteIds.includes(facilityId)
     },
@@ -338,7 +359,7 @@ export default {
         })
 
         // 3. Assign the full sorted list to the main facilities array
-        // (This array includes unrated facilities, but they will be at the bottom due to numericRating=0)
+        // This sorting applies to both the 'All Facilities' list and the list used for searching (before filtering)
         facilitiesWithRatings.sort((a, b) => {
           if (b.numericRating !== a.numericRating) {
             return b.numericRating - a.numericRating
@@ -431,7 +452,23 @@ export default {
     >
       <v-toolbar-title class="font-weight-bold ml-3 text-white">PlayMatch</v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon><v-icon>mdi-magnify</v-icon></v-btn>
+      <v-text-field
+        v-model="searchQuery"
+        placeholder="Search facilities, sports, or location"
+        hide-details
+        single-line
+        filled
+        rounded
+        dense
+        clearable
+        class="shrink mx-3"
+        dark
+        color="white"
+      >
+        <template v-slot:prepend-inner>
+          <v-icon color="white">mdi-magnify</v-icon>
+        </template>
+      </v-text-field>
       <v-btn icon @click="logout"><v-icon color="red">mdi-logout</v-icon></v-btn>
     </v-app-bar>
 
@@ -490,7 +527,7 @@ export default {
           </v-col>
         </v-row>
 
-        <v-row no-gutters class="facilities-section px-4 mt-5 mb-10">
+        <v-row no-gutters class="facilities-section px-4 mt-5 mb-10" v-if="!searchQuery">
           <v-col cols="12" class="mb-3">
             <h2 class="text-h6 font-weight-medium">Popular Facilities</h2>
           </v-col>
@@ -570,11 +607,12 @@ export default {
             </div>
           </v-col>
         </v-row>
-
         <v-row no-gutters class="facilities-section px-4 mt-5 mb-10">
           <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
-            <h2 class="text-h6 font-weight-medium">More Facilities</h2>
-            <v-btn icon @click="toggleView">
+            <h2 class="text-h6 font-weight-medium">
+              {{ searchQuery ? 'Search Results' : 'All Facilities' }}
+            </h2>
+            <v-btn icon @click="toggleView" v-if="!searchQuery">
               <v-icon>{{ isGridView ? 'mdi-view-list' : 'mdi-view-grid' }}</v-icon>
             </v-btn>
           </v-col>
@@ -584,12 +622,15 @@ export default {
               <v-progress-circular indeterminate color="blue" />
             </div>
 
-            <div v-else-if="facilities.length === 0" class="text-center py-4 grey--text">
-              No facilities available.
+            <div
+              v-else-if="searchQuery && filteredFacilities.length === 0"
+              class="text-center py-4 grey--text"
+            >
+              No facilities found matching your search.
             </div>
 
             <div v-else>
-              <v-row v-if="isGridView" dense>
+              <v-row v-if="isGridView && !searchQuery" dense>
                 <v-col
                   v-for="facility in facilities"
                   :key="facility.id"
@@ -659,7 +700,7 @@ export default {
 
               <div v-else>
                 <v-card
-                  v-for="facility in facilities"
+                  v-for="facility in searchQuery ? filteredFacilities : facilities"
                   :key="facility.id"
                   class="d-flex pa-3 mb-3 align-start"
                   elevation="1"
@@ -743,6 +784,7 @@ export default {
         </v-card-actions>
       </v-card>
     </v-dialog>
+
     <v-bottom-navigation app fixed color="white" light v-model="activeNav">
       <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
         <v-icon size="29" :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
@@ -795,5 +837,9 @@ export default {
 
 .v-card {
   transition: 0.3s ease;
+}
+
+.v-app-bar .v-text-field {
+  max-width: 300px;
 }
 </style>
