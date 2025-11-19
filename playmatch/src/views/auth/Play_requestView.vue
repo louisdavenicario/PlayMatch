@@ -461,20 +461,19 @@ export default {
     manageDialog: false, // For Manage Request
     manageTab: 0, // 0 for Participants, 1 for Edit
     valid: true,
-    search: '',
-    // ✅ ADDED: New data property for match type filter
+    search: '', // ✅ ADDED: New data property for match type filter
     matchTypeFilter: 'all', // 'all', 'individual', or 'team'
     currentUserId: null,
     playmateRequests: [],
     userJoins: [],
     participants: [], // List of users who joined the selected request
     selectedRequest: {}, // The request object currently being managed or edited
-
     // Sport specific data
+
     baseSports: ['Badminton', 'Basketball', 'Tennis', 'Volleyball', 'Soccer'],
     otherSportText: '', // Stores the manually typed sport if "Other" is chosen
-
     // Location specific data
+
     facilities: [],
     facilityLoading: false,
     otherLocationText: '', // Stores the manually typed location if "Other" is chosen
@@ -485,8 +484,7 @@ export default {
       max_joins: 4, // DEFAULT VALUE
       date: '',
       start_time: '',
-      description: '',
-      // NEW FIELD: Default to individual match
+      description: '', // NEW FIELD: Default to individual match
       match_type: 'individual',
     },
     todayDate: new Date().toISOString().split('T')[0],
@@ -504,18 +502,15 @@ export default {
     },
     isLocationOther() {
       return this.newRequest.location === 'Other (Specify)'
-    },
-    // ✅ MODIFIED: Updated filteredRequests to include matchTypeFilter logic
+    }, // ✅ MODIFIED: Updated filteredRequests to include matchTypeFilter logic
     filteredRequests() {
-      const searchTerm = this.search ? this.search.toLowerCase() : ''
+      const searchTerm = this.search ? this.search.toLowerCase() : '' // 1. Filter by Match Type
 
-      // 1. Filter by Match Type
       const matchTypeFiltered = this.playmateRequests.filter((request) => {
         if (this.matchTypeFilter === 'all') return true
         return request.match_type === this.matchTypeFilter
-      })
+      }) // 2. Filter by Search Term
 
-      // 2. Filter by Search Term
       return matchTypeFiltered.filter(
         (request) =>
           request.sport.toLowerCase().includes(searchTerm) ||
@@ -561,9 +556,7 @@ export default {
       if (value !== 'Other (Specify)') {
         this.otherLocationText = ''
       }
-    },
-
-    // --- Core Interaction Methods ---
+    }, // --- Core Interaction Methods ---
 
     async getCurrentUser() {
       const {
@@ -590,12 +583,10 @@ export default {
       } finally {
         this.facilityLoading = false
       }
-    },
+    }, // Centralized function to check and update request status
 
-    // Centralized function to check and update request status
     async checkRequestStatus(requestId) {
       const { data, error } = await supabase
-        // ADD 'match_type' TO SELECT FOR LOGIC CHECK
         .from('playmate_requests')
         .select('max_joins, status, playmate_joins(count), match_type')
         .eq('id', requestId)
@@ -612,9 +603,8 @@ export default {
       const isTeamMatch = data.match_type === 'team'
       let newStatus = currentStatus
 
-      if (currentStatus === 'canceled') return
+      if (currentStatus === 'canceled') return // Logic updated to check team match (1 join is "full" - the opposing team)
 
-      // Logic updated to check team match (1 join is "full")
       if (isTeamMatch) {
         if (currentJoins >= 1) {
           newStatus = 'full'
@@ -639,16 +629,14 @@ export default {
         if (updateError) {
           console.error(`Error updating status to ${newStatus}:`, updateError.message)
         }
-      }
-
-      this.fetchRequestsAndJoins()
+      } // ✅ REMOVED: Redundant fetchRequestsAndJoins() here.
+      // The caller (handleJoinToggle) will handle the refresh after the action and status check.
     },
 
     async fetchRequestsAndJoins() {
       this.loading = true
       try {
-        const { data: requestsData, error: requestsError } = await supabase
-          // ADD 'match_type' TO SELECT LIST
+        const { data: requestsData, error: requestsError } = await supabase // ADD 'match_type' TO SELECT LIST
           .from('playmate_requests')
           .select('*, creator:creator_id (full_name), playmate_joins(count), match_type')
           .gte('date', this.todayDate)
@@ -672,9 +660,9 @@ export default {
           if (joinsError) throw joinsError
 
           this.userJoins = joinsData.map((j) => j.request_id)
-        }
+        } // --- Status Management (Initial Load) ---
 
-        // --- Status Management (Initial Load) ---
+        // This block ensures the displayed status reflects the current join count.
         const requestsToUpdate = this.playmateRequests
           .filter((r) => r.status !== 'canceled')
           .map((r) => {
@@ -715,9 +703,8 @@ export default {
         this.playmateRequests.forEach((r) => {
           if (requestsToOpen.includes(r.id)) r.status = 'open'
           if (requestsToClose.includes(r.id)) r.status = 'full'
-        })
+        }) // Filter the main display list
 
-        // Filter the main display list
         this.playmateRequests = this.playmateRequests.filter(
           (r) => r.status !== 'canceled' || r.creator_id === this.currentUserId,
         )
@@ -726,9 +713,8 @@ export default {
       } finally {
         this.loading = false
       }
-    },
+    }, // Fetches participants for the Manage Request modal
 
-    // Fetches participants for the Manage Request modal
     async fetchJoinsForRequest(requestId) {
       this.participants = []
       try {
@@ -757,17 +743,15 @@ export default {
       } catch (err) {
         console.error('Error fetching participants:', err.message)
       }
-    },
+    }, // Opens the Manage Request dialog for the creator
 
-    // Opens the Manage Request dialog for the creator
     openManageDialog(request) {
       this.selectedRequest = { ...request }
       this.manageDialog = true
       this.manageTab = 0
       this.fetchJoinsForRequest(request.id)
-    },
+    }, // ✅ FIXED: Main button handler logic to correctly check full status before joining and refresh after any action.
 
-    // Main button handler logic
     async handleJoinToggle(request) {
       if (this.isCreator(request.creator_id)) {
         this.openManageDialog(request)
@@ -782,23 +766,8 @@ export default {
         return
       }
 
-      // Updated logic for team matches: it's "full" if joins_count >= 1
-      if (
-        (isTeamMatch && request.joins_count >= 1 && !this.isJoined(requestId)) ||
-        (!isTeamMatch && request.status === 'full' && !this.isJoined(requestId))
-      ) {
-        alert(`This play request is currently full and cannot be joined.`)
-        return
-      }
-
-      // Safety check: ensure only one "Opponent Team" can join a team match
-      if (isTeamMatch && request.joins_count > 0 && !this.isJoined(requestId)) {
-        alert('An opponent team has already accepted this challenge.')
-        return
-      }
-
       if (this.isJoined(requestId)) {
-        // Withdraw logic
+        // --- Withdraw logic ---
         const msg = isTeamMatch
           ? 'Successfully withdrawn the opponent team from the challenge.'
           : 'Successfully withdrawn from the request.'
@@ -812,7 +781,18 @@ export default {
           'Failed to withdraw from request.',
         )
       } else {
-        // Join logic
+        // --- Join logic ---
+
+        // Check if the request is full based on its current state (before joining)
+        const isFull = isTeamMatch
+          ? request.joins_count >= 1 // Team match is full with 1 join (the opponent team)
+          : request.status === 'full' // Individual match uses the 'full' status based on max_joins
+
+        if (isFull) {
+          alert(`This play request is currently full and cannot be joined.`)
+          return
+        }
+
         const msg = isTeamMatch
           ? 'You have successfully accepted the team challenge!'
           : 'Successfully joined the request!'
@@ -823,12 +803,12 @@ export default {
           msg,
           'Failed to join request. It may be full or closed.',
         )
-      }
+      } // ✅ Crucial Fix: Check status in DB and then refresh the entire list to update the UI
 
       await this.checkRequestStatus(requestId)
-    },
+      await this.fetchRequestsAndJoins()
+    }, // Updates the request details
 
-    // Updates the request details
     async editRequest() {
       if (this.$refs.editForm && !this.$refs.editForm.validate()) {
         alert('Please correct the validation errors before saving.')
@@ -850,8 +830,7 @@ export default {
             max_joins: this.selectedRequest.max_joins,
             date: this.selectedRequest.date,
             start_time: this.selectedRequest.start_time,
-            description: this.selectedRequest.description,
-            // Match type is intentionally not editable after creation
+            description: this.selectedRequest.description, // Match type is intentionally not editable after creation
           })
           .eq('id', this.selectedRequest.id)
           .eq('creator_id', this.currentUserId)
@@ -861,14 +840,14 @@ export default {
         alert('Request updated successfully!')
         this.manageDialog = false
         await this.checkRequestStatus(this.selectedRequest.id)
+        await this.fetchRequestsAndJoins() // Ensure list refreshes after edit/status check
       } catch (err) {
         alert(`Failed to update request: ${err.message}`)
       } finally {
         this.creating = false
       }
-    },
+    }, // Cancels (updates status to 'canceled') the request
 
-    // Cancels (updates status to 'canceled') the request
     async cancelRequest() {
       if (!this.selectedRequest?.id) return
 
@@ -885,21 +864,20 @@ export default {
           .eq('id', this.selectedRequest.id)
           .eq('creator_id', this.currentUserId)
 
-        if (error) throw error
+        if (error) throw error // ✅ Remove locally so UI updates immediately
 
-        // ✅ Remove locally so UI updates immediately
         this.playmateRequests = this.playmateRequests.filter(
           (r) => r.id !== this.selectedRequest.id,
         )
 
         this.manageDialog = false
         alert('Request permanently deleted.')
+        this.fetchRequestsAndJoins() // Ensure list refreshes after deletion
       } catch (err) {
         console.error('Error deleting request:', err)
         alert('Failed to delete the request. Please try again.')
       }
-    },
-    // Helper for Supabase actions - MODIFIED FOR BETTER ERROR LOGGING
+    }, // Helper for Supabase actions - MODIFIED FOR BETTER ERROR LOGGING
     async supabaseAction(promise, successMsg, failMsg) {
       this.creating = true
       try {
@@ -914,8 +892,7 @@ export default {
         return data
       } catch (err) {
         // Log the exact error for developer debugging
-        console.error('Supabase action failed:', err.message)
-        // Check for specific error codes (RLS: 42501, NOT NULL: 23502)
+        console.error('Supabase action failed:', err.message) // Check for specific error codes (RLS: 42501, NOT NULL: 23502)
         let customFailMsg = failMsg
         if (err.code === '42501') {
           customFailMsg += ' (Check your RLS Policy on the table!)'
@@ -928,9 +905,8 @@ export default {
       } finally {
         this.creating = false
       }
-    },
+    }, // Create Request method
 
-    // Create Request method
     async createRequest() {
       if (!this.$refs.form.validate() || !this.currentUserId) {
         if (!this.currentUserId) {
@@ -968,16 +944,14 @@ export default {
               date: this.newRequest.date,
               start_time: this.newRequest.start_time,
               description: this.newRequest.description,
-              status: 'open',
-              // NEW FIELD INSERT
+              status: 'open', // NEW FIELD INSERT
               match_type: this.newRequest.match_type,
             },
           ]),
           'Playmate request created successfully!',
           'Failed to create request. See console for error details.',
-        )
+        ) // --- Success Logic ---
 
-        // --- Success Logic ---
         this.dialog = false
         this.$refs.form.reset()
         this.newRequest.sport = null

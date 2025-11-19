@@ -16,6 +16,9 @@ export default {
     loading: false,
     error: null,
     isGridView: false,
+    notifications: [],
+    unreadCount: 0,
+    notificationMenu: false,
 
     // Search Query Data Property
     searchQuery: '',
@@ -67,6 +70,8 @@ export default {
     this.fetchPlaymateRequests()
     this.subscribeFavoritesRealtime()
     this.subscribeRatingsRealtime()
+    await this.fetchNotifications()
+    this.subscribeNotificationsRealtime()
   },
 
   beforeUnmount() {
@@ -90,6 +95,53 @@ export default {
         console.error('Error fetching current user:', err.message)
         this.currentUserId = null
       }
+    },
+
+    async fetchNotifications() {
+      if (!this.currentUserId) return
+
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', this.currentUserId)
+        .order('created_at', { ascending: false })
+        .limit(20)
+
+      if (error) {
+        console.error('Error loading notifications:', error.message)
+        return
+      }
+
+      this.notifications = data
+      this.unreadCount = data.filter((n) => !n.read).length
+    },
+
+    async markNotificationAsRead(id) {
+      const { error } = await supabase.from('notifications').update({ read: true }).eq('id', id)
+
+      if (!error) {
+        this.fetchNotifications()
+      }
+    },
+
+    async subscribeNotificationsRealtime() {
+      if (!this.currentUserId) return
+      this.notificationSubscription = supabase
+        .channel('notifications-user-updates') // Renamed for clarity/uniqueness
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT', // Only listen for new notifications
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${this.currentUserId}`,
+          },
+          (payload) => {
+            console.log('🔔 New notification:', payload.new)
+            this.fetchNotifications() // Refetch to show the new one
+          },
+        )
+        .subscribe()
     },
 
     // Logout
@@ -392,18 +444,16 @@ export default {
 
     formatDate(dateString) {
       if (!dateString) return ''
-      return new Date(dateString).toLocaleDateString(undefined, {
-        month: 'short',
-        day: 'numeric',
-      })
+      const date = new Date(dateString)
+      if (isNaN(date)) return ''
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
     },
 
-    formatTime(timeString) {
-      if (!timeString) return ''
-      const [hours, minutes] = timeString.split(':')
-      const tempDate = new Date()
-      tempDate.setHours(hours, minutes)
-      return tempDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+    formatTime(dateString) {
+      if (!dateString) return ''
+      const date = new Date(dateString)
+      if (isNaN(date)) return ''
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
     },
 
     goToPlaymateRequests() {
@@ -469,6 +519,66 @@ export default {
           <v-icon color="white">mdi-magnify</v-icon>
         </template>
       </v-text-field>
+
+      <!-- 🔔 Notification Icon + Dropdown -->
+      <v-menu v-model="notificationMenu" offset-y left>
+        <template v-slot:activator="{ props }">
+          <v-btn icon v-bind="props">
+            <v-badge color="red" :content="unreadCount" v-if="unreadCount > 0" overlap>
+              <v-icon color="white">mdi-bell</v-icon>
+            </v-badge>
+
+            <v-icon v-else color="white">mdi-bell-outline</v-icon>
+          </v-btn>
+        </template>
+
+        <v-card width="320" max-height="400" class="py-2">
+          <v-card-title class="text-body-1 font-weight-bold pb-1"> Notifications </v-card-title>
+          <v-divider></v-divider>
+
+          <!-- No Notifications -->
+          <div v-if="notifications.length === 0" class="text-center py-4 grey--text">
+            No notifications yet.
+          </div>
+
+          <!-- Notification List -->
+          <v-list v-else class="py-0" style="overflow-y: auto; max-height: 350px">
+            <v-list-item
+              v-for="n in notifications"
+              :key="n.id"
+              @click="markNotificationAsRead(n.id)"
+              :class="{ 'blue lighten-5': !n.read }"
+            >
+              <v-list-item-avatar>
+                <v-icon color="blue">
+                  {{
+                    n.type === 'booking_status'
+                      ? 'mdi-calendar-check'
+                      : n.type === 'playmate_join'
+                        ? 'mdi-account-plus'
+                        : n.type === 'playmate_withdraw'
+                          ? 'mdi-account-remove'
+                          : 'mdi-bell'
+                  }}
+                </v-icon>
+              </v-list-item-avatar>
+
+              <v-list-item-content>
+                <v-list-item-title>{{ n.title }}</v-list-item-title>
+                <v-list-item-subtitle>{{ n.message }}</v-list-item-subtitle>
+                <div class="text-caption grey--text mt-1">
+                  {{ formatDate(n.created_at) }} • {{ formatTime(n.created_at) }}
+                </div>
+              </v-list-item-content>
+
+              <v-list-item-action>
+                <v-icon small color="grey">mdi-chevron-right</v-icon>
+              </v-list-item-action>
+            </v-list-item>
+          </v-list>
+        </v-card>
+      </v-menu>
+
       <v-btn icon @click="logout"><v-icon color="red">mdi-logout</v-icon></v-btn>
     </v-app-bar>
 
