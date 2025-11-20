@@ -113,6 +113,23 @@ onMounted(() => {
 
 <template>
   <v-app>
+    <v-app-bar
+      app
+      fixed
+      dark
+      :style="{
+        background:
+          'linear-gradient(to bottom right, rgba(26, 101, 162, 0.8), rgba(119, 154, 229, 0.8))',
+      }"
+      flat
+    >
+      <v-btn icon @click="$router.go(-1)">
+        <v-icon color="white">mdi-arrow-left</v-icon>
+      </v-btn>
+      <v-toolbar-title class="font-weight-bold" style="color: white">My Profile</v-toolbar-title>
+      <v-spacer></v-spacer>
+    </v-app-bar>
+
     <v-main
       :style="{
         background:
@@ -123,17 +140,6 @@ onMounted(() => {
         <v-row justify="center">
           <v-col cols="12" md="8" lg="6">
             <v-card class="pa-6" elevation="5" rounded="lg">
-              <div class="d-flex align-center mb-4">
-                <v-btn icon @click="router.back()" class="mr-3" :disabled="isEditing">
-                  <v-icon>mdi-arrow-left</v-icon>
-                </v-btn>
-                <h1 class="text-h5 font-weight-bold primary--text">
-                  {{ isEditing ? 'Edit Profile' : 'My Profile' }}
-                </h1>
-              </div>
-
-              <v-divider class="mb-5"></v-divider>
-
               <div v-if="loading" class="text-center py-10">
                 <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
                 <p class="mt-3 grey--text">Loading user data...</p>
@@ -161,55 +167,49 @@ onMounted(() => {
 
                 <v-list dense class="profile-details-list" v-if="!isEditing">
                   <v-list-item class="list-item-hover">
-                    <v-list-item-icon
-                      ><v-icon color="blue">mdi-email-outline</v-icon></v-list-item-icon
-                    >
+                    <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
+                      <v-icon color="blue">mdi-email-outline</v-icon> Email Address
+                    </p>
                     <v-list-item-content>
-                      <v-list-item-title class="font-weight-medium"
-                        >Email Address</v-list-item-title
-                      >
                       <v-list-item-subtitle>{{ profileData.email }}</v-list-item-subtitle>
                     </v-list-item-content>
                   </v-list-item>
 
-                  <v-divider inset></v-divider>
+                  <v-divider class="mt-3"></v-divider>
 
                   <v-list-item class="list-item-hover">
-                    <v-list-item-icon
-                      ><v-icon color="indigo">mdi-account-details-outline</v-icon></v-list-item-icon
-                    >
+                    <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
+                      <v-icon color="green">mdi-account-details-outline</v-icon> Full Name
+                    </p>
                     <v-list-item-content>
-                      <v-list-item-title class="font-weight-medium">Full Name</v-list-item-title>
                       <v-list-item-subtitle>{{
                         profileData.full_name || 'N/A'
                       }}</v-list-item-subtitle>
                     </v-list-item-content>
                   </v-list-item>
 
-                  <v-divider inset></v-divider>
+                  <v-divider class="mt-3"></v-divider>
 
                   <v-list-item class="list-item-hover">
-                    <v-list-item-icon
-                      ><v-icon color="green">mdi-phone-outline</v-icon></v-list-item-icon
-                    >
+                    <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
+                      <v-icon color="green">mdi-phone-outline</v-icon> Phone Number
+                    </p>
                     <v-list-item-content>
-                      <v-list-item-title class="font-weight-medium">Phone Number</v-list-item-title>
                       <v-list-item-subtitle>{{
                         profileData.phone_number || 'N/A'
                       }}</v-list-item-subtitle>
                     </v-list-item-content>
                   </v-list-item>
 
-                  <v-divider inset></v-divider>
+                  <v-divider class="mt-3"></v-divider>
 
                   <v-list-item class="list-item-hover">
-                    <v-list-item-icon
-                      ><v-icon color="orange">mdi-map-marker-outline</v-icon></v-list-item-icon
-                    >
+                    <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
+                      <v-icon color="orange">mdi-map-marker-outline</v-icon> Address
+                    </p>
                     <v-list-item-content>
-                      <v-list-item-title class="font-weight-medium">Address</v-list-item-title>
                       <v-list-item-subtitle>
-                        {{ profileData.address || 'N/A' }}<br />
+                        {{ profileData.address || 'N/A' }}
                         {{ profileData.city || ''
                         }}{{ profileData.city && profileData.zip_code ? ', ' : ''
                         }}{{ profileData.zip_code || '' }}
@@ -313,17 +313,19 @@ onMounted(() => {
       </v-container>
     </v-main>
     <v-bottom-navigation app fixed color="white" light v-model="activeNav">
-      <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
-        <v-icon size="29":color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
+      <v-btn class="mx-1" value="home" @click="$router.push({ name: 'customer-dashboard' })">
+        <v-icon size="31" :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
       </v-btn>
-      <v-btn value="bookings" @click="$router.push({ name: 'customer-bookings' })">
-        <v-icon size="27":color="activeNav === 'bookings' ? 'blue' : 'black'">mdi-calendar-check</v-icon>
+      <v-btn class="mx-2" value="bookings" @click="$router.push({ name: 'customer-bookings' })">
+        <v-icon size="28" :color="activeNav === 'bookings' ? 'blue' : 'black'"
+          >mdi-calendar-check</v-icon
+        >
       </v-btn>
-      <v-btn value="favorites" @click="$router.push({ name: 'favorites' })">
-        <v-icon size="27":color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
+      <v-btn class="mx-2" value="favorites" @click="$router.push({ name: 'favorites' })">
+        <v-icon size="28" :color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
       </v-btn>
-      <v-btn value="profile" @click="$router.push({ name: 'customer-profile' })">
-        <v-icon size="32" :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
+      <v-btn class="mx-1" value="profile" @click="$router.push({ name: 'customer-profile' })">
+        <v-icon size="33" :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
       </v-btn>
     </v-bottom-navigation>
   </v-app>

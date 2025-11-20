@@ -13,6 +13,8 @@ import Customer_profileView from '@/views/auth/Customer_profileView.vue'
 import Play_requestView from '@/views/auth/Play_requestView.vue'
 import FavoritesView from '@/views/auth/FavoritesView.vue'
 import CustomerBookingsView from '@/views/auth/CustomerBookingsView.vue'
+import PrivacyView from '@/views/auth/PrivacyView.vue'
+import TermsView from '@/views/auth/TermsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -77,6 +79,16 @@ const router = createRouter({
       path: '/customer-bookings',
       name: 'customer-bookings',
       component: CustomerBookingsView,
+    },
+    {
+      path: '/terms',
+      name: 'terms',
+      component: TermsView,
+    },
+    {
+      path: '/privacy',
+      name: 'privacy',
+      component: PrivacyView
     },
   ],
 })

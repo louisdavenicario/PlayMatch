@@ -19,6 +19,7 @@ export default {
     notifications: [],
     unreadCount: 0,
     notificationMenu: false,
+    showMobileSearch: false,
 
     // Search Query Data Property
     searchQuery: '',
@@ -503,6 +504,7 @@ export default {
       <v-toolbar-title class="font-weight-bold ml-3 text-white">PlayMatch</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-text-field
+        v-if="$vuetify.display.mdAndUp"
         v-model="searchQuery"
         placeholder="Search facilities, sports, or location"
         hide-details
@@ -520,6 +522,38 @@ export default {
         </template>
       </v-text-field>
 
+      <!-- Mobile Search Icon -->
+      <v-btn
+        v-if="$vuetify.display.smAndDown && !showMobileSearch"
+        icon
+        @click="showMobileSearch = true"
+      >
+        <v-icon color="white">mdi-magnify</v-icon>
+      </v-btn>
+
+      <!-- Mobile Expanding Search Bar -->
+      <transition name="slide-fade">
+        <v-text-field
+          v-if="$vuetify.display.smAndDown && showMobileSearch"
+          v-model="searchQuery"
+          placeholder="Search..."
+          hide-details
+          single-line
+          filled
+          rounded
+          dense
+          clearable
+          class="mx-3"
+          dark
+          color="white"
+          @blur="showMobileSearch = false"
+        >
+          <template v-slot:prepend-inner>
+            <v-icon color="white">mdi-magnify</v-icon>
+          </template>
+        </v-text-field>
+      </transition>
+
       <!-- 🔔 Notification Icon + Dropdown -->
       <v-menu v-model="notificationMenu" offset-y left>
         <template v-slot:activator="{ props }">
@@ -528,7 +562,7 @@ export default {
               <v-icon color="white">mdi-bell</v-icon>
             </v-badge>
 
-            <v-icon v-else color="white">mdi-bell-outline</v-icon>
+            <v-icon v-else color="white">mdi-bell</v-icon>
           </v-btn>
         </template>
 
@@ -896,25 +930,35 @@ export default {
     </v-dialog>
 
     <v-bottom-navigation app fixed color="white" light v-model="activeNav">
-      <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
-        <v-icon size="29" :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
+      <v-btn class="mx-1" value="home" @click="$router.push({ name: 'customer-dashboard' })">
+        <v-icon size="31" :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
       </v-btn>
-      <v-btn value="bookings" @click="$router.push({ name: 'customer-bookings' })">
-        <v-icon size="27" :color="activeNav === 'bookings' ? 'blue' : 'black'"
+      <v-btn class="mx-2" value="bookings" @click="$router.push({ name: 'customer-bookings' })">
+        <v-icon size="28" :color="activeNav === 'bookings' ? 'blue' : 'black'"
           >mdi-calendar-check</v-icon
         >
       </v-btn>
-      <v-btn value="favorites" @click="$router.push({ name: 'favorites' })">
-        <v-icon size="27" :color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
+      <v-btn class="mx-2" value="favorites" @click="$router.push({ name: 'favorites' })">
+        <v-icon size="28" :color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
       </v-btn>
-      <v-btn value="profile" @click="$router.push({ name: 'customer-profile' })">
-        <v-icon size="32" :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
+      <v-btn class="mx-1" value="profile" @click="$router.push({ name: 'customer-profile' })">
+        <v-icon size="33" :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
       </v-btn>
     </v-bottom-navigation>
   </v-app>
 </template>
 
 <style scoped>
+.slide-fade-enter-active,
+.slide-fade-leave-active {
+  transition: all 0.25s ease;
+}
+
+.slide-fade-enter-from,
+.slide-fade-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
 .search-prompt-container {
   position: absolute;
   bottom: -30px;
