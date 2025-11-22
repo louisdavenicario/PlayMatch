@@ -566,7 +566,7 @@ export default {
           </v-btn>
         </template>
 
-        <v-card width="320" max-height="400" class="py-2">
+        <v-card width="320" max-height="400">
           <v-card-title class="text-body-1 font-weight-bold pb-1"> Notifications </v-card-title>
           <v-divider></v-divider>
 
@@ -581,7 +581,7 @@ export default {
               v-for="n in notifications"
               :key="n.id"
               @click="markNotificationAsRead(n.id)"
-              :class="{ 'blue lighten-5': !n.read }"
+              :style="!n.read ? 'background-color: #e3f2fd;' : ''"
             >
               <v-list-item-avatar>
                 <v-icon color="blue">
