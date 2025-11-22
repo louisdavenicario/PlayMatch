@@ -50,6 +50,7 @@
             <v-chip value="team" color="deep-purple" text-color="white"> Opponent Teams </v-chip>
           </v-chip-group>
         </v-card>
+
         <div v-if="loading" class="text-center py-10">
           <v-progress-circular indeterminate color="blue"></v-progress-circular>
           <p class="mt-2 grey--text">Loading playmate requests...</p>
@@ -70,7 +71,13 @@
           <v-col cols="12" v-for="request in filteredRequests" :key="request.id">
             <v-card class="pa-4" rounded="lg" elevation="2">
               <div class="d-flex align-center">
-                <v-avatar color="blue lighten-4" size="50" class="mr-4">
+                <v-avatar
+                  color="blue lighten-4"
+                  size="50"
+                  class="mr-4"
+                  style="cursor: pointer"
+                  @click="viewUserProfile(request.creator_id)"
+                >
                   <span class="white--text font-weight-bold">{{ request.creator_name[0] }}</span>
                 </v-avatar>
                 <div>
@@ -100,7 +107,14 @@
                     </v-chip>
                   </div>
                   <div class="text-caption grey--text">
-                    {{ request.creator_name }} wants to play at {{ request.location }}
+                    <span
+                      style="cursor: pointer; text-decoration: underline"
+                      class="blue--text"
+                      @click="viewUserProfile(request.creator_id)"
+                    >
+                      {{ request.creator_name }}
+                    </span>
+                    wants to play at {{ request.location }}
                   </div>
                 </div>
               </div>
@@ -132,6 +146,60 @@
                 {{ request.description || 'No specific notes provided.' }}
               </p>
 
+              <v-card
+                v-if="request.joins_count > 0 || request.match_type === 'team'"
+                flat
+                class="mt-3 pa-2 rounded-sm"
+                :class="
+                  request.match_type === 'team' ? 'deep-purple lighten-5' : 'light-blue lighten-5'
+                "
+              >
+                <div
+                  class="text-body-2"
+                  :class="
+                    request.match_type === 'team'
+                      ? 'deep-purple--text text-darken-2'
+                      : 'light-blue--text text-darken-2'
+                  "
+                >
+                  <span v-if="request.match_type === 'team'">
+                    <span class="font-weight-bold">{{ request.creator_name }} Team</span>
+                    vs.
+                    <span v-if="request.joiners && request.joiners.length > 0">
+                      <strong
+                        class="mx-1"
+                        style="cursor: pointer; text-decoration: underline"
+                        @click="viewUserProfile(request.joiners[0].user_id)"
+                      >
+                        {{ request.joiners[0].full_name }} Team
+                      </strong>
+                      (Opponent Contact)
+                    </span>
+                    <span v-else class="grey--text font-italic">No opponent yet.</span>
+                  </span>
+
+                  <span v-else class="d-flex flex-column">
+                    <span class="font-weight-medium mb-1">Joiners:</span>
+                    <span
+                      v-for="(joiner, index) in request.joiners"
+                      :key="index"
+                      class="text-body-2"
+                    >
+                      <span
+                        class="blue--text"
+                        style="cursor: pointer; text-decoration: underline"
+                        @click="viewUserProfile(joiner.user_id)"
+                      >
+                        {{ joiner.full_name }}
+                      </span>
+                    </span>
+                    <span v-if="request.joins_count === 0" class="grey--text font-italic">
+                      Be the first to join!
+                    </span>
+                  </span>
+                </div>
+              </v-card>
+
               <v-card-actions class="pa-0 pt-2">
                 <v-btn
                   small
@@ -158,7 +226,7 @@
                         : request.status === 'full' && request.match_type === 'individual'
                           ? 'Full'
                           : request.match_type === 'team'
-                            ? 'Accept Challenge' // New label for team join
+                            ? 'Accept Challenge'
                             : 'Join'
                   }}
                 </v-btn>
@@ -169,6 +237,7 @@
       </v-container>
     </v-main>
 
+    <!-- Create Request Dialog (unchanged) -->
     <v-dialog v-model="dialog" max-width="500px">
       <v-card rounded="lg">
         <v-card-title class="text-h5 blue white--text">Create New Request</v-card-title>
@@ -280,6 +349,7 @@
       </v-card>
     </v-dialog>
 
+    <!-- Manage Dialog (unchanged except participants clickable) -->
     <v-dialog v-model="manageDialog" max-width="600px">
       <v-card rounded="lg">
         <v-card-title class="text-h5 orange darken-1 white--text">Manage Your Request</v-card-title>
@@ -298,14 +368,20 @@
               <v-list dense>
                 <v-list-item v-if="participants.length === 1">
                   <v-list-item-content>
-                    <v-list-item-title class="grey--text">{{
+                    <v-list-item-title class="grey--Text">{{
                       selectedRequest.match_type === 'team'
                         ? 'No opponent team has accepted the challenge yet.'
                         : 'No players have joined yet.'
                     }}</v-list-item-title>
                   </v-list-item-content>
                 </v-list-item>
-                <v-list-item v-for="p in participants" :key="p.user_id">
+
+                <v-list-item
+                  v-for="p in participants"
+                  :key="p.user_id"
+                  style="cursor: pointer"
+                  @click="viewUserProfile(p.user_id)"
+                >
                   <v-list-item-avatar color="grey lighten-3" size="40">
                     <span class="font-weight-bold">{{ p.full_name[0] }}</span>
                   </v-list-item-avatar>
@@ -322,6 +398,7 @@
                   </v-list-item-content>
                 </v-list-item>
               </v-list>
+
               <v-alert v-if="selectedRequest.status === 'full'" type="success" class="mt-4" dense>
                 {{
                   selectedRequest.match_type === 'team'
@@ -446,6 +523,82 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!--  Profile Dialog  -->
+    <v-dialog v-model="profileDialog" max-width="480px">
+      <v-card rounded="lg">
+        <v-card-title class="d-flex align-center mt-4">
+          <v-avatar size="48" class="mr-3" color="blue lighten-4">
+            <span class="white--text font-weight-bold">{{ profileInitials }}</span>
+          </v-avatar>
+          <div>
+            <div class="text-h6 font-weight-bold">{{ profile.full_name || 'Profile' }}</div>
+            <div class="text-caption grey--text">{{ profile.role || '' }}</div>
+          </div>
+          <v-spacer></v-spacer>
+          <v-btn icon @click="closeProfileDialog"><v-icon>mdi-close</v-icon></v-btn>
+        </v-card-title>
+
+        <v-card-text>
+          <div v-if="profileLoading" class="text-center py-4">
+            <v-progress-circular indeterminate></v-progress-circular>
+          </div>
+
+          <div v-else-if="!profileFound" class="text-center py-6 grey--text">
+            Profile not found.
+          </div>
+
+          <div v-else>
+            <v-list dense>
+              <v-list-item>
+                <v-list-item-content>
+                  <v-list-item-title class="grey--text text-caption">Full Name</v-list-item-title>
+                  <v-list-item-subtitle>{{ profile.full_name || '—' }}</v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-divider class="my-2"></v-divider>
+
+              <v-list-item>
+                <v-list-item-content>
+                  <v-list-item-title class="grey--text text-caption">Phone</v-list-item-title>
+                  <v-list-item-subtitle>{{ profile.phone_number || '—' }}</v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-divider class="my-2"></v-divider>
+
+              <v-list-item>
+                <v-list-item-content>
+                  <v-list-item-title class="grey--text text-caption">Address</v-list-item-title>
+                  <v-list-item-subtitle>
+                    {{ fullAddress || '—' }}
+                  </v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-divider class="my-2"></v-divider>
+
+              <v-list-item>
+                <v-list-item-content>
+                  <v-list-item-title class="grey--text text-caption"
+                    >Last Updated</v-list-item-title
+                  >
+                  <v-list-item-subtitle>
+                    {{ profile.updated_at ? new Date(profile.updated_at).toLocaleString() : '—' }}
+                  </v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list>
+          </div>
+        </v-card-text>
+
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text color="grey" @click="closeProfileDialog">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 
@@ -461,33 +614,43 @@ export default {
     manageDialog: false, // For Manage Request
     manageTab: 0, // 0 for Participants, 1 for Edit
     valid: true,
-    search: '', // ✅ ADDED: New data property for match type filter
-    matchTypeFilter: 'all', // 'all', 'individual', or 'team'
+    search: '',
+    matchTypeFilter: 'all',
     currentUserId: null,
     playmateRequests: [],
     userJoins: [],
-    participants: [], // List of users who joined the selected request
-    selectedRequest: {}, // The request object currently being managed or edited
-    // Sport specific data
-
+    participants: [],
+    selectedRequest: {},
     baseSports: ['Badminton', 'Basketball', 'Tennis', 'Volleyball', 'Soccer'],
-    otherSportText: '', // Stores the manually typed sport if "Other" is chosen
-    // Location specific data
-
+    otherSportText: '',
     facilities: [],
     facilityLoading: false,
-    otherLocationText: '', // Stores the manually typed location if "Other" is chosen
-
+    otherLocationText: '',
     newRequest: {
       sport: null,
-      location: '', // Holds selected facility name OR 'Other (Specify)'
-      max_joins: 4, // DEFAULT VALUE
+      location: '',
+      max_joins: 4,
       date: '',
       start_time: '',
-      description: '', // NEW FIELD: Default to individual match
+      description: '',
       match_type: 'individual',
     },
     todayDate: new Date().toISOString().split('T')[0],
+
+    // Profile dialog state
+    profileDialog: false,
+    profileLoading: false,
+    profileFound: false,
+    profile: {
+      id: null,
+      full_name: null,
+      role: null,
+      address: null,
+      city: null,
+      zip_code: null,
+      phone_number: null,
+      updated_at: null,
+    },
   }),
   computed: {
     sportChoices() {
@@ -502,21 +665,36 @@ export default {
     },
     isLocationOther() {
       return this.newRequest.location === 'Other (Specify)'
-    }, // ✅ MODIFIED: Updated filteredRequests to include matchTypeFilter logic
+    },
     filteredRequests() {
-      const searchTerm = this.search ? this.search.toLowerCase() : '' // 1. Filter by Match Type
-
+      const searchTerm = this.search ? this.search.toLowerCase() : ''
       const matchTypeFiltered = this.playmateRequests.filter((request) => {
         if (this.matchTypeFilter === 'all') return true
         return request.match_type === this.matchTypeFilter
-      }) // 2. Filter by Search Term
+      })
 
       return matchTypeFiltered.filter(
         (request) =>
-          request.sport.toLowerCase().includes(searchTerm) ||
-          request.location.toLowerCase().includes(searchTerm) ||
-          request.creator_name.toLowerCase().includes(searchTerm),
+          (request.sport || '').toLowerCase().includes(searchTerm) ||
+          (request.location || '').toLowerCase().includes(searchTerm) ||
+          (request.creator_name || '').toLowerCase().includes(searchTerm),
       )
+    },
+    profileInitials() {
+      if (!this.profile.full_name) return ''
+      return this.profile.full_name
+        .split(' ')
+        .map((s) => s[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+    },
+    fullAddress() {
+      const parts = []
+      if (this.profile.address) parts.push(this.profile.address)
+      if (this.profile.city) parts.push(this.profile.city)
+      if (this.profile.zip_code) parts.push(this.profile.zip_code)
+      return parts.join(', ')
     },
   },
   async mounted() {
@@ -525,7 +703,7 @@ export default {
     this.fetchFacilities()
   },
   methods: {
-    // --- Utility Methods ---
+    // Formatting helpers
     formatDate(dateString) {
       if (!dateString) return ''
       return new Date(dateString + 'T00:00:00').toLocaleDateString(undefined, {
@@ -541,6 +719,7 @@ export default {
       tempDate.setHours(hours, minutes)
       return tempDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
     },
+
     isJoined(requestId) {
       return this.userJoins.includes(requestId)
     },
@@ -556,14 +735,18 @@ export default {
       if (value !== 'Other (Specify)') {
         this.otherLocationText = ''
       }
-    }, // --- Core Interaction Methods ---
+    },
 
     async getCurrentUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (user) {
-        this.currentUserId = user.id
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        if (user) {
+          this.currentUserId = user.id
+        }
+      } catch (err) {
+        console.error('Error getting current user:', err)
       }
     },
 
@@ -583,7 +766,7 @@ export default {
       } finally {
         this.facilityLoading = false
       }
-    }, // Centralized function to check and update request status
+    },
 
     async checkRequestStatus(requestId) {
       const { data, error } = await supabase
@@ -603,21 +786,12 @@ export default {
       const isTeamMatch = data.match_type === 'team'
       let newStatus = currentStatus
 
-      if (currentStatus === 'canceled') return // Logic updated to check team match (1 join is "full" - the opposing team)
+      if (currentStatus === 'canceled') return
 
       if (isTeamMatch) {
-        if (currentJoins >= 1) {
-          newStatus = 'full'
-        } else {
-          newStatus = 'open'
-        }
+        newStatus = currentJoins >= 1 ? 'full' : 'open'
       } else {
-        // Original logic for individual matches
-        if (currentJoins >= maxJoins) {
-          newStatus = 'full'
-        } else {
-          newStatus = 'open'
-        }
+        newStatus = currentJoins >= maxJoins ? 'full' : 'open'
       }
 
       if (newStatus !== currentStatus) {
@@ -629,14 +803,13 @@ export default {
         if (updateError) {
           console.error(`Error updating status to ${newStatus}:`, updateError.message)
         }
-      } // ✅ REMOVED: Redundant fetchRequestsAndJoins() here.
-      // The caller (handleJoinToggle) will handle the refresh after the action and status check.
+      }
     },
 
     async fetchRequestsAndJoins() {
       this.loading = true
       try {
-        const { data: requestsData, error: requestsError } = await supabase // ADD 'match_type' TO SELECT LIST
+        const { data: requestsData, error: requestsError } = await supabase
           .from('playmate_requests')
           .select('*, creator:creator_id (full_name), playmate_joins(count), match_type')
           .gte('date', this.todayDate)
@@ -645,10 +818,32 @@ export default {
 
         if (requestsError) throw requestsError
 
-        this.playmateRequests = requestsData.map((request) => ({
+        const requestIds = (requestsData || []).map((r) => r.id)
+        let allJoinsData = []
+        if (requestIds.length > 0) {
+          const { data: joins, error: joinsError } = await supabase
+            .from('playmate_joins')
+            .select('request_id, user_id, user:user_id (full_name)')
+            .in('request_id', requestIds)
+
+          if (joinsError) throw joinsError
+          allJoinsData = joins || []
+        }
+
+        const joinsByRequest = allJoinsData.reduce((acc, join) => {
+          if (!acc[join.request_id]) acc[join.request_id] = []
+          acc[join.request_id].push({
+            user_id: join.user_id,
+            full_name: join.user?.full_name || 'Anonymous Player',
+          })
+          return acc
+        }, {})
+
+        this.playmateRequests = (requestsData || []).map((request) => ({
           ...request,
           creator_name: request.creator?.full_name || 'Anonymous User',
           joins_count: request.playmate_joins[0]?.count || 0,
+          joiners: joinsByRequest[request.id] || [],
         }))
 
         if (this.currentUserId) {
@@ -660,9 +855,9 @@ export default {
           if (joinsError) throw joinsError
 
           this.userJoins = joinsData.map((j) => j.request_id)
-        } // --- Status Management (Initial Load) ---
+        }
 
-        // This block ensures the displayed status reflects the current join count.
+        // Status sync (initial)
         const requestsToUpdate = this.playmateRequests
           .filter((r) => r.status !== 'canceled')
           .map((r) => {
@@ -675,7 +870,6 @@ export default {
             let newStatus = r.status
             if (shouldBeFull && r.status !== 'full') newStatus = 'full'
             if (shouldBeOpen && r.status !== 'open') newStatus = 'open'
-
             return { id: r.id, oldStatus: r.status, newStatus }
           })
           .filter((u) => u.oldStatus !== u.newStatus)
@@ -703,7 +897,7 @@ export default {
         this.playmateRequests.forEach((r) => {
           if (requestsToOpen.includes(r.id)) r.status = 'open'
           if (requestsToClose.includes(r.id)) r.status = 'full'
-        }) // Filter the main display list
+        })
 
         this.playmateRequests = this.playmateRequests.filter(
           (r) => r.status !== 'canceled' || r.creator_id === this.currentUserId,
@@ -713,7 +907,7 @@ export default {
       } finally {
         this.loading = false
       }
-    }, // Fetches participants for the Manage Request modal
+    },
 
     async fetchJoinsForRequest(requestId) {
       this.participants = []
@@ -743,14 +937,14 @@ export default {
       } catch (err) {
         console.error('Error fetching participants:', err.message)
       }
-    }, // Opens the Manage Request dialog for the creator
+    },
 
     openManageDialog(request) {
       this.selectedRequest = { ...request }
       this.manageDialog = true
       this.manageTab = 0
       this.fetchJoinsForRequest(request.id)
-    }, // ✅ FIXED: Main button handler logic to correctly check full status before joining and refresh after any action.
+    },
 
     async handleJoinToggle(request) {
       if (this.isCreator(request.creator_id)) {
@@ -767,7 +961,6 @@ export default {
       }
 
       if (this.isJoined(requestId)) {
-        // --- Withdraw logic ---
         const msg = isTeamMatch
           ? 'Successfully withdrawn the opponent team from the challenge.'
           : 'Successfully withdrawn from the request.'
@@ -781,12 +974,7 @@ export default {
           'Failed to withdraw from request.',
         )
       } else {
-        // --- Join logic ---
-
-        // Check if the request is full based on its current state (before joining)
-        const isFull = isTeamMatch
-          ? request.joins_count >= 1 // Team match is full with 1 join (the opponent team)
-          : request.status === 'full' // Individual match uses the 'full' status based on max_joins
+        const isFull = isTeamMatch ? request.joins_count >= 1 : request.status === 'full'
 
         if (isFull) {
           alert(`This play request is currently full and cannot be joined.`)
@@ -803,11 +991,11 @@ export default {
           msg,
           'Failed to join request. It may be full or closed.',
         )
-      } // ✅ Crucial Fix: Check status in DB and then refresh the entire list to update the UI
+      }
 
       await this.checkRequestStatus(requestId)
       await this.fetchRequestsAndJoins()
-    }, // Updates the request details
+    },
 
     async editRequest() {
       if (this.$refs.editForm && !this.$refs.editForm.validate()) {
@@ -830,7 +1018,7 @@ export default {
             max_joins: this.selectedRequest.max_joins,
             date: this.selectedRequest.date,
             start_time: this.selectedRequest.start_time,
-            description: this.selectedRequest.description, // Match type is intentionally not editable after creation
+            description: this.selectedRequest.description,
           })
           .eq('id', this.selectedRequest.id)
           .eq('creator_id', this.currentUserId)
@@ -840,13 +1028,13 @@ export default {
         alert('Request updated successfully!')
         this.manageDialog = false
         await this.checkRequestStatus(this.selectedRequest.id)
-        await this.fetchRequestsAndJoins() // Ensure list refreshes after edit/status check
+        await this.fetchRequestsAndJoins()
       } catch (err) {
         alert(`Failed to update request: ${err.message}`)
       } finally {
         this.creating = false
       }
-    }, // Cancels (updates status to 'canceled') the request
+    },
 
     async cancelRequest() {
       if (!this.selectedRequest?.id) return
@@ -857,14 +1045,13 @@ export default {
       if (!confirmCancel) return
 
       try {
-        // ✅ Delete request based on creator_id
         const { error } = await supabase
           .from('playmate_requests')
           .delete()
           .eq('id', this.selectedRequest.id)
           .eq('creator_id', this.currentUserId)
 
-        if (error) throw error // ✅ Remove locally so UI updates immediately
+        if (error) throw error
 
         this.playmateRequests = this.playmateRequests.filter(
           (r) => r.id !== this.selectedRequest.id,
@@ -872,12 +1059,13 @@ export default {
 
         this.manageDialog = false
         alert('Request permanently deleted.')
-        this.fetchRequestsAndJoins() // Ensure list refreshes after deletion
+        this.fetchRequestsAndJoins()
       } catch (err) {
         console.error('Error deleting request:', err)
         alert('Failed to delete the request. Please try again.')
       }
-    }, // Helper for Supabase actions - MODIFIED FOR BETTER ERROR LOGGING
+    },
+
     async supabaseAction(promise, successMsg, failMsg) {
       this.creating = true
       try {
@@ -891,8 +1079,7 @@ export default {
         alert(successMsg)
         return data
       } catch (err) {
-        // Log the exact error for developer debugging
-        console.error('Supabase action failed:', err.message) // Check for specific error codes (RLS: 42501, NOT NULL: 23502)
+        console.error('Supabase action failed:', err.message)
         let customFailMsg = failMsg
         if (err.code === '42501') {
           customFailMsg += ' (Check your RLS Policy on the table!)'
@@ -900,12 +1087,12 @@ export default {
           customFailMsg += ' (A required field is NULL, e.g., creator_id!)'
         }
 
-        alert(customFailMsg) // Show the user the generic/custom failure message
+        alert(customFailMsg)
         throw err
       } finally {
         this.creating = false
       }
-    }, // Create Request method
+    },
 
     async createRequest() {
       if (!this.$refs.form.validate() || !this.currentUserId) {
@@ -944,19 +1131,19 @@ export default {
               date: this.newRequest.date,
               start_time: this.newRequest.start_time,
               description: this.newRequest.description,
-              status: 'open', // NEW FIELD INSERT
+              status: 'open',
               match_type: this.newRequest.match_type,
             },
           ]),
           'Playmate request created successfully!',
           'Failed to create request. See console for error details.',
-        ) // --- Success Logic ---
+        )
 
         this.dialog = false
         this.$refs.form.reset()
         this.newRequest.sport = null
         this.newRequest.location = ''
-        this.newRequest.match_type = 'individual' // Reset new field
+        this.newRequest.match_type = 'individual'
         this.otherSportText = ''
         this.otherLocationText = ''
         this.fetchRequestsAndJoins()
@@ -964,6 +1151,83 @@ export default {
         console.log('Create request process aborted after failure.')
       }
     },
+
+    // ====== NEW: Profile dialog helpers ======
+    async viewUserProfile(userId) {
+      if (!userId) return
+      this.profileDialog = true
+      await this.fetchProfile(userId)
+    },
+
+    async fetchProfile(userId) {
+      this.profileLoading = true
+      this.profileFound = false
+      // Reset profile object
+      this.profile = {
+        id: null,
+        full_name: null,
+        role: null,
+        address: null,
+        city: null,
+        zip_code: null,
+        phone_number: null,
+        updated_at: null,
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, role, address, city, zip_code, phone_number, updated_at')
+          .eq('id', userId)
+          .single()
+
+        if (error) {
+          if (error.code === 'PGRST116' || error.message === 'No rows found') {
+            // no profile found
+            this.profileFound = false
+            return
+          }
+          throw error
+        }
+        if (data) {
+          this.profile = data
+          this.profileFound = true
+        } else {
+          this.profileFound = false
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err)
+        this.profileFound = false
+      } finally {
+        this.profileLoading = false
+      }
+    },
+
+    closeProfileDialog() {
+      this.profileDialog = false
+      // small delay to clear, optional
+      setTimeout(() => {
+        this.profile = {
+          id: null,
+          full_name: null,
+          role: null,
+          address: null,
+          city: null,
+          zip_code: null,
+          phone_number: null,
+          updated_at: null,
+        }
+        this.profileFound = false
+      }, 250)
+    },
   },
 }
 </script>
+
+<style scoped>
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+</style>

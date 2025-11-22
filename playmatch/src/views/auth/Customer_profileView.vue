@@ -1,10 +1,11 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { supabase } from '@/supabaseClient'
 
 const activeNav = ref('profile')
 const router = useRouter()
+const route = useRoute() // Import useRoute to access parameters
 const profileData = ref(null)
 const loading = ref(false)
 const error = ref(null)
@@ -12,6 +13,14 @@ const error = ref(null)
 const isEditing = ref(false)
 const formData = ref({}) // Holds data for the edit form
 const saving = ref(false)
+const currentUserId = ref(null) // Stores the logged-in user's ID
+
+// Get the user ID from the route parameter. If null, it's the self-profile view.
+const targetUserId = computed(() => route.params.userId || null)
+// Boolean flag to determine if we are viewing someone else's profile
+const isViewingOther = computed(
+  () => targetUserId.value && targetUserId.value !== currentUserId.value,
+)
 
 // Fetches the user's profile data from Supabase.
 const fetchProfile = async () => {
@@ -20,7 +29,7 @@ const fetchProfile = async () => {
   profileData.value = null
 
   try {
-    // Get the current user session
+    // 1. Get the current logged-in user session
     const {
       data: { user },
     } = await supabase.auth.getUser()
@@ -30,29 +39,42 @@ const fetchProfile = async () => {
       router.push({ name: 'signin' })
       return
     }
+    currentUserId.value = user.id // Store logged-in user's ID
 
-    // Fetch the corresponding profile data using the user's ID
+    // 2. Determine which profile ID to fetch
+    const idToFetch = targetUserId.value || user.id
+
+    // 3. Fetch the corresponding profile data
+    // For security, we only fetch public details (no need for email for others)
     const { data, error: fetchError } = await supabase
       .from('profiles')
       .select('full_name, phone_number, address, city, zip_code, role')
-      .eq('id', user.id)
+      .eq('id', idToFetch)
       .single()
 
     if (fetchError && fetchError.code !== 'PGRST116') {
-      // PGRST116 means no rows found (profile might be missing)
       throw fetchError
     }
 
-    // Combine the profile data with the user's email from the auth object
-    const finalData = {
-      email: user.email,
-      id: user.id,
+    let finalData = {
+      id: idToFetch,
       ...data,
     }
+
+    // If viewing self-profile, include the authenticated user's email
+    if (!isViewingOther.value) {
+      finalData.email = user.email
+    } else {
+      // For other users, email is generally kept private or not fetched.
+      finalData.email = 'Hidden'
+    }
+
     profileData.value = finalData
 
-    // Initialize form data with current profile data
-    formData.value = { ...finalData }
+    // Initialize form data only if it is the self-profile view
+    if (!isViewingOther.value) {
+      formData.value = { ...finalData }
+    }
   } catch (err) {
     console.error('Profile fetch failed:', err.message)
     error.value = 'Failed to load profile. Please try again.'
@@ -61,8 +83,9 @@ const fetchProfile = async () => {
   }
 }
 
+// Ensure editing is only possible for the logged-in user's profile
 const toggleEdit = () => {
-  if (!profileData.value) return
+  if (isViewingOther.value || !profileData.value) return
   isEditing.value = !isEditing.value
   if (isEditing.value) {
     formData.value = { ...profileData.value }
@@ -70,6 +93,9 @@ const toggleEdit = () => {
 }
 
 const saveProfile = async () => {
+  // Save is only allowed for the current user
+  if (isViewingOther.value) return
+
   saving.value = true
   error.value = null // Clear any previous errors
 
@@ -126,7 +152,9 @@ onMounted(() => {
       <v-btn icon @click="$router.go(-1)">
         <v-icon color="white">mdi-arrow-left</v-icon>
       </v-btn>
-      <v-toolbar-title class="font-weight-bold" style="color: white">My Profile</v-toolbar-title>
+      <v-toolbar-title class="font-weight-bold" style="color: white">
+        {{ isViewingOther ? 'User Profile View' : 'My Profile' }}
+      </v-toolbar-title>
       <v-spacer></v-spacer>
     </v-app-bar>
 
@@ -171,7 +199,9 @@ onMounted(() => {
                       <v-icon color="blue">mdi-email-outline</v-icon> Email Address
                     </p>
                     <v-list-item-content>
-                      <v-list-item-subtitle>{{ profileData.email }}</v-list-item-subtitle>
+                      <v-list-item-subtitle>{{
+                        isViewingOther ? 'Contact via chat/request' : profileData.email
+                      }}</v-list-item-subtitle>
                     </v-list-item-content>
                   </v-list-item>
 
@@ -270,7 +300,7 @@ onMounted(() => {
                 </v-form>
               </v-card-text>
 
-              <v-card-actions class="pt-4 px-4 justify-end">
+              <v-card-actions class="pt-4 px-4 justify-end" v-if="!isViewingOther">
                 <v-btn
                   v-if="isEditing"
                   color="secondary"
@@ -312,6 +342,7 @@ onMounted(() => {
         </v-row>
       </v-container>
     </v-main>
+
     <v-bottom-navigation app fixed color="white" light v-model="activeNav">
       <v-btn class="mx-1" value="home" @click="$router.push({ name: 'customer-dashboard' })">
         <v-icon size="31" :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
