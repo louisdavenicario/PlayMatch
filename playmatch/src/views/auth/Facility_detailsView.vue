@@ -39,7 +39,6 @@
               />
             </v-col>
           </v-row>
-
           <v-row
             v-else-if="allPhotos.length >= 2 && allPhotos.length <= 4"
             class="mb-4 mx-auto"
@@ -57,7 +56,6 @@
               />
             </v-col>
           </v-row>
-
           <v-row
             v-else-if="allPhotos.length >= 5"
             class="mb-4 mx-auto align-stretch"
@@ -84,7 +82,6 @@
                 </div>
               </v-img>
             </v-col>
-
             <v-col cols="12" md="5" class="pa-1 d-flex flex-column">
               <v-row no-gutters class="flex-grow-1">
                 <v-col
@@ -104,7 +101,6 @@
                   />
                 </v-col>
               </v-row>
-
               <v-row no-gutters class="flex-grow-1">
                 <v-col
                   v-for="(photoUrl, i) in allPhotos.slice(3, 5)"
@@ -125,7 +121,6 @@
               </v-row>
             </v-col>
           </v-row>
-
           <v-img
             v-else
             src="/images/default-facility.jpg"
@@ -136,14 +131,26 @@
 
           <h2 class="font-weight-bold">{{ facility.facility_name }}</h2>
           <p class="grey--text mb-2">Address: {{ facility.address }}</p>
-          <p class="grey--text mb-2">
-            Operating Hours (Today): {{ currentDayOperatingHours }}
-          </p>
+          <p class="grey--text mb-2">Operating Hours (Today): {{ currentDayOperatingHours }}</p>
           <p class="grey--text mb-2">Contact Number: {{ facility.phone_number }}</p>
           <p class="grey--text mb-2">Amenities: {{ facility.amenities }}</p>
+          <p class="grey--text mb-2">
+            Price:
+            <v-chip color="green darken-1" dark class="mt-2 mt-sm-0">
+              ₱{{ facility.price_per_hour || 'N/A' }} / hour
+            </v-chip>
+          </p>
 
-          <div class="d-flex align-center mb-3">
-            <div class="d-flex align-center mr-2">
+          <v-divider class="my-4"></v-divider>
+
+          <p class="grey--text mb-4">
+            {{ facility.briefdescription || 'No description available.' }}
+          </p>
+
+          <v-divider class="my-6"></v-divider>
+
+          <div class="d-flex align-center flex-wrap mb-4">
+            <div class="d-flex align-center mr-4">
               <v-icon
                 v-for="star in 5"
                 :key="star"
@@ -154,51 +161,87 @@
               >
                 {{ star <= userRating ? 'mdi-star' : 'mdi-star-outline' }}
               </v-icon>
+              <span class="ml-2 grey--text text-body-2">
+                {{ averageRating }} ({{ totalRatings }} reviews)
+              </span>
             </div>
-            <span class="ml-2 grey--text text-body-2">
-              {{ averageRating }} ({{ totalRatings }} reviews)
-            </span>
           </div>
 
-          <v-chip color="green darken-1" dark>
-            ₱{{ facility.price_per_hour || 'N/A' }} / hour
-          </v-chip>
+          <div>
+            <h3 class="text-h6 font-weight-medium mb-4">Reviews & Comments</h3>
 
-          <v-divider class="my-4"></v-divider>
+            <div v-if="currentUserId">
+              <v-textarea
+                v-model="newComment"
+                label="Write your comment..."
+                outlined
+                rows="2"
+                class="mb-0"
+              />
+              <v-btn
+                color="blue"
+                dark
+                rounded
+                @click="submitReview"
+                :loading="submittingReview"
+                :disabled="!newComment.trim()"
+              >
+                Submit
+              </v-btn>
+            </div>
+            <div v-else class="grey--text mb-4">Please log in to leave a review.</div>
 
-          <p class="grey--text">{{ facility.briefdescription || 'No description available.' }}</p>
+            <v-divider class="my-4"></v-divider>
+
+            <v-list two-line>
+              <v-list-item v-for="review in displayedReviews" :key="review.id" class="mb-2">
+                <v-list-item-content>
+                  <v-list-item-title class="font-weight-bold">
+                    {{ review.user_name || 'Anonymous' }}
+                    <v-icon
+                      v-for="n in review.rating_value"
+                      :key="'filled-' + n"
+                      color="amber"
+                      small
+                      >mdi-star</v-icon
+                    >
+                    <v-icon
+                      v-for="n in 5 - review.rating_value"
+                      :key="'outline-' + n"
+                      color="grey lighten-1"
+                      small
+                      >mdi-star-outline</v-icon
+                    >
+                  </v-list-item-title>
+                  <v-list-item-subtitle>{{ review.comment }}</v-list-item-subtitle>
+                  <span class="grey--text text-caption">{{ formatDate(review.created_at) }}</span>
+                </v-list-item-content>
+              </v-list-item>
+              <div v-if="reviews.length === 0" class="grey--text">No reviews yet.</div>
+            </v-list>
+
+            <v-btn
+              v-if="!showAllReviews && reviews.length > 2"
+              text
+              rounded
+              color="blue"
+              @click="showAllReviews = true"
+            >
+              See More Reviews
+            </v-btn>
+            <v-btn
+              v-else-if="showAllReviews && reviews.length > 2"
+              text
+              rounded
+              color="blue"
+              @click="showAllReviews = false"
+            >
+              See Less Reviews
+            </v-btn>
+          </div>
         </v-card>
 
-        <v-dialog v-model="zoomDialog" fullscreen transition="dialog-bottom-transition">
-          <v-card dark color="black">
-            <v-toolbar dense flat color="white">
-              <v-spacer></v-spacer>
-              <v-btn icon @click="zoomDialog = false">
-                <v-icon color="#1a65a2">mdi-close</v-icon>
-              </v-btn>
-            </v-toolbar>
-
-            <v-container fluid fill-height>
-              <v-row align="center" justify="center">
-                <v-col cols="12" class="text-center">
-                  <v-carousel
-                    v-model="zoomCarouselIndex"
-                    hide-delimiter-background
-                    height="90vh"
-                    show-arrows-on-hover
-                    delimiter-icon="mdi-circle-small"
-                    delimiter-size="12"
-                    cycle
-                  >
-                    <v-carousel-item v-for="(photoUrl, index) in allPhotos" :key="index">
-                      <v-img :src="photoUrl" contain max-height="90vh" class="mx-auto"></v-img>
-                    </v-carousel-item>
-                  </v-carousel>
-                </v-col>
-              </v-row>
-            </v-container>
-          </v-card>
-        </v-dialog>
+        <v-divider class="my-6"></v-divider>
 
         <v-card class="pa-4 mt-6" rounded="lg" elevation="2">
           <h3 class="text-h6 font-weight-medium mb-3">Book this Facility</h3>
@@ -242,11 +285,7 @@
                 v-if="groupedSchedules[selectedDate] && groupedSchedules[selectedDate].length > 0"
                 class="d-flex flex-wrap"
               >
-                <v-chip-group
-                  v-if="groupedSchedules[selectedDate] && groupedSchedules[selectedDate].length > 0"
-                  column
-                  class="d-flex flex-wrap"
-                >
+                <v-chip-group column class="d-flex flex-wrap">
                   <v-chip
                     v-for="slot in groupedSchedules[selectedDate]"
                     :key="slot.start_time"
@@ -341,6 +380,37 @@
           </div>
         </v-card>
 
+        <v-dialog v-model="zoomDialog" fullscreen transition="dialog-bottom-transition">
+          <v-card dark color="black">
+            <v-toolbar dense flat color="white">
+              <v-spacer></v-spacer>
+              <v-btn icon @click="zoomDialog = false">
+                <v-icon color="#1a65a2">mdi-close</v-icon>
+              </v-btn>
+            </v-toolbar>
+
+            <v-container fluid fill-height>
+              <v-row align="center" justify="center">
+                <v-col cols="12" class="text-center">
+                  <v-carousel
+                    v-model="zoomCarouselIndex"
+                    hide-delimiter-background
+                    height="90vh"
+                    show-arrows-on-hover
+                    delimiter-icon="mdi-circle-small"
+                    delimiter-size="12"
+                    cycle
+                  >
+                    <v-carousel-item v-for="(photoUrl, index) in allPhotos" :key="index">
+                      <v-img :src="photoUrl" contain max-height="90vh" class="mx-auto"></v-img>
+                    </v-carousel-item>
+                  </v-carousel>
+                </v-col>
+              </v-row>
+            </v-container>
+          </v-card>
+        </v-dialog>
+
         <v-dialog v-model="receiptDialog" max-width="500">
           <v-card>
             <v-toolbar color="blue" dark flat class="px-4">
@@ -392,11 +462,20 @@
 
 <script>
 import { supabase } from '@/supabaseClient'
+
 export default {
-  name: 'Facility_details',
+  name: 'FacilityDetails',
   props: ['id'],
+
   data: () => ({
     facility: {},
+    // Review/Photo Data
+    reviews: [],
+    newComment: '',
+    submittingReview: false,
+    showAllReviews: false,
+
+    // Booking/Schedule Data
     schedules: [],
     bookings: [],
     availableSchedules: [],
@@ -404,25 +483,30 @@ export default {
     availableDates: [],
     selectedDate: null,
     customSchedules: [],
+
     // Multi-Hour Booking Data
     selectedStartSlot: null,
     selectedDuration: 1,
     MAX_BOOKING_HOURS: 4,
     durationError: '',
-    // ---
+
+    // General State
     loading: false,
     loadingSchedules: false,
     SLOT_DURATION_MINUTES: 60,
     DAYS_TO_GENERATE: 90,
+
     // Ratings
     userRating: 0,
     averageRating: '0.0',
     totalRatings: 0,
     currentUserId: null,
+
     // Carousel & Zoom
     zoomDialog: false,
     zoomCarouselIndex: 0,
-    // NEW: Receipt Dialog
+
+    // Receipt Dialog
     receiptDialog: false,
     receiptDetails: {
       date: '',
@@ -433,31 +517,13 @@ export default {
     },
   }),
 
-  async mounted() {
-    await this.getCurrentUser()
-    await this.fetchFacility()
-    await this.fetchCustomSchedules()
-    await this.fetchSchedulesAndBookings()
-    await this.fetchRatings()
-    this.autoSelectFirstAvailableDate()
-  },
-
   computed: {
-    currentDayOperatingHours() {
-      if (!this.schedules || this.schedules.length === 0) return 'N/A'
-      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
-      const todayDayOfWeek = days[new Date().getDay()]
-      
-      const schedules = this.schedules.find(
-        (s) => s.type === 'regular' && s.day_of_week === todayDayOfWeek
-      )
-      
-      if (schedules && schedules.start_time && schedules.end_time) {
-        return `${schedules.start_time} - ${schedules.end_time}`
-      }
-      return 'N/A'
+    // Reviews Computed Property
+    displayedReviews() {
+      if (this.showAllReviews) return this.reviews
+      return this.reviews.slice(0, 2)
     },
-    // ... (Rest of computed properties are unchanged)
+    // Photos Computed Property
     allPhotos() {
       const photos = []
       if (this.facility.image_url) photos.push(this.facility.image_url)
@@ -466,9 +532,23 @@ export default {
       }
       return photos
     },
+    // Scheduling Computed Properties
+    currentDayOperatingHours() {
+      if (!this.schedules || this.schedules.length === 0) return 'N/A'
+      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+      const todayDayOfWeek = days[new Date().getDay()]
+
+      const schedules = this.schedules.find(
+        (s) => s.type === 'regular' && s.day_of_week === todayDayOfWeek,
+      )
+
+      if (schedules && schedules.start_time && schedules.end_time) {
+        return `${schedules.start_time} - ${schedules.end_time}`
+      }
+      return 'N/A'
+    },
     formattedSelectedTime() {
       if (!this.selectedStartSlot) return ''
-      // The slot is UTC but we display it as local time
       return new Date(this.selectedStartSlot).toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
@@ -481,7 +561,6 @@ export default {
       const end = new Date(
         start.getTime() + this.selectedDuration * this.SLOT_DURATION_MINUTES * 60000,
       )
-      // The end time is also UTC but displayed locally
       return end.toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
@@ -492,7 +571,6 @@ export default {
       const price = this.facility.price_per_hour || 0
       return (price * this.selectedDuration).toFixed(2)
     },
-    // 🧩 NEW — detect and display custom schedule reason
     selectedCustomSchedule() {
       if (!this.customSchedules || !this.selectedDate) return null
       return this.customSchedules.find((s) => s.date === this.selectedDate)
@@ -500,6 +578,16 @@ export default {
     selectedDateHasCustomSchedule() {
       return !!this.selectedCustomSchedule
     },
+  },
+
+  async mounted() {
+    await this.getCurrentUser()
+    await this.fetchFacility()
+    await this.fetchCustomSchedules()
+    await this.fetchSchedulesAndBookings()
+    await this.fetchRatings()
+    await this.fetchReviews()
+    this.autoSelectFirstAvailableDate()
   },
 
   watch: {
@@ -512,15 +600,12 @@ export default {
         this.selectedDate = `${year}-${month}-${day}`
         return
       }
-      // If it's already a string, or null, proceed with state reset
       this.handleDateSelection()
     },
-    // Reset duration and clear error whenever the start slot changes
     selectedStartSlot() {
       this.selectedDuration = 1
-      this.durationError = '' // Clear error on slot change
+      this.durationError = ''
     },
-    // Watch duration input to perform validation immediately
     selectedDuration(newDuration) {
       if (this.selectedStartSlot) {
         this.validateDuration(newDuration)
@@ -535,31 +620,13 @@ export default {
       this.$router.push({ name: 'customer-dashboard' })
     },
 
-    isSlotDisabled(slotStartTime) {
-      if (!this.selectedCustomSchedule) return false
-
-      const slotTime = new Date(slotStartTime)
-      const [customStartHour, customStartMinute] = this.selectedCustomSchedule.start_time
-        .split(':')
-        .map(Number)
-      const [customEndHour, customEndMinute] = this.selectedCustomSchedule.end_time
-        .split(':')
-        .map(Number)
-
-      const customStart = new Date(slotTime)
-      customStart.setHours(customStartHour, customStartMinute, 0, 0)
-      const customEnd = new Date(slotTime)
-      customEnd.setHours(customEndHour, customEndMinute, 0, 0)
-
-      // Disabled if slotStartTime falls within the custom CLOSED range
-      return slotTime >= customStart && slotTime < customEnd
-    },
-
+    // --- Authentication ---
     async getCurrentUser() {
       const { data } = await supabase.auth.getUser()
       this.currentUserId = data?.user?.id || null
     },
 
+    // --- Facility Details ---
     async fetchFacility() {
       const { data, error } = await supabase
         .from('facilities')
@@ -569,6 +636,7 @@ export default {
 
       if (!error) {
         this.facility = data
+        // Logic to parse stringified JSON photos
         if (typeof this.facility.additional_photos === 'string') {
           try {
             this.facility.additional_photos = JSON.parse(this.facility.additional_photos)
@@ -581,12 +649,7 @@ export default {
       } else console.error('Error fetching facility:', error.message)
     },
 
-    openZoom(photoUrl) {
-      const index = this.allPhotos.findIndex((p) => p === photoUrl)
-      this.zoomCarouselIndex = index >= 0 ? index : 0
-      this.zoomDialog = true
-    },
-
+    // --- Ratings Logic ---
     async fetchRatings() {
       try {
         const { data: allRatings, error: allError } = await supabase
@@ -613,7 +676,6 @@ export default {
         console.error('Error fetching ratings:', err.message)
       }
     },
-
     async rateFacility(star) {
       if (!this.currentUserId) {
         alert('Please log in to rate this facility.')
@@ -638,11 +700,92 @@ export default {
         }
 
         await this.fetchRatings()
+        await this.fetchReviews()
       } catch (err) {
         console.error('Error submitting rating:', err.message)
       }
     },
 
+    // --- Reviews/Comments Logic ---
+    async fetchReviews() {
+      const { data, error } = await supabase
+        .from('ratings')
+        .select('id, user_id, rating_value, comment, created_at, profiles(full_name)')
+        .eq('facility_id', this.id)
+
+      if (!error) {
+        this.reviews = data
+          .filter((r) => r.comment && r.comment.trim() !== '')
+          .map((r) => ({
+            ...r,
+            user_name: r.profiles?.full_name || 'Anonymous',
+          }))
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      } else console.error('Error fetching reviews:', error)
+    },
+    async submitReview() {
+      if (!this.newComment.trim() || !this.currentUserId)
+        return alert('Comment cannot be empty, and you must be logged in.')
+
+      this.submittingReview = true
+      try {
+        const { data: existing } = await supabase
+          .from('ratings')
+          .select('id, rating_value')
+          .eq('user_id', this.currentUserId)
+          .eq('facility_id', this.id)
+          .limit(1)
+
+        const existingRatingId = existing?.[0]?.id || null
+        const ratingToUse = existing?.[0]?.rating_value || this.userRating || 5
+
+        if (existingRatingId) {
+          await supabase
+            .from('ratings')
+            .update({ comment: this.newComment.trim(), rating_value: ratingToUse })
+            .eq('id', existingRatingId)
+        } else {
+          await supabase.from('ratings').insert([
+            {
+              user_id: this.currentUserId,
+              facility_id: this.id,
+              rating_value: ratingToUse,
+              comment: this.newComment.trim(),
+            },
+          ])
+        }
+
+        this.newComment = ''
+        await this.fetchRatings()
+        await this.fetchReviews()
+      } catch (err) {
+        console.error('Error submitting review:', err.message)
+        alert('Failed to submit review. Please try again.')
+      } finally {
+        this.submittingReview = false
+      }
+    },
+    formatDate(dateStr) {
+      return new Date(dateStr).toLocaleString()
+    },
+
+    // --- Booking/Scheduling Logic ---
+
+    async fetchCustomSchedules() {
+      try {
+        if (!this.id) return
+        const { data, error } = await supabase
+          .from('schedules')
+          .select('*')
+          .eq('facility_id', this.id)
+          .eq('type', 'custom')
+
+        if (error) throw error
+        this.customSchedules = data || []
+      } catch (err) {
+        console.error('Error fetching custom schedules:', err.message)
+      }
+    },
     async fetchSchedulesAndBookings() {
       this.loadingSchedules = true
       try {
@@ -653,7 +796,6 @@ export default {
           .eq('type', 'regular')
         this.schedules = schedulesData || []
 
-        // Fetch bookings: Now selecting 'status' to exclude 'cancelled' bookings
         const { data: bookingsData } = await supabase
           .from('bookings')
           .select('start_time, duration_hours, status')
@@ -661,28 +803,19 @@ export default {
           .not('status', 'in', '("cancelled","rejected")')
 
         const activeBookings = Array.isArray(bookingsData) ? bookingsData : []
-        // --- CORE FIX: Calculate ALL occupied 1-hour slot UTC ISO strings ---
         const reservedSlots = new Set()
         activeBookings.forEach((booking) => {
-          // Use the database time, which is the UTC ISO string saved from generateFutureSlots
-          // The database saves this: 2025-10-23T08:00:00.000Z
           const start = new Date(booking.start_time)
           const duration = booking.duration_hours || 1
 
           for (let i = 0; i < duration; i++) {
             const reservedTime = new Date(start.getTime() + i * this.SLOT_DURATION_MINUTES * 60000)
-
-            // CRITICAL: The ISO string must match the one generated in generateFutureSlots
             reservedSlots.add(reservedTime.toISOString())
           }
         })
 
-        // -----------------------------------------------------------------
-
         const generatedSlots = this.generateFutureSlots()
 
-        // Filter: Compare the generated slot's ISO string (start_time) directly
-        // against the reservedSlots Set.
         this.availableSchedules = generatedSlots.filter(
           (slot) => !reservedSlots.has(slot.start_time),
         )
@@ -694,7 +827,6 @@ export default {
         this.loadingSchedules = false
       }
     },
-
     generateFutureSlots() {
       const slots = []
       const today = new Date()
@@ -705,14 +837,12 @@ export default {
         const date = new Date(today)
         date.setDate(today.getDate() + i)
         const dayOfWeekName = days[date.getDay()]
-        const dateString = date.toISOString().split('T')[0] // YYYY-MM-DD
+        const dateString = date.toISOString().split('T')[0]
 
-        // Determine if a custom schedule exists for this exact date
         const customSchedule = this.customSchedules.find(
           (s) => s.date === dateString && s.type === 'custom' && s.facility_id === this.id,
         )
 
-        // If custom exists for this date, use it. Otherwise use the regular one for the weekday
         const regularSchedule = this.schedules.find(
           (s) => s.type === 'regular' && s.day_of_week === dayOfWeekName,
         )
@@ -734,7 +864,6 @@ export default {
         while (currentSlotTime < closingTime) {
           if (currentSlotTime > new Date()) {
             slots.push({
-              // Store the UTC ISO string (e.g., 2025-10-23T00:00:00.000Z)
               start_time: currentSlotTime.toISOString(),
               formatted_time: currentSlotTime.toLocaleTimeString([], {
                 hour: '2-digit',
@@ -748,60 +877,49 @@ export default {
       }
       return slots
     },
-
-    async fetchCustomSchedules() {
-      try {
-        if (!this.id) {
-          console.warn('No facility ID provided for fetchCustomSchedules')
-          return
-        }
-
-        const { data, error } = await supabase
-          .from('schedules')
-          .select('*')
-          .eq('facility_id', this.id)
-          .eq('type', 'custom')
-
-        if (error) throw error
-        this.customSchedules = data || []
-        console.log('Custom schedules loaded:', this.customSchedules)
-      } catch (err) {
-        console.error('Error fetching custom schedules:', err.message)
-      }
-    },
-
     groupAvailableSchedules() {
       const grouped = {}
       this.availableSchedules.forEach((slot) => {
-      // FIX 1: Use a Date object to extract the date based on the client's local timezone
-      const dateObj = new Date(slot.start_time)
-      
-      // Extract components based on the LOCAL time
-      const year = dateObj.getFullYear()
-      const month = String(dateObj.getMonth() + 1).padStart(2, '0')
-      const day = String(dateObj.getDate()).padStart(2, '0')
-      
-      // This ensures 1:00 AM local time is grouped to the correct local date
-      const dateKey = `${year}-${month}-${day}` 
-      
-      if (!grouped[dateKey]) grouped[dateKey] = []
-            grouped[dateKey].push(slot)
+        const dateObj = new Date(slot.start_time)
+
+        // Extract components based on the LOCAL time
+        const year = dateObj.getFullYear()
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0')
+        const day = String(dateObj.getDate()).padStart(2, '0')
+
+        const dateKey = `${year}-${month}-${day}`
+
+        if (!grouped[dateKey]) grouped[dateKey] = []
+        grouped[dateKey].push(slot)
       })
-      
-      // FIX 2: Explicitly sort the slots within each date group
+
       for (const dateKey in grouped) {
         grouped[dateKey].sort((a, b) => {
-          // Sort by the actual Date object time (which is the UTC ISO string value)
           return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
         })
       }
-      
+
       this.groupedSchedules = grouped
       this.availableDates = Object.keys(grouped)
     },
-    /**
-     * Allows any date from today onward to be selected.
-     */
+    isSlotDisabled(slotStartTime) {
+      if (!this.selectedCustomSchedule) return false
+
+      const slotTime = new Date(slotStartTime)
+      const [customStartHour, customStartMinute] = this.selectedCustomSchedule.start_time
+        .split(':')
+        .map(Number)
+      const [customEndHour, customEndMinute] = this.selectedCustomSchedule.end_time
+        .split(':')
+        .map(Number)
+
+      const customStart = new Date(slotTime)
+      customStart.setHours(customStartHour, customStartMinute, 0, 0)
+      const customEnd = new Date(slotTime)
+      customEnd.setHours(customEndHour, customEndMinute, 0, 0)
+
+      return slotTime >= customStart && slotTime < customEnd
+    },
     allowedDates(date) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
@@ -810,19 +928,14 @@ export default {
 
       return picked >= today
     },
-
-    // Logic to reset time slots, triggered by selectedDate watcher
     handleDateSelection() {
       this.selectedStartSlot = null
       this.selectedDuration = 1
       this.durationError = ''
     },
-
     autoSelectFirstAvailableDate() {
       if (this.availableDates.length > 0) this.selectedDate = this.availableDates[0]
-      // Watcher handles the state reset after this assignment
     },
-
     handleTimeSlotSelection(startTime) {
       if (this.selectedStartSlot === startTime) {
         this.selectedStartSlot = null
@@ -834,16 +947,13 @@ export default {
         this.durationError = ''
       }
     },
-
     isSlotSelected(slotTime) {
       return this.selectedStartSlot === slotTime
     },
-
     isDurationPossible(duration) {
       if (!this.selectedStartSlot || duration <= 0) return false
       return this._checkSlotAvailability(duration)
     },
-
     isDurationValid(duration) {
       const numDuration = parseInt(duration)
       if (
@@ -856,14 +966,11 @@ export default {
       }
       return this._checkSlotAvailability(numDuration)
     },
-
     validateDuration(duration) {
       this.durationError = ''
       const numDuration = parseInt(duration)
 
-      if (!this.selectedStartSlot) {
-        return
-      }
+      if (!this.selectedStartSlot) return
 
       if (isNaN(numDuration) || numDuration <= 0) {
         this.durationError = 'Duration must be a positive number of hours.'
@@ -879,30 +986,23 @@ export default {
         this.durationError = `A ${numDuration}-hour booking starting at ${this.formattedSelectedTime} is not fully available. Please choose a shorter duration.`
       }
     },
-
     _checkSlotAvailability(duration) {
       const slotDurationMs = this.SLOT_DURATION_MINUTES * 60000
-      // selectedStartSlot is the UTC ISO string (e.g., 2025-10-23T08:00:00.000Z)
       const selectedStart = new Date(this.selectedStartSlot)
       const currentSlots = this.groupedSchedules[this.selectedDate] || []
 
-      // The availableStartTimes are the UTC ISO strings from the generated slots
       const availableStartTimes = new Set(currentSlots.map((slot) => slot.start_time))
 
       for (let i = 0; i < duration; i++) {
-        // Calculate the required slot's UTC time
         const requiredTime = new Date(selectedStart.getTime() + i * slotDurationMs)
-        const requiredTimeISO = requiredTime.toISOString() // This is the UTC ISO string
+        const requiredTimeISO = requiredTime.toISOString()
 
-        // Compare the UTC ISO string
         if (!availableStartTimes.has(requiredTimeISO)) {
           return false
         }
       }
       return true
     },
-
-    // MODIFIED: Show receipt dialog on success instead of alert
     async bookFacility() {
       this.validateDuration(this.selectedDuration)
 
@@ -912,18 +1012,13 @@ export default {
       }
       this.loading = true
 
-      // 1. Get the starting moment (already UTC ISO string from selectedStartSlot)
       const start = new Date(this.selectedStartSlot)
-
-      // 2. Calculate the end moment in milliseconds
       const durationInMinutes = this.selectedDuration * this.SLOT_DURATION_MINUTES
       const durationInMs = durationInMinutes * 60000
       const endTimeMs = start.getTime() + durationInMs
 
-      // 3. Convert the start and end moments back to the UTC ISO string format
-      //    to be saved in the TIMESTAMPZ column.
-      const calculatedStartTime = this.selectedStartSlot // It's already the correct UTC ISO string
-      const calculatedEndTime = new Date(endTimeMs).toISOString() // New UTC ISO string for end time
+      const calculatedStartTime = this.selectedStartSlot
+      const calculatedEndTime = new Date(endTimeMs).toISOString()
 
       try {
         const user = (await supabase.auth.getUser()).data.user
@@ -937,8 +1032,8 @@ export default {
           {
             facility_id: this.facility.id,
             booking_date: this.selectedDate,
-            start_time: calculatedStartTime, // <<-- Using the UTC ISO string
-            end_time: calculatedEndTime, // <<-- Using the UTC ISO string
+            start_time: calculatedStartTime,
+            end_time: calculatedEndTime,
             duration_hours: this.selectedDuration,
             total_cost: this.totalBookingCost,
             status: 'pending',
@@ -947,7 +1042,7 @@ export default {
         ])
         if (error) throw error
 
-        // --- NEW: Populate and Show Receipt Dialog ---
+        // Populate and Show Receipt Dialog
         this.receiptDetails = {
           date: this.selectedDate,
           startTime: this.formattedSelectedTime,
@@ -956,7 +1051,6 @@ export default {
           cost: this.totalBookingCost,
         }
         this.receiptDialog = true
-        // --- END NEW ---
 
         // Reset state and refresh data
         this.selectedStartSlot = null
@@ -970,6 +1064,13 @@ export default {
       } finally {
         this.loading = false
       }
+    },
+
+    // --- Zoom/Carousel ---
+    openZoom(photoUrl) {
+      const index = this.allPhotos.findIndex((p) => p === photoUrl)
+      this.zoomCarouselIndex = index >= 0 ? index : 0
+      this.zoomDialog = true
     },
   },
 }
