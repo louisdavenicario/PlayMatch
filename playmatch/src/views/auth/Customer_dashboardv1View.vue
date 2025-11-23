@@ -576,7 +576,7 @@ export default {
           </v-btn>
         </template>
 
-        <v-card width="320" max-height="400">
+        <v-card width="320" max-height="400" rounded="lg" elevation="2">
           <v-card-title class="text-body-1 font-weight-bold pb-1"> Notifications </v-card-title>
           <v-divider></v-divider>
 
