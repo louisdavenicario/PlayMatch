@@ -71,6 +71,10 @@ export default {
       await this.markCompletedBookings()
       this.subscribeBookingsRealtime()
     }
+
+    if (this.$route.query.tab !== undefined) {
+      this.tab = parseInt(this.$route.query.tab)
+    }
   },
 
   beforeUnmount() {

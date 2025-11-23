@@ -9,7 +9,6 @@ export default {
     playmateRequests: [],
     playmateLoading: false,
     facilities: [],
-    // New array to hold only the popular facilities (rated and sorted)
     popularFacilities: [],
     favorites: [],
     favoriteIds: [],
@@ -34,7 +33,6 @@ export default {
 
   computed: {
     filteredFacilities() {
-      // If the search query is empty, return the full, sorted list of facilities.
       if (!this.searchQuery || this.searchQuery.trim() === '') {
         return this.facilities
       }
@@ -98,6 +96,23 @@ export default {
       }
     },
 
+    async handleNotificationClick(notification) {
+      // Mark as read first
+      await this.markNotificationAsRead(notification.id)
+
+      // Route based on notification type
+      if (notification.type === 'booking_status') {
+        this.$router.push({ name: 'customer-bookings' })
+      }
+
+      if (notification.type === 'playmate_join' || notification.type === 'playmate_withdraw') {
+        this.$router.push({ name: 'playmate-requests' })
+      }
+
+      // Close dropdown after click
+      this.notificationMenu = false
+    },
+
     async fetchNotifications() {
       if (!this.currentUserId) return
 
@@ -128,7 +143,7 @@ export default {
     async subscribeNotificationsRealtime() {
       if (!this.currentUserId) return
       this.notificationSubscription = supabase
-        .channel('notifications-user-updates') // Renamed for clarity/uniqueness
+        .channel('notifications-user-updates')
         .on(
           'postgres_changes',
           {
@@ -340,7 +355,6 @@ export default {
           if (insertError) throw insertError
         }
 
-        // The real-time subscription will now handle the UI refresh (via fetchFacilities)
         this.closeRatingDialog()
       } catch (err) {
         console.error('Error submitting rating:', err.message)
@@ -398,12 +412,10 @@ export default {
           }
         })
 
-        // 1. Create a copy and filter out facilities with zero reviews for the "Popular" list
+        // filter out facilities with zero reviews for the "Popular" list
         let ratedFacilities = facilitiesWithRatings.filter((f) => f.reviews > 0)
 
-        // 2. Sort the rated facilities:
-        // Primary sort: highest numericRating first (descending)
-        // Secondary sort: more reviews first for a tie in rating (descending)
+        // Sort the rated facilities:
         ratedFacilities.sort((a, b) => {
           if (b.numericRating !== a.numericRating) {
             return b.numericRating - a.numericRating
@@ -411,8 +423,6 @@ export default {
           return b.reviews - a.reviews
         })
 
-        // 3. Assign the full sorted list to the main facilities array
-        // This sorting applies to both the 'All Facilities' list and the list used for searching (before filtering)
         facilitiesWithRatings.sort((a, b) => {
           if (b.numericRating !== a.numericRating) {
             return b.numericRating - a.numericRating
@@ -580,7 +590,7 @@ export default {
             <v-list-item
               v-for="n in notifications"
               :key="n.id"
-              @click="markNotificationAsRead(n.id)"
+              @click="handleNotificationClick(n)"
               :style="!n.read ? 'background-color: #e3f2fd;' : ''"
             >
               <v-list-item-avatar>
