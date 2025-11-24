@@ -5,22 +5,91 @@ import { supabase } from '@/supabaseClient'
 
 const activeNav = ref('profile')
 const router = useRouter()
-const route = useRoute() // Import useRoute to access parameters
+const route = useRoute()
 const profileData = ref(null)
 const loading = ref(false)
 const error = ref(null)
 
 const isEditing = ref(false)
-const formData = ref({}) // Holds data for the edit form
+const formData = ref({})
 const saving = ref(false)
-const currentUserId = ref(null) // Stores the logged-in user's ID
+const currentUserId = ref(null)
 
-// Get the user ID from the route parameter. If null, it's the self-profile view.
+const receivedRatings = ref([])
+const receivedRatingsLoading = ref(false)
+
+// ADDED: State for managing the active tab within the profile card
+const activeProfileTab = ref('details')
+
 const targetUserId = computed(() => route.params.userId || null)
-// Boolean flag to determine if we are viewing someone else's profile
 const isViewingOther = computed(
   () => targetUserId.value && targetUserId.value !== currentUserId.value,
 )
+
+// Computed property to calculate the average rating
+const averageRating = computed(() => {
+  if (!receivedRatings.value || receivedRatings.value.length === 0) {
+    return 0
+  }
+  const sum = receivedRatings.value.reduce((acc, rating) => acc + rating.rating, 0)
+  return sum / receivedRatings.value.length
+})
+
+// Fetches ratings given to the user identified by userId
+const fetchReceivedRatings = async (userId) => {
+  if (!userId) {
+    receivedRatings.value = []
+    return
+  }
+
+  receivedRatingsLoading.value = true
+  try {
+    const { data, error: ratingsError } = await supabase
+      .from('playmate_ratings')
+      .select('id, rating, comment, created_at, rater_id, request_id')
+      .eq('rated_user_id', userId)
+      .order('created_at', { ascending: false })
+
+    if (ratingsError) throw ratingsError
+
+    // Fetch rater names for all ratings
+    const raterIds = data.map((r) => r.rater_id).filter(Boolean)
+    const { data: raters } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .in('id', raterIds)
+
+    const raterMap = raters.reduce((acc, r) => {
+      acc[r.id] = r.full_name
+      return acc
+    }, {})
+
+    // Fetch request info
+    const requestIds = data.map((r) => r.request_id).filter(Boolean)
+    const { data: requests } = await supabase
+      .from('playmate_requests')
+      .select('id, sport, location')
+      .in('id', requestIds)
+
+    const requestMap = requests.reduce((acc, r) => {
+      acc[r.id] = r
+      return acc
+    }, {})
+
+    receivedRatings.value = data.map((r) => ({
+      ...r,
+      rater_name: raterMap[r.rater_id] || 'Anonymous',
+      match_info: r.request_id
+        ? `${requestMap[r.request_id]?.sport || 'Unknown Sport'} at ${requestMap[r.request_id]?.location || 'Unknown Location'}`
+        : 'No match info',
+    }))
+  } catch (err) {
+    console.error('Error fetching received ratings:', err.message)
+    receivedRatings.value = []
+  } finally {
+    receivedRatingsLoading.value = false
+  }
+}
 
 // Fetches the user's profile data from Supabase.
 const fetchProfile = async () => {
@@ -39,13 +108,12 @@ const fetchProfile = async () => {
       router.push({ name: 'signin' })
       return
     }
-    currentUserId.value = user.id // Store logged-in user's ID
+    currentUserId.value = user.id
 
     // 2. Determine which profile ID to fetch
     const idToFetch = targetUserId.value || user.id
 
     // 3. Fetch the corresponding profile data
-    // For security, we only fetch public details (no need for email for others)
     const { data, error: fetchError } = await supabase
       .from('profiles')
       .select('full_name, phone_number, address, city, zip_code, role')
@@ -61,20 +129,19 @@ const fetchProfile = async () => {
       ...data,
     }
 
-    // If viewing self-profile, include the authenticated user's email
     if (!isViewingOther.value) {
       finalData.email = user.email
     } else {
-      // For other users, email is generally kept private or not fetched.
       finalData.email = 'Hidden'
     }
 
     profileData.value = finalData
 
-    // Initialize form data only if it is the self-profile view
     if (!isViewingOther.value) {
       formData.value = { ...finalData }
     }
+
+    await fetchReceivedRatings(idToFetch)
   } catch (err) {
     console.error('Profile fetch failed:', err.message)
     error.value = 'Failed to load profile. Please try again.'
@@ -83,7 +150,6 @@ const fetchProfile = async () => {
   }
 }
 
-// Ensure editing is only possible for the logged-in user's profile
 const toggleEdit = () => {
   if (isViewingOther.value || !profileData.value) return
   isEditing.value = !isEditing.value
@@ -93,11 +159,10 @@ const toggleEdit = () => {
 }
 
 const saveProfile = async () => {
-  // Save is only allowed for the current user
   if (isViewingOther.value) return
 
   saving.value = true
-  error.value = null // Clear any previous errors
+  error.value = null
 
   try {
     const updates = {
@@ -107,10 +172,9 @@ const saveProfile = async () => {
       address: formData.value.address,
       city: formData.value.city,
       zip_code: formData.value.zip_code,
-      updated_at: new Date().toISOString(), // Track update time
+      updated_at: new Date().toISOString(),
     }
 
-    // Update the 'profiles' table in Supabase
     const { error: updateError } = await supabase
       .from('profiles')
       .update(updates)
@@ -121,8 +185,7 @@ const saveProfile = async () => {
       throw updateError
     }
 
-    // Successfully updated
-    await fetchProfile() // Re-fetch to show latest data
+    await fetchProfile()
     isEditing.value = false
   } catch (err) {
     console.error('Profile update failed:', err.message)
@@ -177,8 +240,8 @@ onMounted(() => {
                 Error: {{ error }}
               </v-alert>
 
-              <v-card-text v-else-if="profileData">
-                <div class="text-center mb-6">
+              <v-card-text v-else-if="profileData" class="pa-0">
+                <div class="text-center mb-6 px-6">
                   <v-avatar size="100" color="primary lighten-1" class="mb-3 elevation-2">
                     <span v-if="profileData.full_name" class="white--text text-h4">
                       {{ profileData.full_name.charAt(0).toUpperCase() }}
@@ -193,111 +256,215 @@ onMounted(() => {
                   </p>
                 </div>
 
-                <v-list dense class="profile-details-list" v-if="!isEditing">
-                  <v-list-item class="list-item-hover">
-                    <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
-                      <v-icon color="blue">mdi-email-outline</v-icon> Email Address
-                    </p>
-                    <v-list-item-content>
-                      <v-list-item-subtitle>{{
-                        isViewingOther ? 'Contact via chat/request' : profileData.email
-                      }}</v-list-item-subtitle>
-                    </v-list-item-content>
-                  </v-list-item>
+                <v-tabs
+                  v-model="activeProfileTab"
+                  color="primary"
+                  align-tabs="center"
+                  grow
+                  class="mb-4"
+                >
+                  <v-tab value="details">
+                    <v-icon start>mdi-account-details-outline</v-icon>
+                    Details
+                  </v-tab>
+                  <v-tab value="ratings">
+                    <v-icon start>mdi-star-face</v-icon>
+                    Ratings ({{ receivedRatings.length }})
+                  </v-tab>
+                </v-tabs>
 
-                  <v-divider class="mt-3"></v-divider>
+                <v-window v-model="activeProfileTab" class="px-6 pb-4">
+                  <v-window-item value="details">
+                    <v-list dense class="profile-details-list" v-if="!isEditing">
+                      <div class="mb-4">
+                        <p class="text-subtitle-1 grey--text text--darken-1 mb-1">
+                          <v-icon class="mr-1" color="yellow-darken-2">mdi-star</v-icon> Overall
+                          Rating
+                        </p>
+                        <div v-if="receivedRatings.length > 0" class="d-flex align-center">
+                          <v-rating
+                            :model-value="averageRating"
+                            size="small"
+                            density="compact"
+                            readonly
+                            half-increments
+                            color="yellow-darken-2"
+                            class="mr-2"
+                          ></v-rating>
+                          <span class="text-subtitle-1 font-weight-bold">
+                            {{ averageRating.toFixed(1) }}
+                          </span>
+                          <span class="text-caption grey--text ml-1">
+                            / 5 ({{ receivedRatings.length }} reviews)
+                          </span>
+                        </div>
+                        <p v-else class="text-body-2 text-medium-emphasis">No ratings yet.</p>
+                      </div>
 
-                  <v-list-item class="list-item-hover">
-                    <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
-                      <v-icon color="green">mdi-account-details-outline</v-icon> Full Name
-                    </p>
-                    <v-list-item-content>
-                      <v-list-item-subtitle>{{
-                        profileData.full_name || 'N/A'
-                      }}</v-list-item-subtitle>
-                    </v-list-item-content>
-                  </v-list-item>
+                      <v-divider class="my-3"></v-divider>
 
-                  <v-divider class="mt-3"></v-divider>
+                      <v-list-item class="list-item-hover">
+                        <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
+                          <v-icon color="blue">mdi-email-outline</v-icon> Email Address
+                        </p>
+                        <div>
+                          <span class="text-subtitle-1 text-medium-emphasis">{{
+                            isViewingOther ? 'Contact via chat/request' : profileData.email
+                          }}</span>
+                        </div>
+                      </v-list-item>
 
-                  <v-list-item class="list-item-hover">
-                    <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
-                      <v-icon color="green">mdi-phone-outline</v-icon> Phone Number
-                    </p>
-                    <v-list-item-content>
-                      <v-list-item-subtitle>{{
-                        profileData.phone_number || 'N/A'
-                      }}</v-list-item-subtitle>
-                    </v-list-item-content>
-                  </v-list-item>
+                      <v-divider class="mt-3"></v-divider>
 
-                  <v-divider class="mt-3"></v-divider>
+                      <v-list-item class="list-item-hover">
+                        <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
+                          <v-icon color="green">mdi-account-details-outline</v-icon> Full Name
+                        </p>
+                        <div>
+                          <span class="text-subtitle-1 text-medium-emphasis">{{
+                            profileData.full_name || 'N/A'
+                          }}</span>
+                        </div>
+                      </v-list-item>
 
-                  <v-list-item class="list-item-hover">
-                    <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
-                      <v-icon color="orange">mdi-map-marker-outline</v-icon> Address
-                    </p>
-                    <v-list-item-content>
-                      <v-list-item-subtitle>
-                        {{ profileData.address || 'N/A' }}
-                        {{ profileData.city || ''
-                        }}{{ profileData.city && profileData.zip_code ? ', ' : ''
-                        }}{{ profileData.zip_code || '' }}
-                      </v-list-item-subtitle>
-                    </v-list-item-content>
-                  </v-list-item>
-                </v-list>
+                      <v-divider class="mt-3"></v-divider>
 
-                <v-form v-else @submit.prevent="saveProfile">
-                  <v-text-field
-                    v-model="formData.full_name"
-                    label="Full Name"
-                    prepend-icon="mdi-account"
-                    required
-                    class="mb-3"
-                  ></v-text-field>
+                      <v-list-item class="list-item-hover">
+                        <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
+                          <v-icon color="green">mdi-phone-outline</v-icon> Phone Number
+                        </p>
+                        <div>
+                          <span class="text-subtitle-1 text-medium-emphasis">{{
+                            profileData.phone_number || 'N/A'
+                          }}</span>
+                        </div>
+                      </v-list-item>
 
-                  <v-text-field
-                    :value="profileData.email"
-                    label="Email Address (Read Only)"
-                    prepend-icon="mdi-email"
-                    disabled
-                    class="mb-3"
-                  ></v-text-field>
+                      <v-divider class="mt-3"></v-divider>
 
-                  <v-text-field
-                    v-model="formData.phone_number"
-                    label="Phone Number"
-                    prepend-icon="mdi-phone"
-                    class="mb-3"
-                  ></v-text-field>
+                      <v-list-item class="list-item-hover">
+                        <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
+                          <v-icon color="orange">mdi-map-marker-outline</v-icon> Address
+                        </p>
+                        <div>
+                          <span class="text-subtitle-1 text-medium-emphasis">
+                            {{ profileData.address || 'N/A' }}
+                            {{ profileData.city || ''
+                            }}{{ profileData.city && profileData.zip_code ? ', ' : ''
+                            }}{{ profileData.zip_code || '' }}
+                          </span>
+                        </div>
+                      </v-list-item>
+                    </v-list>
 
-                  <v-text-field
-                    v-model="formData.address"
-                    label="Street Address"
-                    prepend-icon="mdi-map-marker"
-                    class="mb-3"
-                  ></v-text-field>
-
-                  <v-row>
-                    <v-col cols="12" sm="6">
+                    <v-form v-else @submit.prevent="saveProfile">
                       <v-text-field
-                        v-model="formData.city"
-                        label="City"
-                        prepend-icon="mdi-city"
+                        v-model="formData.full_name"
+                        label="Full Name"
+                        prepend-icon="mdi-account"
+                        required
                         class="mb-3"
                       ></v-text-field>
-                    </v-col>
-                    <v-col cols="12" sm="6">
+
                       <v-text-field
-                        v-model="formData.zip_code"
-                        label="ZIP Code"
-                        prepend-icon="mdi-postage-box"
+                        :value="profileData.email"
+                        label="Email Address (Read Only)"
+                        prepend-icon="mdi-email"
+                        disabled
                         class="mb-3"
                       ></v-text-field>
-                    </v-col>
-                  </v-row>
-                </v-form>
+
+                      <v-text-field
+                        v-model="formData.phone_number"
+                        label="Phone Number"
+                        prepend-icon="mdi-phone"
+                        class="mb-3"
+                      ></v-text-field>
+
+                      <v-text-field
+                        v-model="formData.address"
+                        label="Street Address"
+                        prepend-icon="mdi-map-marker"
+                        class="mb-3"
+                      ></v-text-field>
+
+                      <v-row>
+                        <v-col cols="12" sm="6">
+                          <v-text-field
+                            v-model="formData.city"
+                            label="City"
+                            prepend-icon="mdi-city"
+                            class="mb-3"
+                          ></v-text-field>
+                        </v-col>
+                        <v-col cols="12" sm="6">
+                          <v-text-field
+                            v-model="formData.zip_code"
+                            label="ZIP Code"
+                            prepend-icon="mdi-postage-box"
+                            class="mb-3"
+                          ></v-text-field>
+                        </v-col>
+                      </v-row>
+                    </v-form>
+                  </v-window-item>
+
+                  <v-window-item value="ratings">
+                    <div v-if="receivedRatingsLoading" class="text-center py-4">
+                      <v-progress-circular indeterminate color="primary"></v-progress-circular>
+                      <p class="mt-2 text-caption grey--text">Fetching ratings and comments...</p>
+                    </div>
+
+                    <v-list
+                      v-else-if="receivedRatings.length"
+                      lines="two"
+                      density="compact"
+                      class="py-0"
+                    >
+                      <v-list-item
+                        v-for="rating in receivedRatings"
+                        :key="rating.created_at"
+                        class="mb-3 pa-3 rounded-lg list-item-hover d-block"
+                        color="primary"
+                      >
+                        <div class="d-flex justify-space-between align-start">
+                          <div class="mb-1">
+                            <span class="font-weight-bold text-subtitle-1 mr-1">
+                              {{ rating.rater_name }}
+                            </span>
+                            <span class="text-caption text-medium-emphasis">
+                              ({{ rating.match_info }})
+                            </span>
+                          </div>
+                        </div>
+
+                        <div class="d-flex align-center mb-1">
+                          <v-rating
+                            :model-value="rating.rating"
+                            size="small"
+                            density="compact"
+                            readonly
+                            color="yellow-darken-2"
+                          ></v-rating>
+                        </div>
+
+                        <v-list-item-subtitle v-if="rating.comment" class="text-wrap">
+                          "{{ rating.comment }}"
+                        </v-list-item-subtitle>
+                        <v-list-item-subtitle v-else class="text-medium-emphasis">
+                          (No comment provided)
+                        </v-list-item-subtitle>
+                        <span class="text-caption text-grey-darken-1 text-right">
+                          {{ new Date(rating.created_at).toLocaleDateString() }}
+                        </span>
+                      </v-list-item>
+                    </v-list>
+
+                    <div v-else>
+                      <p class="text-medium-emphasis text-center py-8">No ratings received yet.</p>
+                    </div>
+                  </v-window-item>
+                </v-window>
               </v-card-text>
 
               <v-card-actions class="pt-4 px-4 justify-end" v-if="!isViewingOther">
