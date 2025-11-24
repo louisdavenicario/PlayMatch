@@ -42,202 +42,289 @@
         </v-card>
 
         <v-card class="pa-3 mb-4" rounded="lg" elevation="1">
-          <v-chip-group v-model="matchTypeFilter" active-class="blue white--text" column mandatory>
-            <v-chip value="all"> All Requests </v-chip>
-            <v-chip value="individual" color="light-blue" text-color="white">
-              Seeking Players
-            </v-chip>
-            <v-chip value="team" color="deep-purple" text-color="white"> Opponent Teams </v-chip>
-          </v-chip-group>
+          <v-tabs v-model="mainTab" background-color="transparent" grow>
+            <v-tab>Active Requests</v-tab>
+            <v-tab>Recently Played</v-tab>
+          </v-tabs>
+
+          <div v-if="mainTab === 0" class="pt-3">
+            <v-chip-group
+              v-model="matchTypeFilter"
+              active-class="blue white--text"
+              column
+              mandatory
+            >
+              <v-chip value="all"> All Requests </v-chip>
+              <v-chip value="individual" color="light-blue" text-color="white">
+                Seeking Players
+              </v-chip>
+              <v-chip value="team" color="deep-purple" text-color="white"> Opponent Teams </v-chip>
+            </v-chip-group>
+          </div>
         </v-card>
 
-        <div v-if="loading" class="text-center py-10">
-          <v-progress-circular indeterminate color="blue"></v-progress-circular>
-          <p class="mt-2 grey--text">Loading playmate requests...</p>
-        </div>
+        <div v-if="mainTab === 0">
+          <div v-if="loading" class="text-center py-10">
+            <v-progress-circular indeterminate color="blue"></v-progress-circular>
+            <p class="mt-2 grey--text">Loading playmate requests...</p>
+          </div>
 
-        <div v-else-if="filteredRequests.length === 0" class="text-center py-10">
-          <v-icon large color="grey lighten-1">mdi-account-group-outline</v-icon>
-          <h3 class="mt-2 text-h6 grey--text">
-            No active requests found for your current filters.
-          </h3>
-          <p class="grey--text">Be the first to create a playmate request!</p>
-          <v-btn color="blue" dark class="mt-4" rounded @click="dialog = true">
-            <v-icon left>mdi-plus-circle-outline</v-icon> Create Request
-          </v-btn>
-        </div>
+          <div v-else-if="filteredRequests.length === 0" class="text-center py-10">
+            <v-icon large color="grey lighten-1">mdi-account-group-outline</v-icon>
+            <h3 class="mt-2 text-h6 grey--text">
+              No active requests found for your current filters.
+            </h3>
+            <p class="grey--text">Be the first to create a playmate request!</p>
+            <v-btn color="blue" dark class="mt-4" rounded @click="dialog = true">
+              <v-icon left>mdi-plus-circle-outline</v-icon> Create Request
+            </v-btn>
+          </div>
 
-        <v-row v-else>
-          <v-col cols="12" v-for="request in filteredRequests" :key="request.id">
-            <v-card class="pa-4" rounded="lg" elevation="2">
-              <div class="d-flex align-center">
-                <v-avatar
-                  color="blue lighten-4"
-                  size="50"
-                  class="mr-4"
-                  style="cursor: pointer"
-                  @click="viewUserProfile(request.creator_id)"
-                >
-                  <span class="white--text font-weight-bold">{{ request.creator_name[0] }}</span>
-                </v-avatar>
-                <div>
-                  <div class="font-weight-bold text-subtitle-1">
-                    {{ request.sport }}
-                    <v-chip
-                      x-small
-                      :color="
-                        request.status === 'open'
-                          ? 'green'
-                          : request.status === 'canceled'
-                            ? 'red'
-                            : 'orange'
-                      "
-                      dark
-                      class="ml-2"
-                    >
-                      {{ request.status }}
-                    </v-chip>
-                    <v-chip
-                      x-small
-                      :color="request.match_type === 'team' ? 'deep-purple' : 'light-blue'"
-                      dark
-                      class="ml-1"
-                    >
-                      {{ request.match_type === 'team' ? 'Team Match' : 'Seeking Players' }}
-                    </v-chip>
-                  </div>
-                  <div class="text-caption grey--text">
-                    <span
-                      style="cursor: pointer; text-decoration: underline"
-                      class="blue--text"
-                      @click="viewUserProfile(request.creator_id)"
-                    >
-                      {{ request.creator_name }}
-                    </span>
-                    wants to play at {{ request.location }}
+          <v-row v-else>
+            <v-col cols="12" v-for="request in filteredRequests" :key="request.id">
+              <v-card class="pa-4" rounded="lg" elevation="2">
+                <div class="d-flex align-center">
+                  <v-avatar
+                    color="blue lighten-4"
+                    size="50"
+                    class="mr-4"
+                    style="cursor: pointer"
+                    @click="viewUserProfile(request.creator_id)"
+                  >
+                    <span class="white--text font-weight-bold">{{ request.creator_name[0] }}</span>
+                  </v-avatar>
+                  <div>
+                    <div class="font-weight-bold text-subtitle-1">
+                      {{ request.sport }}
+                      <v-chip
+                        x-small
+                        :color="
+                          request.status === 'open'
+                            ? 'green'
+                            : request.status === 'canceled'
+                              ? 'red'
+                              : 'orange'
+                        "
+                        dark
+                        class="ml-2"
+                      >
+                        {{ request.status }}
+                      </v-chip>
+                      <v-chip
+                        x-small
+                        :color="request.match_type === 'team' ? 'deep-purple' : 'light-blue'"
+                        dark
+                        class="ml-1"
+                      >
+                        {{ request.match_type === 'team' ? 'Team Match' : 'Seeking Players' }}
+                      </v-chip>
+                    </div>
+                    <div class="text-caption grey--text">
+                      <span
+                        style="cursor: pointer; text-decoration: underline"
+                        class="blue--text"
+                        @click="viewUserProfile(request.creator_id)"
+                      >
+                        {{ request.creator_name }}
+                      </span>
+                      wants to play at {{ request.location }}
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <v-divider class="my-3"></v-divider>
+                <v-divider class="my-3"></v-divider>
 
-              <div class="d-flex justify-space-between text-caption">
-                <span class="d-flex align-center">
-                  <v-icon small class="mr-1">mdi-calendar-range</v-icon>
-                  {{ formatDate(request.date) }}
-                </span>
-                <span class="d-flex align-center">
-                  <v-icon small class="mr-1">mdi-clock-time-four-outline</v-icon>
-                  {{ formatTime(request.start_time) }}
-                </span>
-                <span class="d-flex align-center">
-                  <v-icon small class="mr-1">{{
-                    request.match_type === 'team' ? 'mdi-trophy' : 'mdi-account-group'
-                  }}</v-icon>
-                  {{
-                    request.match_type === 'team'
-                      ? `Seeking Team (Max ${request.max_joins} players)`
-                      : `${request.joins_count} / ${request.max_joins} joined`
-                  }}
-                </span>
-              </div>
-
-              <p class="text-body-2 mt-3 mb-1 grey--text text-truncate">
-                {{ request.description || 'No specific notes provided.' }}
-              </p>
-
-              <v-card
-                v-if="request.joins_count > 0 || request.match_type === 'team'"
-                flat
-                class="mt-3 pa-2 rounded-sm"
-                :class="
-                  request.match_type === 'team' ? 'deep-purple lighten-5' : 'light-blue lighten-5'
-                "
-              >
-                <div
-                  class="text-body-2"
-                  :class="
-                    request.match_type === 'team'
-                      ? 'deep-purple--text text-darken-2'
-                      : 'light-blue--text text-darken-2'
-                  "
-                >
-                  <span v-if="request.match_type === 'team'">
-                    <span class="font-weight-bold">{{ request.creator_name }} Team</span>
-                    vs.
-                    <span v-if="request.joiners && request.joiners.length > 0">
-                      <strong
-                        class="mx-1"
-                        style="cursor: pointer; text-decoration: underline"
-                        @click="viewUserProfile(request.joiners[0].user_id)"
-                      >
-                        {{ request.joiners[0].full_name }} Team
-                      </strong>
-                      (Opponent Contact)
-                    </span>
-                    <span v-else class="grey--text font-italic">No opponent yet.</span>
+                <div class="d-flex justify-space-between text-caption">
+                  <span class="d-flex align-center">
+                    <v-icon small class="mr-1">mdi-calendar-range</v-icon>
+                    {{ formatDate(request.date) }}
+                  </span>
+                  <span class="d-flex align-center">
+                    <v-icon small class="mr-1">mdi-clock-time-four-outline</v-icon>
+                    {{ formatTime(request.start_time) }} - {{ formatTime(request.end_time) }}
                   </span>
 
-                  <span v-else class="d-flex flex-column">
-                    <span class="font-weight-medium mb-1">Joiners:</span>
-                    <span
-                      v-for="(joiner, index) in request.joiners"
-                      :key="index"
-                      class="text-body-2"
-                    >
+                  <span class="d-flex align-center">
+                    <v-icon small class="mr-1">{{
+                      request.match_type === 'team' ? 'mdi-trophy' : 'mdi-account-group'
+                    }}</v-icon>
+                    {{
+                      request.match_type === 'team'
+                        ? `Seeking Team (Max ${request.max_joins} players)`
+                        : `${request.joins_count} / ${request.max_joins} joined`
+                    }}
+                  </span>
+                </div>
+
+                <p class="text-body-2 mt-3 mb-1 grey--text text-truncate">
+                  {{ request.description || 'No specific notes provided.' }}
+                </p>
+
+                <v-card
+                  v-if="request.joins_count > 0 || request.match_type === 'team'"
+                  flat
+                  class="mt-3 pa-2 rounded-sm"
+                  :class="
+                    request.match_type === 'team' ? 'deep-purple lighten-5' : 'light-blue lighten-5'
+                  "
+                >
+                  <div
+                    class="text-body-2"
+                    :class="
+                      request.match_type === 'team'
+                        ? 'deep-purple--text text-darken-2'
+                        : 'light-blue--text text-darken-2'
+                    "
+                  >
+                    <span v-if="request.match_type === 'team'">
+                      <span class="font-weight-bold">{{ request.creator_name }} Team</span>
+                      vs.
+                      <span v-if="request.joiners && request.joiners.length > 0">
+                        <strong
+                          class="mx-1"
+                          style="cursor: pointer; text-decoration: underline"
+                          @click="viewUserProfile(request.joiners[0].user_id)"
+                        >
+                          {{ request.joiners[0].full_name }} Team
+                        </strong>
+                        (Opponent Contact)
+                      </span>
+                      <span v-else class="grey--text font-italic">No opponent yet.</span>
+                    </span>
+
+                    <span v-else class="d-flex flex-column">
+                      <span class="font-weight-medium mb-1">Joiners:</span>
                       <span
-                        class="blue--text"
-                        style="cursor: pointer; text-decoration: underline"
-                        @click="viewUserProfile(joiner.user_id)"
+                        v-for="(joiner, index) in request.joiners"
+                        :key="index"
+                        class="text-body-2"
                       >
-                        {{ joiner.full_name }}
+                        <span
+                          class="blue--text"
+                          style="cursor: pointer; text-decoration: underline"
+                          @click="viewUserProfile(joiner.user_id)"
+                        >
+                          {{ joiner.full_name }}
+                        </span>
+                      </span>
+                      <span v-if="request.joins_count === 0" class="grey--text font-italic">
+                        Be the first to join!
                       </span>
                     </span>
-                    <span v-if="request.joins_count === 0" class="grey--text font-italic">
-                      Be the first to join!
-                    </span>
-                  </span>
-                </div>
-              </v-card>
+                  </div>
+                </v-card>
 
-              <v-card-actions class="pa-0 pt-2">
-                <v-btn
-                  small
-                  :color="
-                    isJoined(request.id)
-                      ? 'red'
-                      : isCreator(request.creator_id)
-                        ? 'orange darken-1'
-                        : request.match_type === 'team'
-                          ? 'deep-purple' // Distinct color for team match join
-                          : 'blue'
-                  "
-                  dark
-                  rounded
-                  block
-                  :disabled="request.status !== 'open' && !isCreator(request.creator_id)"
-                  @click="handleJoinToggle(request)"
-                >
-                  {{
-                    isCreator(request.creator_id)
-                      ? 'Manage'
-                      : isJoined(request.id)
-                        ? 'Withdraw'
-                        : request.status === 'full' && request.match_type === 'individual'
-                          ? 'Full'
+                <v-card-actions class="pa-0 pt-2">
+                  <v-btn
+                    small
+                    :color="
+                      isJoined(request.id)
+                        ? 'red'
+                        : isCreator(request.creator_id)
+                          ? 'orange darken-1'
                           : request.match_type === 'team'
-                            ? 'Accept Challenge'
-                            : 'Join'
-                  }}
-                </v-btn>
-              </v-card-actions>
-            </v-card>
-          </v-col>
-        </v-row>
+                            ? 'deep-purple'
+                            : 'blue'
+                    "
+                    dark
+                    rounded
+                    block
+                    :disabled="request.status !== 'open' && !isCreator(request.creator_id)"
+                    @click="handleJoinToggle(request)"
+                  >
+                    {{
+                      isCreator(request.creator_id)
+                        ? 'Manage'
+                        : isJoined(request.id)
+                          ? 'Withdraw'
+                          : request.status === 'full' && request.match_type === 'individual'
+                            ? 'Full'
+                            : request.match_type === 'team'
+                              ? 'Accept Challenge'
+                              : 'Join'
+                    }}
+                  </v-btn>
+                </v-card-actions>
+              </v-card>
+            </v-col>
+          </v-row>
+        </div>
+
+        <div v-if="mainTab === 1">
+          <v-alert
+            type="info"
+            class="mt-4 mb-4"
+            variant="tonal"
+            title="Rating Window"
+            text="Matches that ended in the last 24 hours are displayed here for rating. The rating window closes 7 days after the match ends."
+            colored-border
+            border="left"
+            prominent
+          >
+          </v-alert>
+
+          <div v-if="loading" class="text-center py-10">
+            <v-progress-circular indeterminate color="blue"></v-progress-circular>
+            <p class="mt-2 grey--text">Loading recently played...</p>
+          </div>
+
+          <div
+            v-else-if="!finishedPlaymates || finishedPlaymates.length === 0"
+            class="text-center py-10"
+          >
+            <v-icon large color="grey lighten-1">mdi-history</v-icon>
+            <h3 class="mt-2 text-h6 grey--text">No recently played matches found.</h3>
+            <p class="grey--text">Go play some sports!</p>
+          </div>
+
+          <v-card
+            v-for="play in finishedPlaymates"
+            :key="play.id"
+            class="mb-3 pa-4"
+            rounded="lg"
+            elevation="2"
+            color="blue-grey lighten-5"
+          >
+            <div class="font-weight-bold text-h6 primary--text mb-1">
+              {{ play.sport }} - {{ play.location }}
+            </div>
+            <div class="text-caption grey--text mb-3">
+              Ended: {{ formatDate(play.date) }} at {{ formatTime(play.end_time) }}
+            </div>
+
+            <v-divider class="mb-3"></v-divider>
+
+            <div class="text-body-2 font-weight-medium mb-2">Rate Your Playmates:</div>
+
+            <v-chip-group column>
+              <v-chip
+                v-for="p in play.players"
+                :key="p.user_id"
+                class="ma-1"
+                :color="isRatingWindowExpired(play.end_time_ts) ? 'grey' : 'blue lighten-1'"
+                :text-color="isRatingWindowExpired(play.end_time_ts) ? 'grey darken-3' : 'white'"
+                @click="openRateDialog(p, play.id)"
+                :disabled="isRatingWindowExpired(play.end_time_ts)"
+              >
+                {{ p.full_name }}
+                <v-icon right x-small>{{
+                  isRatingWindowExpired(play.end_time_ts) ? 'mdi-close-octagon' : 'mdi-star-face'
+                }}</v-icon>
+              </v-chip>
+            </v-chip-group>
+
+            <div
+              class="text-caption mt-2 red--text font-weight-medium"
+              v-if="isRatingWindowExpired(play.end_time_ts)"
+            >
+              <v-icon small color="red" class="mr-1">mdi-alert-circle-outline</v-icon>
+              Rating window for this match has expired.
+            </div>
+          </v-card>
+        </div>
       </v-container>
     </v-main>
 
-    <!-- Create Request Dialog (unchanged) -->
     <v-dialog v-model="dialog" max-width="500px">
       <v-card rounded="lg">
         <v-card-title class="text-h5 blue white--text">Create New Request</v-card-title>
@@ -330,6 +417,21 @@
               class="mb-3"
             ></v-text-field>
 
+            <v-text-field
+              v-model="newRequest.end_time"
+              label="End Time"
+              type="time"
+              :rules="[
+                (v) => !!v || 'End time is required',
+                (v) =>
+                  !newRequest.start_time ||
+                  v > newRequest.start_time ||
+                  'End time must be after start time',
+              ]"
+              required
+              class="mb-3"
+            ></v-text-field>
+
             <v-textarea
               v-model="newRequest.description"
               label="Description (e.g., skill level, rules, duration)"
@@ -349,7 +451,6 @@
       </v-card>
     </v-dialog>
 
-    <!-- Manage Dialog (unchanged except participants clickable) -->
     <v-dialog v-model="manageDialog" max-width="600px">
       <v-card rounded="lg">
         <v-card-title class="text-h5 orange darken-1 white--text">Manage Your Request</v-card-title>
@@ -484,6 +585,21 @@
                   class="mb-3"
                 ></v-text-field>
 
+                <v-text-field
+                  v-model="selectedRequest.end_time"
+                  label="End Time"
+                  type="time"
+                  :rules="[
+                    (v) => !!v || 'End time is required',
+                    (v) =>
+                      !selectedRequest.start_time ||
+                      v > selectedRequest.start_time ||
+                      'End time must be after start time',
+                  ]"
+                  required
+                  class="mb-3"
+                ></v-text-field>
+
                 <v-textarea
                   v-model="selectedRequest.description"
                   label="Description"
@@ -524,7 +640,6 @@
       </v-card>
     </v-dialog>
 
-    <!--  Profile Dialog  -->
     <v-dialog v-model="profileDialog" max-width="480px">
       <v-card rounded="lg">
         <v-card-title class="d-flex align-center mt-4">
@@ -570,6 +685,33 @@
 
               <v-list-item>
                 <v-list-item-content>
+                  <v-list-item-title class="grey--text text-caption"
+                    >Average Rating</v-list-item-title
+                  >
+                  <v-list-item-subtitle class="mt-2">
+                    <div class="d-flex align-center">
+                      <v-rating
+                        :value="averageRating"
+                        readonly
+                        dense
+                        half-increments
+                        color="yellow darken-3"
+                        background-color="grey lighten-2"
+                        size="18"
+                      ></v-rating>
+                      <span class="ml-2 font-weight-bold"> ({{ profileRatings.length }}) </span>
+                      <span class="ml-2 font-weight-bold">
+                        {{ averageRating ? averageRating.toFixed(1) : 'N/A' }}
+                      </span>
+                    </div>
+                  </v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-divider class="my-2"></v-divider>
+
+              <v-list-item>
+                <v-list-item-content>
                   <v-list-item-title class="grey--text text-caption">Address</v-list-item-title>
                   <v-list-item-subtitle>
                     {{ fullAddress || '—' }}
@@ -596,6 +738,31 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn text color="grey" @click="closeProfileDialog">Close</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog v-model="ratingDialog" max-width="400px">
+      <v-card rounded="lg">
+        <v-card-title class="blue darken-1 white--text">Rate Player</v-card-title>
+        <v-card-text class="pt-4">
+          <p class="text-subtitle-1 mb-2 font-weight-medium">
+            Rating: {{ selectedPlayerToRate ? selectedPlayerToRate.full_name : '' }}
+          </p>
+          <v-rating v-model="newRating.rating" length="5" color="amber" large></v-rating>
+          <v-textarea
+            v-model="newRating.comment"
+            label="Comment (optional)"
+            class="mt-3"
+            rows="3"
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer></v-spacer>
+          <v-btn text @click="ratingDialog = false">Cancel</v-btn>
+          <v-btn color="blue" dark @click="submitRating" :disabled="newRating.rating === 0">
+            Submit
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -632,12 +799,24 @@ export default {
       max_joins: 4,
       date: '',
       start_time: '',
+      end_time: '',
       description: '',
       match_type: 'individual',
     },
     todayDate: new Date().toISOString().split('T')[0],
 
-    // Profile dialog state
+    // DATA PROPERTIES FOR TABS AND RATING
+    mainTab: 0, // 0 for Active Requests, 1 for Recently Played
+    finishedPlaymates: [],
+    ratingDialog: false,
+    selectedPlayerToRate: null,
+    newRating: {
+      rating: 0,
+      comment: '',
+      request_id: null,
+      rated_user_id: null,
+    },
+    existingRatingId: null,
     profileDialog: false,
     profileLoading: false,
     profileFound: false,
@@ -651,8 +830,18 @@ export default {
       phone_number: null,
       updated_at: null,
     },
+    profileRatings: [],
+    statusCheckTimer: null,
   }),
   computed: {
+    // Calculates the average rating for the viewed user
+    averageRating() {
+      if (!this.profileRatings.length) {
+        return 0
+      }
+      const sum = this.profileRatings.reduce((acc, rating) => acc + rating.rating, 0)
+      return sum / this.profileRatings.length
+    },
     sportChoices() {
       return [...this.baseSports, 'Other (Specify)']
     },
@@ -697,13 +886,59 @@ export default {
       return parts.join(', ')
     },
   },
+  watch: {
+    mainTab(newVal) {
+      // Fetch data when the tab is switched
+      if (newVal === 1) {
+        this.fetchFinishedPlaymates()
+      } else if (newVal === 0) {
+        this.fetchRequestsAndJoins()
+      }
+    },
+  },
   async mounted() {
     await this.getCurrentUser()
     this.fetchRequestsAndJoins()
-    this.fetchFacilities()
+    this.fetchFacilities() // Call fetchFinishedPlaymates on initial load so data is ready when user switches tab
+    this.fetchFinishedPlaymates()
+    this.startStatusCheckTimer()
+  },
+  beforeUnmount() {
+    this.stopStatusCheckTimer()
   },
   methods: {
-    // Formatting helpers
+    // UTILITY TO CHECK IF REQUEST IS PAST END_TIME
+    isPastEndTime(date, endTime) {
+      if (!date || !endTime) return false // Combines date and time to create a full datetime object
+      const requestEnd = new Date(`${date}T${endTime}`) // Add a 30-second buffer to account for minor clock discrepancies
+      requestEnd.setSeconds(requestEnd.getSeconds() + 30)
+      return new Date() > requestEnd
+    },
+
+    startStatusCheckTimer() {
+      this.statusCheckTimer = setInterval(async () => {
+        const beforeCount = this.playmateRequests.length // This removes expired requests from the Active tab list
+
+        this.playmateRequests = this.playmateRequests.filter((request) => {
+          return !this.isPastEndTime(request.date, request.end_time)
+        })
+
+        const afterCount = this.playmateRequests.length
+
+        if (beforeCount !== afterCount) {
+          await this.fetchRequestsAndJoins()
+          await this.fetchFinishedPlaymates()
+        }
+      }, 30000) // every 30 seconds
+    },
+
+    stopStatusCheckTimer() {
+      if (this.statusCheckTimer) {
+        clearInterval(this.statusCheckTimer)
+        this.statusCheckTimer = null
+      }
+    },
+
     formatDate(dateString) {
       if (!dateString) return ''
       return new Date(dateString + 'T00:00:00').toLocaleDateString(undefined, {
@@ -737,6 +972,218 @@ export default {
       }
     },
 
+    isRatingWindowExpired(endTimeTimestamp) {
+      if (!endTimeTimestamp) return false
+      const expiryDate = new Date(endTimeTimestamp)
+      expiryDate.setDate(expiryDate.getDate() + 7)
+      return new Date() > expiryDate
+    }, //  Fetches all ratings for a given user ID
+
+    async fetchUserRatings(userId) {
+      if (!userId) {
+        this.profileRatings = []
+        return
+      }
+      try {
+        const { data, error } = await supabase
+          .from('playmate_ratings')
+          .select('rating')
+          .eq('rated_user_id', userId)
+
+        if (error) throw error
+
+        this.profileRatings = data || []
+      } catch (err) {
+        console.error('Error fetching user ratings:', err.message)
+        this.profileRatings = []
+      }
+    }, // Function to check if a rating already exists
+
+    async checkExistingRating(raterId, ratedUserId, requestId) {
+      try {
+        const { data, error } = await supabase
+          .from('playmate_ratings')
+          .select('id, rating, comment')
+          .eq('rater_id', raterId)
+          .eq('rated_user_id', ratedUserId)
+          .eq('request_id', requestId)
+          .single()
+
+        if (error && error.code !== 'PGRST116') {
+          // PGRST116 means 'No rows found'
+          throw error
+        }
+        return data
+      } catch (err) {
+        console.error('Error checking existing rating:', err)
+        return null
+      }
+    },
+
+    async openRateDialog(player, requestId) {
+      const request = this.finishedPlaymates.find((p) => p.id === requestId)
+
+      if (this.isRatingWindowExpired(request?.end_time_ts)) {
+        alert('The rating window for this match has expired.')
+        return
+      }
+
+      if (!this.currentUserId) {
+        alert('You must be logged in to submit a rating.')
+        return
+      } // 1. Check for existing rating
+
+      const existingRating = await this.checkExistingRating(
+        this.currentUserId,
+        player.user_id,
+        requestId,
+      )
+
+      this.selectedPlayerToRate = player
+      this.newRating.request_id = requestId
+      this.newRating.rated_user_id = player.user_id // 2. Populate state based on existing rating
+
+      if (existingRating) {
+        this.existingRatingId = existingRating.id
+        this.newRating.rating = existingRating.rating
+        this.newRating.comment = existingRating.comment
+      } else {
+        this.existingRatingId = null
+        this.newRating.rating = 0
+        this.newRating.comment = ''
+      }
+
+      this.ratingDialog = true
+    },
+
+    async submitRating() {
+      if (this.newRating.rating === 0) {
+        alert('Please select a star rating.')
+        return
+      }
+      if (!this.selectedPlayerToRate || !this.newRating.request_id || !this.currentUserId) {
+        alert('Rating context missing. Please try again.')
+        return
+      }
+
+      this.creating = true
+      try {
+        const ratingPayload = {
+          rating: this.newRating.rating,
+          comment: this.newRating.comment,
+        }
+
+        let query
+        let successMessage
+
+        if (this.existingRatingId) {
+          // RATING EXISTS: Perform UPDATE
+          query = supabase
+            .from('playmate_ratings')
+            .update(ratingPayload)
+            .eq('id', this.existingRatingId)
+          successMessage = `Successfully updated rating for ${this.selectedPlayerToRate.full_name}!`
+        } else {
+          // NEW RATING: Perform INSERT
+          const insertPayload = {
+            ...ratingPayload,
+            request_id: this.newRating.request_id,
+            rater_id: this.currentUserId,
+            rated_user_id: this.newRating.rated_user_id,
+          }
+          query = supabase.from('playmate_ratings').insert([insertPayload])
+          successMessage = `Successfully rated ${this.selectedPlayerToRate.full_name}!`
+        }
+
+        const { error } = await query
+
+        if (error) throw error
+
+        alert(successMessage)
+        this.ratingDialog = false
+        this.fetchFinishedPlaymates() // Refresh list to update state
+      } catch (err) {
+        alert(`Failed to submit/update rating: ${err.message}`)
+      } finally {
+        this.creating = false
+        this.existingRatingId = null // Clean up state
+      }
+    },
+
+    async fetchFinishedPlaymates() {
+      if (!this.currentUserId) return
+
+      try {
+        const { data: requests, error } = await supabase.rpc('get_past_playmate_matches', {
+          user_id_in: this.currentUserId,
+        })
+
+        if (error) throw error
+
+        const now = new Date()
+        const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+
+        const validFinished = (requests || [])
+          .map((req) => {
+            const endDateTime = req.end_time_ts
+              ? new Date(req.end_time_ts)
+              : new Date(`${req.date}T${req.end_time}`)
+
+            return {
+              ...req,
+              combined_end_time: endDateTime,
+              end_time_ts: req.end_time_ts || endDateTime.toISOString(),
+            }
+          }) // Filter for display: ended AND within last 24 hours
+          .filter(
+            (req) => req.combined_end_time <= now && req.combined_end_time >= twentyFourHoursAgo,
+          )
+          .sort((a, b) => b.combined_end_time - a.combined_end_time)
+
+        const finishedIds = validFinished.map((r) => r.id)
+
+        if (!finishedIds.length) {
+          this.finishedPlaymates = []
+          return
+        }
+
+        const { data: joins } = await supabase
+          .from('playmate_joins')
+          .select('request_id, user_id, user:user_id(full_name)')
+          .in('request_id', finishedIds)
+
+        const joinsByRequest = (joins || []).reduce((acc, j) => {
+          if (!acc[j.request_id]) acc[j.request_id] = []
+          if (j.user_id !== this.currentUserId) {
+            acc[j.request_id].push({
+              user_id: j.user_id,
+              full_name: j.user?.full_name || 'Anonymous Player',
+            })
+          }
+          return acc
+        }, {}) // Fetch existing ratings for these matches
+
+        const { data: existingRatings } = await supabase
+          .from('playmate_ratings')
+          .select('rated_user_id, request_id')
+          .in('request_id', finishedIds)
+          .eq('rater_id', this.currentUserId)
+
+        const ratedSet = new Set(
+          (existingRatings || []).map((r) => `${r.request_id}-${r.rated_user_id}`),
+        )
+
+        this.finishedPlaymates = validFinished.map((req) => ({
+          ...req,
+          players: (joinsByRequest[req.id] || []).map((player) => ({
+            ...player,
+            isRated: ratedSet.has(`${req.id}-${player.user_id}`),
+          })),
+        }))
+      } catch (err) {
+        console.error('Error fetching finished playmates:', err.message)
+      }
+    },
     async getCurrentUser() {
       try {
         const {
@@ -809,6 +1256,7 @@ export default {
     async fetchRequestsAndJoins() {
       this.loading = true
       try {
+        // Fetch requests starting from today
         const { data: requestsData, error: requestsError } = await supabase
           .from('playmate_requests')
           .select('*, creator:creator_id (full_name), playmate_joins(count), match_type')
@@ -839,12 +1287,14 @@ export default {
           return acc
         }, {})
 
-        this.playmateRequests = (requestsData || []).map((request) => ({
-          ...request,
-          creator_name: request.creator?.full_name || 'Anonymous User',
-          joins_count: request.playmate_joins[0]?.count || 0,
-          joiners: joinsByRequest[request.id] || [],
-        }))
+        this.playmateRequests = (requestsData || [])
+          .map((request) => ({
+            ...request,
+            creator_name: request.creator?.full_name || 'Anonymous User',
+            joins_count: request.playmate_joins[0]?.count || 0,
+            joiners: joinsByRequest[request.id] || [],
+          })) // Filter out expired requests based on end_time for the Active list
+          .filter((request) => !this.isPastEndTime(request.date, request.end_time))
 
         if (this.currentUserId) {
           const { data: joinsData, error: joinsError } = await supabase
@@ -856,48 +1306,6 @@ export default {
 
           this.userJoins = joinsData.map((j) => j.request_id)
         }
-
-        // Status sync (initial)
-        const requestsToUpdate = this.playmateRequests
-          .filter((r) => r.status !== 'canceled')
-          .map((r) => {
-            const isTeamMatch = r.match_type === 'team'
-            const shouldBeOpen =
-              (isTeamMatch && r.joins_count === 0) || (!isTeamMatch && r.joins_count < r.max_joins)
-            const shouldBeFull =
-              (isTeamMatch && r.joins_count >= 1) || (!isTeamMatch && r.joins_count >= r.max_joins)
-
-            let newStatus = r.status
-            if (shouldBeFull && r.status !== 'full') newStatus = 'full'
-            if (shouldBeOpen && r.status !== 'open') newStatus = 'open'
-            return { id: r.id, oldStatus: r.status, newStatus }
-          })
-          .filter((u) => u.oldStatus !== u.newStatus)
-
-        const requestsToOpen = requestsToUpdate
-          .filter((u) => u.newStatus === 'open')
-          .map((u) => u.id)
-        const requestsToClose = requestsToUpdate
-          .filter((u) => u.newStatus === 'full')
-          .map((u) => u.id)
-
-        if (requestsToOpen.length > 0) {
-          await supabase
-            .from('playmate_requests')
-            .update({ status: 'open' })
-            .in('id', requestsToOpen)
-        }
-        if (requestsToClose.length > 0) {
-          await supabase
-            .from('playmate_requests')
-            .update({ status: 'full' })
-            .in('id', requestsToClose)
-        }
-
-        this.playmateRequests.forEach((r) => {
-          if (requestsToOpen.includes(r.id)) r.status = 'open'
-          if (requestsToClose.includes(r.id)) r.status = 'full'
-        })
 
         this.playmateRequests = this.playmateRequests.filter(
           (r) => r.status !== 'canceled' || r.creator_id === this.currentUserId,
@@ -1018,6 +1426,7 @@ export default {
             max_joins: this.selectedRequest.max_joins,
             date: this.selectedRequest.date,
             start_time: this.selectedRequest.start_time,
+            end_time: this.selectedRequest.end_time,
             description: this.selectedRequest.description,
           })
           .eq('id', this.selectedRequest.id)
@@ -1130,6 +1539,7 @@ export default {
               max_joins: this.newRequest.max_joins,
               date: this.newRequest.date,
               start_time: this.newRequest.start_time,
+              end_time: this.newRequest.end_time,
               description: this.newRequest.description,
               status: 'open',
               match_type: this.newRequest.match_type,
@@ -1146,13 +1556,13 @@ export default {
         this.newRequest.match_type = 'individual'
         this.otherSportText = ''
         this.otherLocationText = ''
-        this.fetchRequestsAndJoins()
+        this.fetchRequestsAndJoins() // Explicitly switch to the Active Requests tab to show the newly created item
+        this.mainTab = 0
       } catch (e) {
         console.log('Create request process aborted after failure.')
       }
     },
 
-    // ====== NEW: Profile dialog helpers ======
     async viewUserProfile(userId) {
       if (!userId) return
       this.profileDialog = true
@@ -1161,8 +1571,8 @@ export default {
 
     async fetchProfile(userId) {
       this.profileLoading = true
-      this.profileFound = false
-      // Reset profile object
+      this.profileFound = false // Reset data for the new user profile
+      this.profileRatings = []
       this.profile = {
         id: null,
         full_name: null,
@@ -1175,6 +1585,7 @@ export default {
       }
 
       try {
+        // 1. Fetch basic profile data
         const { data, error } = await supabase
           .from('profiles')
           .select('id, full_name, role, address, city, zip_code, phone_number, updated_at')
@@ -1191,7 +1602,8 @@ export default {
         }
         if (data) {
           this.profile = data
-          this.profileFound = true
+          this.profileFound = true // 2. Fetch the ratings for the successfully loaded profile
+          await this.fetchUserRatings(userId)
         } else {
           this.profileFound = false
         }
@@ -1205,7 +1617,6 @@ export default {
 
     closeProfileDialog() {
       this.profileDialog = false
-      // small delay to clear, optional
       setTimeout(() => {
         this.profile = {
           id: null,
@@ -1217,6 +1628,7 @@ export default {
           phone_number: null,
           updated_at: null,
         }
+        this.profileRatings = []
         this.profileFound = false
       }, 250)
     },

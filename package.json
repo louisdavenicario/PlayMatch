@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "@supabase/supabase-js": "^2.57.2",
-    "vuetify": "^3.9.6"
+    "vuetify": "^3.10.11"
   },
   "devDependencies": {
     "@mdi/font": "^7.4.47",
