@@ -65,12 +65,15 @@ export default {
     console.log('✅ Logged-in user ID:', this.currentUserId)
 
     await this.fetchFavorites()
-    await this.fetchFacilities()
-    this.fetchPlaymateRequests()
     this.subscribeFavoritesRealtime()
     this.subscribeRatingsRealtime()
     await this.fetchNotifications()
     this.subscribeNotificationsRealtime()
+    await this.fetchFacilities()
+    this.fetchPlaymateRequests()
+    setInterval(() => {
+      this.fetchPlaymateRequests()
+    }, 30000)
   },
 
   beforeUnmount() {
@@ -473,24 +476,33 @@ export default {
 
     async fetchPlaymateRequests() {
       this.playmateLoading = true
+
       try {
+        const now = new Date().toISOString()
+
         const { data, error } = await supabase
           .from('playmate_requests')
           .select('*, creator:creator_id (full_name)')
           .eq('status', 'open')
-          .gte('date', new Date().toISOString().split('T')[0])
           .order('date', { ascending: true })
           .order('start_time', { ascending: true })
-          .limit(3)
 
         if (error) throw error
 
-        this.playmateRequests = data.map((req) => ({
+        // ✅ KEEP ONLY ACTIVE (not finished)
+        const stillActive = data.filter((req) => {
+          if (!req.date || !req.end_time) return false
+
+          const endDateTime = new Date(`${req.date}T${req.end_time}`)
+          return endDateTime.getTime() > Date.now()
+        })
+
+        this.playmateRequests = stillActive.map((req) => ({
           ...req,
           creator_name: req.creator?.full_name || 'Anonymous',
         }))
       } catch (err) {
-        console.error('Error fetching playmate requests:', err.message)
+        console.error('Error fetching playmate requests:', err)
       } finally {
         this.playmateLoading = false
       }
@@ -674,7 +686,7 @@ export default {
                   rounded
                   @click="handlePlaymateAction(req)"
                 >
-                  {{ isCreator(req.creator_id) ? 'Manage' : 'Join' }}
+                  {{ isCreator(req.creator_id) ? 'Manage' : 'View' }}
                 </v-btn>
               </v-card>
             </v-col>
