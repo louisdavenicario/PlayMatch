@@ -169,37 +169,42 @@ export default {
       if (!('PushManager' in window)) return
 
       try {
-        // Register sw
-        const registration = await navigator.serviceWorker.register('/sw.js')
-        console.log('SW registered:', registration)
+        const registration = await navigator.serviceWorker.register('/sw.js', {
+          scope: '/',
+        })
 
-        // Ask permission
+        console.log('✅ Service Worker Registered')
+
         const permission = await Notification.requestPermission()
         if (permission !== 'granted') {
-          console.warn('Notifications blocked')
+          console.warn('❌ Notification permission denied')
           return
         }
 
-        // Get subscription
-        const subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: this.urlBase64ToUint8Array(
-            'BFC5Uq3ZEYOum9E_7LwU0kzkekaXfsaUG-wN0huAC5-noXNBOE0KNbSIRF0Hn9fQn0OrmqVMxt26pcfdM3SSaMc',
-          ),
-        })
+        const existingSub = await registration.pushManager.getSubscription()
 
-        console.log('Push subscription:', subscription)
+        let subscription = existingSub
 
-        // Save to Supabase
+        if (!existingSub) {
+          subscription = await registration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: this.urlBase64ToUint8Array(
+              'BCkDqTRNaMvqmbhbPEpowH7UDSi5MJ1mhX8kkuqlLy9lM-I2o3SipjBhU1tGGf6fQ0Qsf_q5svfbCkOqRiLV-O4',
+            ),
+          })
+        }
+
         await supabase.from('push_subscriptions').upsert({
           user_id: this.currentUserId,
-          subscription: subscription.toJSON(),
+          endpoint: subscription.endpoint,
+          keys: subscription.toJSON().keys,
         })
-      } catch (err) {
-        console.error('Push registration failed:', err)
+
+        console.log('✅ Push subscription saved')
+      } catch (error) {
+        console.error('❌ Push setup failed:', error)
       }
     },
-
     urlBase64ToUint8Array(base64String) {
       const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
       const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
