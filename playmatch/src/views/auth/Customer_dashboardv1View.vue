@@ -189,15 +189,14 @@ export default {
           subscription = await registration.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: this.urlBase64ToUint8Array(
-              'BCkDqTRNaMvqmbhbPEpowH7UDSi5MJ1mhX8kkuqlLy9lM-I2o3SipjBhU1tGGf6fQ0Qsf_q5svfbCkOqRiLV-O4',
+              'BFoHJa51OHMAJEgR8s6qpsn07pV8l5zWEI0fLoBqXBpVSkjnKvxWbBS93IMSP0g8sVm6JyK3CnSL_wKXlZbOiFk',
             ),
           })
         }
 
         await supabase.from('push_subscriptions').upsert({
           user_id: this.currentUserId,
-          endpoint: subscription.endpoint,
-          keys: subscription.toJSON().keys,
+          subscription: subscription.toJSON(), // <- store entire subscription JSON
         })
 
         console.log('✅ Push subscription saved')

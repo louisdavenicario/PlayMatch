@@ -4,10 +4,7 @@ self.addEventListener('push', (event) => {
   try {
     data = event.data ? event.data.json() : {}
   } catch {
-    data = {
-      title: 'PlayMatch Notification',
-      message: event.data.text(),
-    }
+    data = { title: 'PlayMatch Notification', message: event.data.text() }
   }
 
   const title = data.title || 'PlayMatch Notification'
@@ -17,9 +14,7 @@ self.addEventListener('push', (event) => {
     badge: '/icons/icon-72x72.png',
     requireInteraction: true,
     vibrate: [200, 100, 200],
-    data: {
-      url: data.url || '/',
-    },
+    data: { url: data.url || '/' },
   }
 
   event.waitUntil(self.registration.showNotification(title, options))
@@ -27,10 +22,9 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      for (let client of clientList) {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientsList) => {
+      for (let client of clientsList) {
         if (client.url === event.notification.data.url && 'focus' in client) return client.focus()
       }
       if (clients.openWindow) return clients.openWindow(event.notification.data.url)

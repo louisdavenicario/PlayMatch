@@ -1,47 +1,55 @@
 // @ts-nocheck
 
-import { serve } from "https://deno.land/std/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import webpush from "npm:web-push";
 import { createClient } from "npm:@supabase/supabase-js";
+
 const supabase = createClient(
   Deno.env.get("SUPABASE_URL"),
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 );
+
 webpush.setVapidDetails(
   "mailto:admin@playmatch.com",
   Deno.env.get("VAPID_PUBLIC_KEY"),
   Deno.env.get("VAPID_PRIVATE_KEY")
 );
+
 serve(async (req) => {
-  const { user_id, title, message } = await req.json();
-  const { data: subs } = await supabase
-    .from("push_subscriptions")
-    .select("*")
-    .eq("user_id", user_id);
-  if (!subs || subs.length === 0) {
-    return new Response("No subscriptions found", {
-      status: 200,
-    });
-  }
-  for (const sub of subs) {
-    const payload = JSON.stringify({
-      title,
-      message,
-      url: "/",
-    });
-    try {
-      await webpush.sendNotification(
-        {
-          endpoint: sub.endpoint,
-          keys: sub.keys,
-        },
-        payload
-      );
-    } catch (err) {
-      console.error("Push failed:", err);
+  try {
+    const { user_id, title, message, url = "/" } = await req.json();
+
+    const { data: subs, error } = await supabase
+      .from("push_subscriptions")
+      .select("subscription")
+      .eq("user_id", user_id);
+
+    if (error) throw error;
+    if (!subs || subs.length === 0) {
+      return new Response("No subscriptions found", { status: 200 });
     }
+
+    const payload = JSON.stringify({ title, message, url });
+
+    for (const sub of subs) {
+      try {
+        const subscription = sub.subscription;
+
+        await webpush.sendNotification(
+          {
+            endpoint: subscription.endpoint,
+            keys: subscription.keys,
+          },
+          payload
+        );
+      } catch (err) {
+        console.error("Push failed:", err);
+      }
+    }
+
+    return new Response("Push sent", { status: 200 });
+  } catch (err) {
+    console.error("Edge function error:", err);
+    return new Response("Error sending push", { status: 500 });
   }
-  return new Response("Push sent", {
-    status: 200,
-  });
 });

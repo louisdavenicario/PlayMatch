@@ -5,6 +5,7 @@
   },
   "devDependencies": {
     "@mdi/font": "^7.4.47",
+    "supabase": "^2.62.10",
     "vite": "^7.1.12"
   }
 }
