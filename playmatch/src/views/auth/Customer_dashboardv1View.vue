@@ -69,6 +69,7 @@ export default {
     this.subscribeRatingsRealtime()
     await this.fetchNotifications()
     this.subscribeNotificationsRealtime()
+    await this.registerPushNotifications()
     await this.fetchFacilities()
     this.fetchPlaymateRequests()
     setInterval(() => {
@@ -163,6 +164,72 @@ export default {
         .subscribe()
     },
 
+    async registerPushNotifications() {
+      if (!('serviceWorker' in navigator)) return
+      if (!('PushManager' in window)) return
+
+      try {
+        // Register sw
+        const registration = await navigator.serviceWorker.register('/sw.js')
+        console.log('SW registered:', registration)
+
+        // Ask permission
+        const permission = await Notification.requestPermission()
+        if (permission !== 'granted') {
+          console.warn('Notifications blocked')
+          return
+        }
+
+        // Get subscription
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: this.urlBase64ToUint8Array(
+            'BFC5Uq3ZEYOum9E_7LwU0kzkekaXfsaUG-wN0huAC5-noXNBOE0KNbSIRF0Hn9fQn0OrmqVMxt26pcfdM3SSaMc',
+          ),
+        })
+
+        console.log('Push subscription:', subscription)
+
+        // Save to Supabase
+        await supabase.from('push_subscriptions').upsert({
+          user_id: this.currentUserId,
+          subscription: subscription.toJSON(),
+        })
+      } catch (err) {
+        console.error('Push registration failed:', err)
+      }
+    },
+
+    urlBase64ToUint8Array(base64String) {
+      const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+      const rawData = atob(base64)
+      const outputArray = new Uint8Array(rawData.length)
+
+      for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i)
+      }
+      return outputArray
+    },
+
+    async sendNotification(user_id, title, message, type = 'system') {
+      // Save to DB
+      await supabase.from('notifications').insert([
+        {
+          user_id,
+          title,
+          message,
+          type,
+        },
+      ])
+
+      // Trigger push notification
+      await fetch('https://oeemjkrnevtfxtrxceuw.supabase.co/functions/v1/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id, title, message }),
+      })
+    },
     // Logout
     async logout() {
       try {
