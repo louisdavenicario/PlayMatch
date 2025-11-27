@@ -63,13 +63,13 @@ export default {
     // Store current user ID
     this.currentUserId = session.user.id
     console.log('✅ Logged-in user ID:', this.currentUserId)
+    await this.subscribeUserToPush()
 
     await this.fetchFavorites()
     this.subscribeFavoritesRealtime()
     this.subscribeRatingsRealtime()
     await this.fetchNotifications()
     this.subscribeNotificationsRealtime()
-    await this.registerPushNotifications()
     await this.fetchFacilities()
     this.fetchPlaymateRequests()
     setInterval(() => {
@@ -115,6 +115,25 @@ export default {
 
       // Close dropdown after click
       this.notificationMenu = false
+    },
+
+    async markAllNotificationsAsRead() {
+      if (!this.currentUserId) return
+
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', this.currentUserId)
+        .eq('read', false)
+
+      if (error) {
+        console.error('Failed to mark all notifications as read:', error.message)
+        return
+      }
+
+      // Update local state instantly
+      this.notifications = this.notifications.map((n) => ({ ...n, read: true }))
+      this.unreadCount = 0
     },
 
     async fetchNotifications() {
@@ -164,76 +183,100 @@ export default {
         .subscribe()
     },
 
-    async registerPushNotifications() {
-      if (!('serviceWorker' in navigator)) return
-      if (!('PushManager' in window)) return
+    async registerServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.register('/service-worker.js')
+          console.log('Service Worker registered', registration)
+          return registration
+        } catch (err) {
+          console.error('Service Worker registration failed', err)
+        }
+      }
+    }, // Subscribe to Push Notifications
+
+    async subscribeUserToPush() {
+      if (!('PushManager' in window) || !this.currentUserId) return
 
       try {
-        const registration = await navigator.serviceWorker.register('/sw.js', {
-          scope: '/',
-        })
-
-        console.log('✅ Service Worker Registered')
+        const registration = await this.registerServiceWorker()
+        if (!registration) return
 
         const permission = await Notification.requestPermission()
-        if (permission !== 'granted') {
-          console.warn('❌ Notification permission denied')
-          return
+        if (permission !== 'granted') return
+
+        // ✅ CHECK EXISTING SUBSCRIPTION FIRST
+        let existingSub = await registration.pushManager.getSubscription()
+
+        if (existingSub) {
+          console.log('Removing old push subscription...')
+          await existingSub.unsubscribe() // IMPORTANT FIX
         }
 
-        const existingSub = await registration.pushManager.getSubscription()
-
-        let subscription = existingSub
-
-        if (!existingSub) {
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: this.urlBase64ToUint8Array(
-              'BFoHJa51OHMAJEgR8s6qpsn07pV8l5zWEI0fLoBqXBpVSkjnKvxWbBS93IMSP0g8sVm6JyK3CnSL_wKXlZbOiFk',
-            ),
-          })
-        }
-
-        await supabase.from('push_subscriptions').upsert({
-          user_id: this.currentUserId,
-          subscription: subscription.toJSON(), // <- store entire subscription JSON
+        // ✅ CREATE NEW SUBSCRIPTION WITH CURRENT VAPID KEY
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: this.urlBase64ToUint8Array(
+            'BFoHJa51OHMAJEgR8s6qpsn07pV8l5zWEI0fLoBqXBpVSkjnKvxWbBS93IMSP0g8sVm6JyK3CnSL_wKXlZbOiFk',
+          ),
         })
 
-        console.log('✅ Push subscription saved')
-      } catch (error) {
-        console.error('❌ Push setup failed:', error)
+        const { error } = await supabase.from('push_subscriptions').upsert([
+          {
+            user_id: this.currentUserId,
+            endpoint: subscription.endpoint,
+            keys: subscription.toJSON().keys,
+          },
+        ])
+
+        if (error) console.error('Error saving push subscription:', error)
+        else console.log('✅ Push subscription saved successfully!')
+      } catch (err) {
+        console.error('Push subscription failed:', err)
       }
     },
     urlBase64ToUint8Array(base64String) {
       const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-      const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-      const rawData = atob(base64)
-      const outputArray = new Uint8Array(rawData.length)
+      const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/')
+      const rawData = window.atob(base64)
+      return new Uint8Array([...rawData].map((char) => char.charCodeAt(0)))
+    }, // Subscribe to Realtime Notifications
 
-      for (let i = 0; i < rawData.length; ++i) {
-        outputArray[i] = rawData.charCodeAt(i)
-      }
-      return outputArray
+    async subscribeNotificationsRealtime() {
+      if (!this.currentUserId) return
+
+      this.notificationSubscription = supabase
+        .channel('notifications-user-updates')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${this.currentUserId}`,
+          },
+          async (payload) => {
+            console.log('🔔 New notification:', payload.new)
+            await this.fetchNotifications() // Show browser push
+
+            if (Notification.permission === 'granted') {
+              new Notification(payload.new.title, { body: payload.new.message })
+            } // Optional: Call Edge Function to send push via service worker if needed
+
+            await fetch('/api/send-push', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: this.currentUserId,
+                title: payload.new.title,
+                message: payload.new.message,
+              }),
+            })
+          },
+        )
+        .subscribe()
     },
 
-    async sendNotification(user_id, title, message, type = 'system') {
-      // Save to DB
-      await supabase.from('notifications').insert([
-        {
-          user_id,
-          title,
-          message,
-          type,
-        },
-      ])
-
-      // Trigger push notification
-      await fetch('https://oeemjkrnevtfxtrxceuw.supabase.co/functions/v1/send-push', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id, title, message }),
-      })
-    },
     // Logout
     async logout() {
       try {
@@ -660,7 +703,24 @@ export default {
         </template>
 
         <v-card width="320" max-height="400" rounded="lg" elevation="2">
-          <v-card-title class="text-body-1 font-weight-bold pb-1"> Notifications </v-card-title>
+          <v-card-title
+            class="text-body-1 font-weight-bold pb-1 d-flex justify-space-between align-center"
+          >
+            Notifications
+
+            <v-btn
+              v-if="unreadCount > 0"
+              small
+              variant="text"
+              density="compact"
+              color="blue"
+              class="ma-0 pa-0 min-h-0 text-caption"
+              style="border: none !important; box-shadow: none !important"
+              @click.stop="markAllNotificationsAsRead"
+            >
+              Mark all as read
+            </v-btn>
+          </v-card-title>
           <v-divider></v-divider>
 
           <!-- No Notifications -->

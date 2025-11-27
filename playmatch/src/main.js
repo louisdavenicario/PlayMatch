@@ -23,6 +23,15 @@ const vuetify = createVuetify({
   directives,
 })
 
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker
+    .register('/sw.js')
+    .then((reg) => {
+      console.log('SW registered:', reg)
+    })
+    .catch((err) => console.error('SW failed:', err))
+}
+
 app.use(createPinia())
 app.use(router)
 app.use(vuetify)
