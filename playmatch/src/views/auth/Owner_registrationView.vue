@@ -6,27 +6,30 @@ import { supabase } from '@/supabaseClient'
 // Get the router instance
 const router = useRouter()
 
+// Theme state (added for background compatibility)
+const theme = ref('light')
+
 const showPassword = ref(false)
 const showConfirmPassword = ref(false)
 
 const formData = ref({
-    email: '',
-    password: '',
-    confirmPassword: '',
-    full_name: '', // Added full_name to match the profiles table
-    address: '',
-    city: '', // Added city to match the profiles table
-    zip_code: '', // Added zip_code to match the profiles table
-    phone_number: '', // Added phone_number to match the profiles table
-    facility_name: '',
-    facility_type: '',
-    amenities: '',
-    briefdescription: '',
-    price_per_hour: '',
-    open_time: null,
-    closing_time: null,
-    image_url: null,
-});
+  email: '',
+  password: '',
+  confirmPassword: '',
+  full_name: '', // Added full_name to match the profiles table
+  address: '',
+  city: '', // Added city to match the profiles table
+  zip_code: '', // Added zip_code to match the profiles table
+  phone_number: '', // Added phone_number to match the profiles table
+  facility_name: '',
+  facility_type: '',
+  amenities: '',
+  briefdescription: '',
+  price_per_hour: '',
+  open_time: null,
+  closing_time: null,
+  image_url: null,
+})
 
 const previewUrl = ref(null)
 const fileInput = ref(null)
@@ -99,12 +102,12 @@ const validateAndSubmit = async () => {
     return
   }
 
-    try {
-        // Step 1: Sign up the user. This creates the user in the auth.users table.
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: formData.value.email,
-            password: formData.value.password,
-        });
+  try {
+    // Step 1: Sign up the user. This creates the user in the auth.users table.
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: formData.value.email,
+      password: formData.value.password,
+    })
 
     if (authError) {
       throw authError
@@ -113,72 +116,67 @@ const validateAndSubmit = async () => {
     const newUserId = authData.user.id
     console.log('New user created with ID:', newUserId)
 
-        // Step 2: Insert the user's profile data into the 'profiles' table.
-        // This is the CRITICAL new step that solves the foreign key error.
-        const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-                id: newUserId,
-                full_name: formData.value.full_name, // Make sure your form has this field
-                role: 'owner',
-                address: formData.value.address,
-                city: formData.value.city,
-                zip_code: formData.value.zip_code,
-                phone_number: formData.value.phone_number, // Mapped to contact_number from form
-            });
+    // Step 2: Insert the user's profile data into the 'profiles' table.
+    // This is the CRITICAL new step that solves the foreign key error.
+    const { error: profileError } = await supabase.from('profiles').insert({
+      id: newUserId,
+      full_name: formData.value.full_name, // Make sure your form has this field
+      role: 'owner',
+      address: formData.value.address,
+      city: formData.value.city,
+      zip_code: formData.value.zip_code,
+      phone_number: formData.value.phone_number, // Mapped to contact_number from form
+    })
 
-        if (profileError) {
-            throw profileError;
+    if (profileError) {
+      throw profileError
+    }
+
+    // Handle photo upload
+    let photoUrl = null
+    if (formData.value.image_url) {
+      const file = formData.value.image_url
+      const filePath = `${newUserId}/${Date.now()}_${file.name}`
+
+      const { error: storageError } = await supabase.storage
+        .from('facility-photos')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+        })
+
+      if (storageError) {
+        console.error('Storage upload failed:', storageError.message)
+        showTemporaryAlert(`Image upload failed: ${storageError.message}`, 'error')
+        // photoUrl remains null, and registration continues without a photo URL
+      } else {
+        const { data } = supabase.storage.from('facility-photos').getPublicUrl(filePath)
+
+        if (data && data.publicUrl) {
+          photoUrl = data.publicUrl
+          console.log('SUCCESS: Public Photo URL:', photoUrl) //CHECK CONSOLE FOR THIS
+        } else {
+          console.error('CRITICAL: Failed to get public URL after successful upload.')
+          // photoUrl remains null, and registration continues wihtout a photo URL
         }
-        
-        // Handle photo upload
-        let photoUrl = null;
-        if (formData.value.image_url) {
-            const file = formData.value.image_url;
-            const filePath = `${newUserId}/${Date.now()}_${file.name}`;
+      }
+    }
 
-            const { error: storageError } = await supabase.storage
-                .from('facility-photos')
-                .upload(filePath, file,
-                {
-                    cacheControl: '3600',
-                    upsert: true,
-                });
-
-            if (storageError) {
-              console.error('Storage upload failed:', storageError.message);
-              showTemporaryAlert(`Image upload failed: ${storageError.message}`, 'error');
-              // photoUrl remains null, and registration continues without a photo URL
-            } else {
-              const { data } = supabase.storage
-              .from('facility-photos')
-              .getPublicUrl(filePath);
-
-              if (data && data.publicUrl) {
-                photoUrl = data.publicUrl;
-                console.log('SUCCESS: Public Photo URL:', photoUrl); //CHECK CONSOLE FOR THIS
-              } else {
-                console.error('CRITICAL: Failed to get public URL after successful upload.');
-                // photoUrl remains null, and registration continues wihtout a photo URL
-              }
-            }
-        }
-
-        // Step 3: Insert the facility data into the 'facilities' table.
-        // This now works because the 'owner_id' exists in 'profiles'.
-        const { error: facilityError } = await supabase.from('facilities').insert({
-            owner_id: newUserId, // This correctly links the facility to the owner's profile
-            facility_name: formData.value.facility_name,
-            facility_type: formData.value.facility_type,
-            address: formData.value.address,
-            amenities: formData.value.amenities,
-            briefdescription: formData.value.briefdescription,
-            price_per_hour: parseFloat(formData.value.price_per_hour),
-            open_time: formData.value.open_time,
-            closing_time: formData.value.closing_time,
-            image_url: photoUrl,
-            phone_number: formData.value.phone_number,
-        });
+    // Step 3: Insert the facility data into the 'facilities' table.
+    // This now works because the 'owner_id' exists in 'profiles'.
+    const { error: facilityError } = await supabase.from('facilities').insert({
+      owner_id: newUserId, // This correctly links the facility to the owner's profile
+      facility_name: formData.value.facility_name,
+      facility_type: formData.value.facility_type,
+      address: formData.value.address,
+      amenities: formData.value.amenities,
+      briefdescription: formData.value.briefdescription,
+      price_per_hour: parseFloat(formData.value.price_per_hour),
+      open_time: formData.value.open_time,
+      closing_time: formData.value.closing_time,
+      image_url: photoUrl,
+      phone_number: formData.value.phone_number,
+    })
 
     if (facilityError) {
       throw facilityError
@@ -199,17 +197,12 @@ const goToSignIn = () => {
 </script>
 
 <template>
-  <v-app>
-    <v-main>
-      <div
-        class="d-flex align-center justify-center"
-        style="
-          min-height: 100vh;
-          background:
-            linear-gradient(to bottom right, rgba(26, 101, 162, 0.6), rgba(119, 154, 229, 0.6)),
-            url('/images/logo.jpg') center/cover no-repeat;
-        "
-      >
+  <v-app :theme="theme">
+    <v-main
+      class="d-flex align-center justify-center smooth-animated-background"
+      style="min-height: 100vh"
+    >
+      <v-container>
         <v-row justify="center">
           <v-col cols="12" md="8">
             <v-card
@@ -329,94 +322,98 @@ const goToSignIn = () => {
                     </v-row>
                   </v-list-item>
 
-                                    <v-list-item class="mb-4">
-                                        <v-list-item-title class="font-weight-bold">Facility Details</v-list-item-title>
-                                        <v-row>
-                                            <v-col cols="12" sm="6">
-                                                <v-text-field
-                                                    v-model="formData.facility_name"
-                                                    label="Facility Name"
-                                                    :rules="requiredRule"
-                                                    variant="outlined"
-                                                />
-                                            </v-col>
-                                            <v-col cols="12" sm="6">
-                                                <v-text-field
-                                                    v-model="formData.facility_type"
-                                                    label="Facility Type"
-                                                    placeholder="e.g. basketball, badminton, or..."
-                                                    :rules="requiredRule"
-                                                    variant="outlined"
-                                                />
-                                            </v-col>
-                                            <v-col cols="12">
-                                                <v-text-field
-                                                    v-model="formData.address"
-                                                    label="Address"
-                                                    :rules="requiredRule"
-                                                    variant="outlined"
-                                                />
-                                            </v-col>
-                                            <v-col cols="12">
-                                                <v-text-field
-                                                    v-model="formData.amenities"
-                                                    label="Amenities"
-                                                    placeholder="What amenities do you offer?"
-                                                    variant="outlined"
-                                                />
-                                            </v-col>
-                                            <v-col cols="12">
-                                                <v-textarea
-                                                    v-model="formData.briefdescription"
-                                                    label="Brief Description"
-                                                    placeholder="Brief description of your facility..."
-                                                    :rules="requiredRule"
-                                                    variant="outlined"
-                                                />
-                                            </v-col>
-                                        </v-row>
-                                    </v-list-item>
-
-                                    <v-list-item class="mb-4">
-                                        <v-list-item-title class="font-weight-bold"
-                                            >Operating Hours & Price</v-list-item-title
-                                        >
-                                        <v-row>
-                                            <v-col cols="12">
-                                                <v-text-field
-                                                    v-model="formData.price_per_hour"
-                                                    label="Price per Hour"
-                                                    type="number"
-                                                    :rules="requiredRule"
-                                                    variant="outlined"
-                                                />
-                                            </v-col>
-                                            <v-col cols="12" sm="6">
-                                                <v-text-field
-                                                    v-model="formData.open_time"
-                                                    label="Opening Time"
-                                                    type="time"
-                                                    :rules="requiredRule"
-                                                    variant="outlined"
-                                                />
-                                            </v-col>
-                                            <v-col cols="12" sm="6">
-                                                <v-text-field
-                                                    v-model="formData.closing_time"
-                                                    label="Closing Time"
-                                                    type="time"
-                                                    :rules="requiredRule"
-                                                    variant="outlined"
-                                                />
-                                            </v-col>
-                                        </v-row>
-                                    </v-list-item>
+                  <v-list-item class="mb-4">
+                    <v-list-item-title class="font-weight-bold">Facility Details</v-list-item-title>
+                    <v-row>
+                      <v-col cols="12" sm="6">
+                        <v-text-field
+                          v-model="formData.facility_name"
+                          label="Facility Name"
+                          :rules="requiredRule"
+                          variant="outlined"
+                        />
+                      </v-col>
+                      <v-col cols="12" sm="6">
+                        <v-text-field
+                          v-model="formData.facility_type"
+                          label="Facility Type"
+                          placeholder="e.g. basketball, badminton, or..."
+                          :rules="requiredRule"
+                          variant="outlined"
+                        />
+                      </v-col>
+                      <v-col cols="12">
+                        <v-text-field
+                          v-model="formData.address"
+                          label="Address"
+                          :rules="requiredRule"
+                          variant="outlined"
+                        />
+                      </v-col>
+                      <v-col cols="12">
+                        <v-text-field
+                          v-model="formData.amenities"
+                          label="Amenities"
+                          placeholder="What amenities do you offer?"
+                          variant="outlined"
+                        />
+                      </v-col>
+                      <v-col cols="12">
+                        <v-textarea
+                          v-model="formData.briefdescription"
+                          label="Brief Description"
+                          placeholder="Brief description of your facility..."
+                          :rules="requiredRule"
+                          variant="outlined"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-list-item>
 
                   <v-list-item class="mb-4">
-                    <v-list-item-title class="font-weight-bold">Facility Photo (Primary Photo)</v-list-item-title>
-                        <p class="text-caption text-medium-emphasis mb-4">
-                          Note: The facility photo you upload here acts as the main display picture of the facility. You can add more photos in the Edit Facility section after you successfully complete your account setup.
-                        </p>
+                    <v-list-item-title class="font-weight-bold"
+                      >Operating Hours & Price</v-list-item-title
+                    >
+                    <v-row>
+                      <v-col cols="12">
+                        <v-text-field
+                          v-model="formData.price_per_hour"
+                          label="Price per Hour"
+                          type="number"
+                          :rules="requiredRule"
+                          variant="outlined"
+                        />
+                      </v-col>
+                      <v-col cols="12" sm="6">
+                        <v-text-field
+                          v-model="formData.open_time"
+                          label="Opening Time"
+                          type="time"
+                          :rules="requiredRule"
+                          variant="outlined"
+                        />
+                      </v-col>
+                      <v-col cols="12" sm="6">
+                        <v-text-field
+                          v-model="formData.closing_time"
+                          label="Closing Time"
+                          type="time"
+                          :rules="requiredRule"
+                          variant="outlined"
+                        />
+                      </v-col>
+                    </v-row>
+                  </v-list-item>
+
+                  <v-list-item class="mb-4">
+                    <v-list-item-title class="font-weight-bold"
+                      >Facility Photo (Primary Photo)</v-list-item-title
+                    >
+                    <p class="text-caption text-medium-emphasis mb-4">
+                      Note: The facility photo you upload here acts as the main display picture of
+                      the facility. You can add more photos in the Edit Facility section after you
+                      successfully complete your account setup.
+                    </p>
                     <div
                       v-if="!previewUrl"
                       class="file-upload-container"
@@ -476,7 +473,7 @@ const goToSignIn = () => {
             </v-card>
           </v-col>
         </v-row>
-      </div>
+      </v-container>
     </v-main>
 
     <v-alert
@@ -487,23 +484,51 @@ const goToSignIn = () => {
       >{{ alertMessage }}</v-alert
     >
 
-        <v-dialog v-model="showSuccessDialog" persistent max-width="400">
-            <v-card class="text-center pa-4" style="border-radius: 20px">
-                <v-card-title class="text-h5 text-green-darken-2">Registration Successful</v-card-title>
-                <v-card-text>
-                    Your facility has been successfully registered. Click signin button to continue.
-                </v-card-text>
-                <v-card-actions class="justify-center">
-                    <v-btn color="primary" rounded block @click="goToSignIn" class="sign-in-button">
-                        Sign In
-                    </v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
-    </v-app>
+    <v-dialog v-model="showSuccessDialog" persistent max-width="400">
+      <v-card class="text-center pa-4" style="border-radius: 20px">
+        <v-card-title class="text-h5 text-green-darken-2">Registration Successful</v-card-title>
+        <v-card-text>
+          Your facility has been successfully registered. Click signin button to continue.
+        </v-card-text>
+        <v-card-actions class="justify-center">
+          <v-btn color="primary" rounded block @click="goToSignIn" class="sign-in-button">
+            Sign In
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+  </v-app>
 </template>
 
 <style scoped>
+/* SMOOTH BACKGROUND ANIMATION */
+.smooth-animated-background {
+  /* Base gradient setup */
+  background: linear-gradient(
+    225deg,
+    #1a65a2 0%,
+    /* Dark Blue */ #779ae5 50%,
+    /* Light Blue */ #1a65a2 100% /* Dark Blue (repeated for seamless loop) */
+  );
+  /* Make the gradient much larger than the container */
+  background-size: 400% 400%;
+  /* Apply the smooth animation */
+  animation: smoothBackgroundShift 20s ease infinite;
+}
+
+@keyframes smoothBackgroundShift {
+  0% {
+    background-position: 0% 50%; /* Start position: Darker color dominates */
+  }
+  50% {
+    background-position: 100% 50%; /* Middle position: Lighter color dominates */
+  }
+  100% {
+    background-position: 0% 50%; /* End position: Back to darker color */
+  }
+}
+/* END SMOOTH BACKGROUND ANIMATION */
+
 .password-rules {
   margin-top: 10px;
   padding: 10px;
@@ -569,5 +594,4 @@ const goToSignIn = () => {
 .sign-in-button:active {
   transform: scale(0.98);
 }
-
 </style>

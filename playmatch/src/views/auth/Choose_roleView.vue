@@ -9,24 +9,22 @@ function continueAction() {
   if (!selectedRole.value) return
 
   if (selectedRole.value === 'customer') {
-    // Correctly navigate to the customer registration page using Vue Router
     router.push('/customer-registration')
   } else if (selectedRole.value === 'owner') {
-    // Navigate to the owner registration page
     router.push('/owner-registration')
   }
 }
 </script>
 
 <template>
-  <div class="d-flex align-center justify-center h-screen bg-blue-grey-lighten-5">
+  <div class="d-flex align-center justify-center h-screen animated-bg" style="padding: 20px">
     <v-card
       class="rounded-xl pa-8"
       elevation="4"
       min-width="400"
-      max-width="1000"
+      max-width="100%"
       color="white"
-      style="border: 2px solid #2196f3"
+      style="border: 2px solid #2196f3; max-width: 500px"
     >
       <v-btn icon @click="router.push({ name: 'home' })" class="mb-4">
         <v-icon>mdi-arrow-left</v-icon>
@@ -45,7 +43,7 @@ function continueAction() {
             :elevation="selectedRole === 'customer' ? 6 : 2"
             :variant="selectedRole === 'customer' ? 'tonal' : 'outlined'"
             color="green"
-            class="pa-4 cursor-pointer"
+            class="pa-4 cursor-pointer transition-all duration-300"
             @click="selectedRole = 'customer'"
           >
             <v-row align="center" no-gutters>
@@ -59,7 +57,7 @@ function continueAction() {
                 <p class="text-body-2 text-medium-emphasis">Book and play at sports facilities</p>
               </v-col>
               <v-col cols="auto" v-if="selectedRole === 'customer'">
-                <v-icon color="primary">mdi-check-circle</v-icon>
+                <v-icon color="primary" class="ml-4">mdi-check-circle</v-icon>
               </v-col>
             </v-row>
           </v-card>
@@ -69,7 +67,7 @@ function continueAction() {
             :elevation="selectedRole === 'owner' ? 6 : 2"
             :variant="selectedRole === 'owner' ? 'tonal' : 'outlined'"
             color="blue"
-            class="pa-4 cursor-pointer"
+            class="pa-4 cursor-pointer transition-all duration-300"
             @click="selectedRole = 'owner'"
           >
             <v-row align="center" no-gutters>
@@ -85,12 +83,13 @@ function continueAction() {
                 </p>
               </v-col>
               <v-col cols="auto" v-if="selectedRole === 'owner'">
-                <v-icon color="primary">mdi-check-circle</v-icon>
+                <v-icon color="primary" class="ml-4">mdi-check-circle</v-icon>
               </v-col>
             </v-row>
           </v-card>
         </v-col>
       </v-row>
+
       <v-card class="mb-8" variant="outlined">
         <v-card-text>
           <h4 class="font-weight-medium mb-3">
@@ -133,6 +132,7 @@ function continueAction() {
           <div v-else class="text-medium-emphasis font-italic">Select a role to see benefits</div>
         </v-card-text>
       </v-card>
+
       <v-btn block color="primary" size="large" :disabled="!selectedRole" @click="continueAction">
         Continue as
         {{
@@ -146,3 +146,25 @@ function continueAction() {
     </v-card>
   </div>
 </template>
+
+<style scoped>
+/* Background gradient animation: dark ↔ light */
+.animated-bg {
+  background: linear-gradient(45deg, #1a65a2, #779ae5);
+  background-size: 400% 400%;
+  animation: bgShift 15s ease-in-out infinite alternate;
+  transition: background 1s ease;
+}
+
+@keyframes bgShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+</style>

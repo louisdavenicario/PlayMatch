@@ -18,7 +18,7 @@ const currentUserId = ref(null)
 const receivedRatings = ref([])
 const receivedRatingsLoading = ref(false)
 
-// ADDED: State for managing the active tab within the profile card
+// State for managing the active tab within the profile card
 const activeProfileTab = ref('details')
 
 const targetUserId = computed(() => route.params.userId || null)
@@ -28,14 +28,12 @@ const isViewingOther = computed(
 
 // Computed property to calculate the average rating
 const averageRating = computed(() => {
-  if (!receivedRatings.value || receivedRatings.value.length === 0) {
-    return 0
-  }
+  if (!receivedRatings.value || receivedRatings.value.length === 0) return 0
   const sum = receivedRatings.value.reduce((acc, rating) => acc + rating.rating, 0)
   return sum / receivedRatings.value.length
 })
 
-// Fetches ratings given to the user identified by userId
+// Fetch ratings given to the user
 const fetchReceivedRatings = async (userId) => {
   if (!userId) {
     receivedRatings.value = []
@@ -52,7 +50,6 @@ const fetchReceivedRatings = async (userId) => {
 
     if (ratingsError) throw ratingsError
 
-    // Fetch rater names for all ratings
     const raterIds = data.map((r) => r.rater_id).filter(Boolean)
     const { data: raters } = await supabase
       .from('profiles')
@@ -64,7 +61,6 @@ const fetchReceivedRatings = async (userId) => {
       return acc
     }, {})
 
-    // Fetch request info
     const requestIds = data.map((r) => r.request_id).filter(Boolean)
     const { data: requests } = await supabase
       .from('playmate_requests')
@@ -91,55 +87,38 @@ const fetchReceivedRatings = async (userId) => {
   }
 }
 
-// Fetches the user's profile data from Supabase.
+// Fetch profile data including sports
 const fetchProfile = async () => {
   loading.value = true
   error.value = null
   profileData.value = null
 
   try {
-    // 1. Get the current logged-in user session
     const {
       data: { user },
     } = await supabase.auth.getUser()
-
     if (!user) {
-      console.log('No user logged in, redirecting to sign-in.')
       router.push({ name: 'signin' })
       return
     }
     currentUserId.value = user.id
-
-    // 2. Determine which profile ID to fetch
     const idToFetch = targetUserId.value || user.id
 
-    // 3. Fetch the corresponding profile data
     const { data, error: fetchError } = await supabase
       .from('profiles')
-      .select('full_name, phone_number, address, city, zip_code, role')
+      .select('full_name, phone_number, address, city, zip_code, role, sports') // ✅ added sports
       .eq('id', idToFetch)
       .single()
 
-    if (fetchError && fetchError.code !== 'PGRST116') {
-      throw fetchError
-    }
+    if (fetchError && fetchError.code !== 'PGRST116') throw fetchError
 
-    let finalData = {
-      id: idToFetch,
-      ...data,
-    }
+    let finalData = { id: idToFetch, ...data }
 
-    if (!isViewingOther.value) {
-      finalData.email = user.email
-    } else {
-      finalData.email = 'Hidden'
-    }
+    if (!isViewingOther.value) finalData.email = user.email
+    else finalData.email = 'Hidden'
 
     profileData.value = finalData
-
-    if (!isViewingOther.value) {
-      formData.value = { ...finalData }
-    }
+    if (!isViewingOther.value) formData.value = { ...finalData }
 
     await fetchReceivedRatings(idToFetch)
   } catch (err) {
@@ -153,14 +132,11 @@ const fetchProfile = async () => {
 const toggleEdit = () => {
   if (isViewingOther.value || !profileData.value) return
   isEditing.value = !isEditing.value
-  if (isEditing.value) {
-    formData.value = { ...profileData.value }
-  }
+  if (isEditing.value) formData.value = { ...profileData.value }
 }
 
 const saveProfile = async () => {
   if (isViewingOther.value) return
-
   saving.value = true
   error.value = null
 
@@ -172,6 +148,7 @@ const saveProfile = async () => {
       address: formData.value.address,
       city: formData.value.city,
       zip_code: formData.value.zip_code,
+      sports: formData.value.sports, // ✅ include sports
       updated_at: new Date().toISOString(),
     }
 
@@ -181,9 +158,7 @@ const saveProfile = async () => {
       .eq('id', profileData.value.id)
       .select()
 
-    if (updateError) {
-      throw updateError
-    }
+    if (updateError) throw updateError
 
     await fetchProfile()
     isEditing.value = false
@@ -275,7 +250,9 @@ onMounted(() => {
 
                 <v-window v-model="activeProfileTab" class="px-6 pb-4">
                   <v-window-item value="details">
+                    <!-- VIEW MODE -->
                     <v-list dense class="profile-details-list" v-if="!isEditing">
+                      <!-- Overall Rating -->
                       <div class="mb-4">
                         <p class="text-subtitle-1 grey--text text--darken-1 mb-1">
                           <v-icon class="mr-1" color="yellow-darken-2">mdi-star</v-icon> Overall
@@ -303,6 +280,7 @@ onMounted(() => {
 
                       <v-divider class="my-3"></v-divider>
 
+                      <!-- Email -->
                       <v-list-item class="list-item-hover">
                         <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
                           <v-icon color="blue">mdi-email-outline</v-icon> Email Address
@@ -316,6 +294,7 @@ onMounted(() => {
 
                       <v-divider class="mt-3"></v-divider>
 
+                      <!-- Full Name -->
                       <v-list-item class="list-item-hover">
                         <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
                           <v-icon color="green">mdi-account-details-outline</v-icon> Full Name
@@ -329,6 +308,7 @@ onMounted(() => {
 
                       <v-divider class="mt-3"></v-divider>
 
+                      <!-- Phone -->
                       <v-list-item class="list-item-hover">
                         <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
                           <v-icon color="green">mdi-phone-outline</v-icon> Phone Number
@@ -342,6 +322,7 @@ onMounted(() => {
 
                       <v-divider class="mt-3"></v-divider>
 
+                      <!-- Address -->
                       <v-list-item class="list-item-hover">
                         <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
                           <v-icon color="orange">mdi-map-marker-outline</v-icon> Address
@@ -350,13 +331,28 @@ onMounted(() => {
                           <span class="text-subtitle-1 text-medium-emphasis">
                             {{ profileData.address || 'N/A' }}
                             {{ profileData.city || ''
-                            }}{{ profileData.city && profileData.zip_code ? ', ' : ''
-                            }}{{ profileData.zip_code || '' }}
+                            }}{{ profileData.city && profileData.zip_code ? ', ' : '' }}
+                            {{ profileData.zip_code || '' }}
                           </span>
+                        </div>
+                      </v-list-item>
+
+                      <v-divider class="mt-3"></v-divider>
+
+                      <!-- Sports -->
+                      <v-list-item class="list-item-hover">
+                        <p class="text-subtitle-1 grey--text text--darken-1 mb-3">
+                          <v-icon color="purple">mdi-basketball</v-icon> Sports
+                        </p>
+                        <div>
+                          <span class="text-subtitle-1 text-medium-emphasis">{{
+                            profileData.sports || 'N/A'
+                          }}</span>
                         </div>
                       </v-list-item>
                     </v-list>
 
+                    <!-- EDIT MODE -->
                     <v-form v-else @submit.prevent="saveProfile">
                       <v-text-field
                         v-model="formData.full_name"
@@ -406,9 +402,18 @@ onMounted(() => {
                           ></v-text-field>
                         </v-col>
                       </v-row>
+
+                      <!-- Sports input -->
+                      <v-text-field
+                        v-model="formData.sports"
+                        label="Sports"
+                        prepend-icon="mdi-basketball"
+                        class="mb-3"
+                      ></v-text-field>
                     </v-form>
                   </v-window-item>
 
+                  <!-- RATINGS TAB -->
                   <v-window-item value="ratings">
                     <div v-if="receivedRatingsLoading" class="text-center py-4">
                       <v-progress-circular indeterminate color="primary"></v-progress-circular>
@@ -429,12 +434,12 @@ onMounted(() => {
                       >
                         <div class="d-flex justify-space-between align-start">
                           <div class="mb-1">
-                            <span class="font-weight-bold text-subtitle-1 mr-1">
-                              {{ rating.rater_name }}
-                            </span>
-                            <span class="text-caption text-medium-emphasis">
-                              ({{ rating.match_info }})
-                            </span>
+                            <span class="font-weight-bold text-subtitle-1 mr-1">{{
+                              rating.rater_name
+                            }}</span>
+                            <span class="text-caption text-medium-emphasis"
+                              >({{ rating.match_info }})</span
+                            >
                           </div>
                         </div>
 
@@ -476,8 +481,7 @@ onMounted(() => {
                   @click="toggleEdit"
                   :disabled="saving"
                 >
-                  <v-icon left>mdi-cancel</v-icon>
-                  Cancel
+                  <v-icon left>mdi-cancel</v-icon> Cancel
                 </v-btn>
                 <v-btn
                   v-if="!isEditing"
@@ -487,8 +491,7 @@ onMounted(() => {
                   @click="toggleEdit"
                   :disabled="loading"
                 >
-                  <v-icon left>mdi-pencil-outline</v-icon>
-                  Edit Profile
+                  <v-icon left>mdi-pencil-outline</v-icon> Edit Profile
                 </v-btn>
                 <v-btn
                   v-else
@@ -500,8 +503,7 @@ onMounted(() => {
                   :disabled="saving"
                   type="submit"
                 >
-                  <v-icon left>mdi-content-save-outline</v-icon>
-                  Save Changes
+                  <v-icon left>mdi-content-save-outline</v-icon> Save Changes
                 </v-btn>
               </v-card-actions>
             </v-card>
@@ -510,6 +512,7 @@ onMounted(() => {
       </v-container>
     </v-main>
 
+    <!-- Bottom navigation -->
     <v-bottom-navigation app fixed color="white" light v-model="activeNav">
       <v-btn class="mx-1" value="home" @click="$router.push({ name: 'customer-dashboard' })">
         <v-icon size="31" :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>

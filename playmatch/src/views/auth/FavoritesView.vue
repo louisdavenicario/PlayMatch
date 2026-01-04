@@ -35,7 +35,7 @@
         <div v-else-if="favorites.length === 0" class="text-center grey--text py-10">
           <v-icon large color="grey lighten-1">mdi-heart-outline</v-icon>
           <p class="mt-2">You haven’t added any favorites yet.</p>
-          <v-btn color="blue" dark rounded @click="$router.push({ name: 'home' })">
+          <v-btn color="blue" dark rounded @click="$router.push({ name: 'customer-dashboard' })">
             Browse Facilities
           </v-btn>
         </div>

@@ -6,6 +6,8 @@ export default {
   data: () => ({
     activeNav: 'home',
     currentUserId: null,
+    // NEW: Data property for the user's name
+    userName: 'User',
     playmateRequests: [],
     playmateLoading: false,
     facilities: [],
@@ -63,6 +65,10 @@ export default {
     // Store current user ID
     this.currentUserId = session.user.id
     console.log('✅ Logged-in user ID:', this.currentUserId)
+
+    // NEW: Fetch the user's name immediately after getting the ID
+    await this.fetchUserName()
+
     await this.subscribeUserToPush()
 
     await this.fetchFavorites()
@@ -83,11 +89,38 @@ export default {
   },
 
   methods: {
+    // NEW: Method to fetch the user's name from the 'profiles' table
+    async fetchUserName() {
+      if (!this.currentUserId) return
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('id', this.currentUserId)
+          .single()
+
+        if (error) throw error
+
+        if (data && data.full_name) {
+          // Update the userName data property
+          this.userName = data.full_name.split(' ')[0] || 'Player' // Use first name if available
+          console.log('👤 User name loaded:', this.userName)
+        } else {
+          this.userName = 'Player' // Default if full_name is null
+        }
+      } catch (err) {
+        console.error('Error fetching user name:', err.message)
+        // Keep default name in case of error
+        this.userName = 'Player'
+      }
+    },
+
     toggleView() {
       this.isGridView = !this.isGridView
     },
 
-    // Get logged-in user
+    // Get logged-in user (kept for completeness, but already handled in mounted)
     async getCurrentUser() {
       try {
         const { data, error } = await supabase.auth.getUser()
@@ -324,7 +357,7 @@ export default {
       }
     },
 
-    //  Check if facility is favorite
+    // Check if facility is favorite
     isFavorite(facilityId) {
       return this.favoriteIds.includes(facilityId)
     },
@@ -658,7 +691,6 @@ export default {
         </template>
       </v-text-field>
 
-      <!-- Mobile Search Icon -->
       <v-btn
         v-if="$vuetify.display.smAndDown && !showMobileSearch"
         icon
@@ -667,7 +699,6 @@ export default {
         <v-icon color="white">mdi-magnify</v-icon>
       </v-btn>
 
-      <!-- Mobile Expanding Search Bar -->
       <transition name="slide-fade">
         <v-text-field
           v-if="$vuetify.display.smAndDown && showMobileSearch"
@@ -690,7 +721,6 @@ export default {
         </v-text-field>
       </transition>
 
-      <!-- 🔔 Notification Icon + Dropdown -->
       <v-menu v-model="notificationMenu" offset-y left>
         <template v-slot:activator="{ props }">
           <v-btn icon v-bind="props">
@@ -723,12 +753,10 @@ export default {
           </v-card-title>
           <v-divider></v-divider>
 
-          <!-- No Notifications -->
           <div v-if="notifications.length === 0" class="text-center py-4 grey--text">
             No notifications yet.
           </div>
 
-          <!-- Notification List -->
           <v-list v-else class="py-0" style="overflow-y: auto; max-height: 350px">
             <v-list-item
               v-for="n in notifications"
@@ -776,7 +804,32 @@ export default {
       }"
     >
       <v-container fluid class="pa-0">
-        <v-row no-gutters class="px-4 pt-10">
+        <v-row no-gutters class="px-4 pt-10 pb-4">
+          <v-col cols="12">
+            <v-card
+              dark
+              rounded="xl"
+              flat
+              class="pa-4 d-flex align-center justify-space-between text-white banner-animated"
+              :style="{
+                background:
+                  'linear-gradient(to right, rgba(26, 101, 162, 1), rgba(119, 154, 229, 1))',
+              }"
+            >
+              <div>
+                <h2 class="text-h6 font-weight-bold">Welcome back, {{ userName }}!</h2>
+                <div class="typing-container">
+                  <p class="text-subtitle-2 mb-0 mt-1 typing-text">
+                    Find and book the perfect facility for your next match.
+                  </p>
+                </div>
+              </div>
+
+              <v-icon size="40" class="ml-3 sport-icon-animation">mdi-whistle</v-icon>
+            </v-card>
+          </v-col>
+        </v-row>
+        <v-row no-gutters class="px-4">
           <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
             <h2 class="text-h6 font-weight-medium">Available Playmate Requests</h2>
             <v-btn text small color="blue" @click="goToPlaymateRequests">
@@ -1102,6 +1155,7 @@ export default {
 </template>
 
 <style scoped>
+/* Standard Transition & Layout Styles  */
 .slide-fade-enter-active,
 .slide-fade-leave-active {
   transition: all 0.25s ease;
@@ -1112,20 +1166,7 @@ export default {
   opacity: 0;
   transform: translateX(20px);
 }
-.search-prompt-container {
-  position: absolute;
-  bottom: -30px;
-  width: 100%;
-}
-.floating-search-card {
-  border-radius: 12px !important;
-  width: 90%;
-  text-align: center;
-  background-color: white;
-}
-.floating-search-card .white--text {
-  color: rgb(0, 122, 204) !important;
-}
+
 .facility-scroll-container {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -1148,5 +1189,85 @@ export default {
 
 .v-app-bar .v-text-field {
   max-width: 300px;
+}
+
+/* --- ANIMATIONS --- */
+
+/* Icon Shake Animation  */
+@keyframes shake-icon {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  10%,
+  30%,
+  50%,
+  70%,
+  90% {
+    transform: rotate(-10deg); /* Increased angle for faster/more noticeable shake */
+  }
+  20%,
+  40%,
+  60%,
+  80% {
+    transform: rotate(10deg);
+  }
+}
+
+.sport-icon-animation {
+  animation: shake-icon 0.1s ease-in-out 50 forwards;
+  transform-origin: 50% 50%;
+}
+
+/* Banner Fade-in Animation */
+.banner-animated {
+  animation: bannerFadeUp 0.9s ease-out forwards;
+  opacity: 0;
+  transform: translateY(15px);
+}
+
+@keyframes bannerFadeUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Typing Animation */
+.typing-text {
+  width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+
+  /* Ensure typing animation runs for a duration (e.g., 3.5s) */
+  animation:
+    typing 3.5s steps(57, end) forwards,
+    blink-caret 0.75s step-end infinite;
+
+  display: inline-block;
+  border-right: 3px solid white;
+}
+
+@keyframes typing {
+  from {
+    width: 0;
+  }
+  to {
+    width: 100%;
+  }
+}
+
+@keyframes blink-caret {
+  from,
+  to {
+    border-color: transparent;
+  }
+  50% {
+    border-color: white;
+  }
 }
 </style>

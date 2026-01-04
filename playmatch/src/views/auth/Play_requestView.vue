@@ -17,7 +17,7 @@
         Playmate Requests
       </v-toolbar-title>
       <v-spacer></v-spacer>
-      <v-btn icon @click="dialog = true" color="white">
+      <v-btn icon @click="openCreateDialog()" color="white">
         <v-icon>mdi-plus</v-icon>
       </v-btn>
     </v-app-bar>
@@ -43,7 +43,8 @@
 
         <v-card class="pa-3 mb-4" rounded="lg" elevation="1">
           <v-tabs v-model="mainTab" background-color="transparent" grow>
-            <v-tab>Active Requests</v-tab>
+            <v-tab>Active Matches</v-tab>
+            <v-tab>Users</v-tab>
             <v-tab>Recently Played</v-tab>
           </v-tabs>
 
@@ -59,6 +60,7 @@
                 Seeking Players
               </v-chip>
               <v-chip value="team" color="deep-purple" text-color="white"> Opponent Teams </v-chip>
+              <v-chip value="direct_invite" color="purple" text-color="white"> Invites </v-chip>
             </v-chip-group>
           </div>
         </v-card>
@@ -66,22 +68,22 @@
         <div v-if="mainTab === 0">
           <div v-if="loading" class="text-center py-10">
             <v-progress-circular indeterminate color="blue"></v-progress-circular>
-            <p class="mt-2 grey--text">Loading playmate requests...</p>
+            <p class="mt-2 grey--text">Loading active matches...</p>
           </div>
 
-          <div v-else-if="filteredRequests.length === 0" class="text-center py-10">
+          <div v-else-if="filteredMatches.length === 0" class="text-center py-10">
             <v-icon large color="grey lighten-1">mdi-account-group-outline</v-icon>
             <h3 class="mt-2 text-h6 grey--text">
               No active requests found for your current filters.
             </h3>
             <p class="grey--text">Be the first to create a playmate request!</p>
-            <v-btn color="blue" dark class="mt-4" rounded @click="dialog = true">
+            <v-btn color="blue" dark class="mt-4" rounded @click="openCreateDialog()">
               <v-icon left>mdi-plus-circle-outline</v-icon> Create Request
             </v-btn>
           </div>
 
           <v-row v-else>
-            <v-col cols="12" v-for="request in filteredRequests" :key="request.id">
+            <v-col cols="12" v-for="request in filteredMatches" :key="request.id">
               <v-card class="pa-4" rounded="lg" elevation="2">
                 <div class="d-flex align-center">
                   <v-avatar
@@ -99,24 +101,49 @@
                       <v-chip
                         x-small
                         :color="
-                          request.status === 'open'
-                            ? 'green'
-                            : request.status === 'canceled'
-                              ? 'red'
-                              : 'orange'
+                          request.match_type === 'direct_invite' &&
+                          request.invite_status === 'pending'
+                            ? 'purple'
+                            : request.status === 'open'
+                              ? 'green'
+                              : request.status === 'canceled'
+                                ? 'red'
+                                : 'orange'
                         "
                         dark
                         class="ml-2"
                       >
-                        {{ request.status }}
+                        {{
+                          request.match_type === 'direct_invite'
+                            ? request.is_invited && request.invite_status === 'pending'
+                              ? 'Action Required'
+                              : request.invite_status === 'accepted'
+                                ? 'Confirmed'
+                                : request.invite_status === 'rejected'
+                                  ? 'Rejected'
+                                  : 'Invite Sent'
+                            : request.status
+                        }}
                       </v-chip>
                       <v-chip
                         x-small
-                        :color="request.match_type === 'team' ? 'deep-purple' : 'light-blue'"
+                        :color="
+                          request.match_type === 'team'
+                            ? 'deep-purple'
+                            : request.match_type === 'direct_invite'
+                              ? 'purple darken-1'
+                              : 'light-blue'
+                        "
                         dark
                         class="ml-1"
                       >
-                        {{ request.match_type === 'team' ? 'Team Match' : 'Seeking Players' }}
+                        {{
+                          request.match_type === 'team'
+                            ? 'Team Match'
+                            : request.match_type === 'direct_invite'
+                              ? 'Direct Invite'
+                              : 'Seeking Players'
+                        }}
                       </v-chip>
                     </div>
                     <div class="text-caption grey--text">
@@ -145,14 +172,22 @@
                   </span>
 
                   <span class="d-flex align-center">
-                    <v-icon small class="mr-1">{{
-                      request.match_type === 'team' ? 'mdi-trophy' : 'mdi-account-group'
-                    }}</v-icon>
-                    {{
-                      request.match_type === 'team'
-                        ? `Seeking Team (Max ${request.max_joins} players)`
-                        : `${request.joins_count} / ${request.max_joins} joined`
-                    }}
+                    <v-icon small class="mr-1">
+                      {{ request.match_type === 'team' ? 'mdi-trophy' : 'mdi-account-group' }}
+                    </v-icon>
+
+                    {{ playersDisplay(request) }}
+
+                    <!-- Extra hint for direct invite -->
+                    <v-chip
+                      v-if="request.match_type === 'direct_invite'"
+                      x-small
+                      color="purple"
+                      outlined
+                      class="ml-2"
+                    >
+                      Invite {{ request.invite_status || 'sent' }}
+                    </v-chip>
                   </span>
                 </div>
 
@@ -160,65 +195,44 @@
                   {{ request.description || 'No specific notes provided.' }}
                 </p>
 
-                <v-card
-                  v-if="request.joins_count > 0 || request.match_type === 'team'"
-                  flat
-                  class="mt-3 pa-2 rounded-sm"
-                  :class="
-                    request.match_type === 'team' ? 'deep-purple lighten-5' : 'light-blue lighten-5'
-                  "
-                >
-                  <div
-                    class="text-body-2"
-                    :class="
-                      request.match_type === 'team'
-                        ? 'deep-purple--text text-darken-2'
-                        : 'light-blue--text text-darken-2'
-                    "
-                  >
-                    <span v-if="request.match_type === 'team'">
-                      <span class="font-weight-bold">{{ request.creator_name }} Team</span>
-                      vs.
-                      <span v-if="request.joiners && request.joiners.length > 0">
-                        <strong
-                          class="mx-1"
-                          style="cursor: pointer; text-decoration: underline"
-                          @click="viewUserProfile(request.joiners[0].user_id)"
-                        >
-                          {{ request.joiners[0].full_name }} Team
-                        </strong>
-                        (Opponent Contact)
-                      </span>
-                      <span v-else class="grey--text font-italic">No opponent yet.</span>
-                    </span>
-
-                    <span v-else class="d-flex flex-column">
-                      <span class="font-weight-medium mb-1">Joiners:</span>
-                      <span
-                        v-for="(joiner, index) in request.joiners"
-                        :key="index"
-                        class="text-body-2"
-                      >
-                        <span
-                          class="blue--text"
-                          style="cursor: pointer; text-decoration: underline"
-                          @click="viewUserProfile(joiner.user_id)"
-                        >
-                          {{ joiner.full_name }}
-                        </span>
-                      </span>
-                      <span v-if="request.joins_count === 0" class="grey--text font-italic">
-                        Be the first to join!
-                      </span>
-                    </span>
-                  </div>
-                </v-card>
-
                 <v-card-actions class="pa-0 pt-2">
                   <v-btn
+                    v-if="
+                      request.match_type === 'direct_invite' &&
+                      request.is_invited &&
+                      request.invite_status === 'pending'
+                    "
+                    color="green darken-1"
+                    dark
+                    rounded
+                    class="mr-2"
+                    @click="handleInviteResponse(request, 'accepted')"
+                  >
+                    <v-icon left>mdi-check-bold</v-icon> Accept Match
+                  </v-btn>
+                  <v-btn
+                    v-if="
+                      request.match_type === 'direct_invite' &&
+                      request.is_invited &&
+                      request.invite_status === 'pending'
+                    "
+                    color="red darken-1"
+                    dark
+                    rounded
+                    @click="handleInviteResponse(request, 'rejected')"
+                  >
+                    <v-icon left>mdi-close</v-icon> Reject
+                  </v-btn>
+
+                  <v-btn
+                    v-else-if="
+                      !request.is_invited ||
+                      request.invite_status !== 'pending' ||
+                      isCreator(request.creator_id)
+                    "
                     small
                     :color="
-                      isJoined(request.id)
+                      isJoined(request.id) && !isCreator(request.creator_id)
                         ? 'red'
                         : isCreator(request.creator_id)
                           ? 'orange darken-1'
@@ -229,7 +243,11 @@
                     dark
                     rounded
                     block
-                    :disabled="request.status !== 'open' && !isCreator(request.creator_id)"
+                    :disabled="
+                      getCapacity(request).isFull &&
+                      !isCreator(request.creator_id) &&
+                      !isJoined(request.id)
+                    "
                     @click="handleJoinToggle(request)"
                   >
                     {{
@@ -237,7 +255,7 @@
                         ? 'Manage'
                         : isJoined(request.id)
                           ? 'Withdraw'
-                          : request.status === 'full' && request.match_type === 'individual'
+                          : getCapacity(request).isFull
                             ? 'Full'
                             : request.match_type === 'team'
                               ? 'Accept Challenge'
@@ -250,7 +268,55 @@
           </v-row>
         </div>
 
-        <div v-if="mainTab === 1">
+        <div v-else-if="mainTab === 1">
+          <v-subheader v-if="filteredUsers.length > 0" class="font-weight-bold"
+            >Users matching "{{ search }}"</v-subheader
+          >
+          <v-alert v-else type="info" text class="mt-4">
+            Start searching to find users to play with!
+          </v-alert>
+
+          <v-list v-if="filteredUsers.length > 0" two-line class="mt-2">
+            <v-list-item v-for="user in filteredUsers" :key="user.id">
+              <v-list-item-avatar color="blue lighten-4" size="50">
+                <span class="white--text font-weight-bold">{{ user.full_name[0] }}</span>
+              </v-list-item-avatar>
+
+              <v-list-item-content>
+                <v-list-item-title class="font-weight-bold">
+                  {{ user.full_name }}
+                </v-list-item-title>
+                <v-list-item-subtitle>
+                  Sport: {{ user.sports || 'N/A' }} | Location: {{ user.city || 'N/A' }}
+                </v-list-item-subtitle>
+              </v-list-item-content>
+
+              <v-list-item-action class="d-flex flex-row my-2 mx-1">
+                <v-btn
+                  icon
+                  class="mr-2"
+                  style="width: 28px; height: 30px; min-width: 30px"
+                  @click="viewUserProfile(user.id)"
+                >
+                  <v-icon size="16" color="blue">mdi-information-outline</v-icon>
+                </v-btn>
+
+                <v-btn
+                  v-if="user.id !== currentUserId"
+                  color="primary"
+                  rounded
+                  class="px-3 text-caption"
+                  style="height: 33px; min-height: 33px"
+                  @click="openMatchRequestDialog(user)"
+                >
+                  Let's Match
+                </v-btn>
+              </v-list-item-action>
+            </v-list-item>
+          </v-list>
+        </div>
+
+        <div v-else-if="mainTab === 2">
           <v-alert
             type="info"
             class="mt-4 mb-4"
@@ -327,7 +393,13 @@
 
     <v-dialog v-model="dialog" max-width="500px">
       <v-card rounded="lg">
-        <v-card-title class="text-h5 blue white--text">Create New Request</v-card-title>
+        <v-card-title class="text-h5 blue white--text">
+          {{
+            isDirectInvite
+              ? `Invite Match with ${selectedUserToMatch.full_name}`
+              : 'Create New Request'
+          }}
+        </v-card-title>
         <v-card-text class="pt-4">
           <v-form ref="form" v-model="valid" lazy-validation>
             <v-select
@@ -337,29 +409,24 @@
               :rules="[(v) => !!v || 'Sport is required']"
               required
               class="mb-3"
-              @change="handleSportChange"
+              :readonly="lockedSport"
+              :disabled="lockedSport"
             ></v-select>
 
             <v-text-field
-              v-if="isSportOther"
+              v-if="isSportOther && !lockedSport"
               v-model="otherSportText"
               label="Specify Other Sport"
               :rules="[(v) => !!v || 'Custom sport is required']"
               required
               class="mt-0 mb-3"
-            ></v-text-field>
+            />
 
-            <v-radio-group
-              v-model="newRequest.match_type"
-              label="What are you looking for?"
-              :rules="[(v) => !!v || 'Match type is required']"
-              required
-              row
-              class="mt-0 mb-3"
-            >
+            <v-radio-group>
               <v-radio label="Individual Players" value="individual"></v-radio>
               <v-radio label="An Opponent Team" value="team"></v-radio>
             </v-radio-group>
+
             <v-select
               v-model="newRequest.location"
               :items="locationChoices"
@@ -385,7 +452,7 @@
               v-model.number="newRequest.max_joins"
               :label="
                 newRequest.match_type === 'team'
-                  ? 'Opponent Team Size (e.g., 5 for 5v5)'
+                  ? 'Players per Team (e.g., 5 for 5v5)'
                   : 'Max Participants (excluding creator)'
               "
               type="number"
@@ -396,7 +463,7 @@
               ]"
               required
               class="mb-3"
-            ></v-text-field>
+            />
 
             <v-text-field
               v-model="newRequest.date"
@@ -438,6 +505,11 @@
               rows="2"
               class="mb-3"
             ></v-textarea>
+
+            <v-alert v-if="isDirectInvite" type="info" dense outlined class="mt-4">
+              This will create a Direct Invite request for {{ selectedUserToMatch.full_name }}. It
+              is pending until they accept or decline.
+            </v-alert>
           </v-form>
         </v-card-text>
 
@@ -445,7 +517,7 @@
           <v-spacer></v-spacer>
           <v-btn color="grey" text @click="dialog = false">Cancel</v-btn>
           <v-btn color="blue darken-1" text @click="createRequest" :loading="creating">
-            Create
+            {{ isDirectInvite ? 'Send Invite' : 'Create' }}
           </v-btn>
         </v-card-actions>
       </v-card>
@@ -459,7 +531,9 @@
             <v-tab>{{
               selectedRequest.match_type === 'team'
                 ? 'Opponent Status'
-                : `Participants (${participants.length})`
+                : selectedRequest.match_type === 'direct_invite'
+                  ? 'Invite Status'
+                  : `Participants (${participants.length})`
             }}</v-tab>
             <v-tab>Edit Details</v-tab>
           </v-tabs>
@@ -467,7 +541,47 @@
           <v-tabs-items v-model="manageTab" class="mt-4">
             <v-tab-item>
               <v-list dense>
-                <v-list-item v-if="participants.length === 1">
+                <div
+                  v-if="selectedRequest.match_type === 'direct_invite'"
+                  class="pa-2 grey lighten-4 rounded"
+                >
+                  <div class="font-weight-medium mb-2">
+                    Invite Status for
+                    <span class="purple--text">{{ selectedRequest.invitee_name }}</span
+                    >:
+                  </div>
+                  <v-chip
+                    :color="
+                      selectedRequest.invite_status === 'accepted'
+                        ? 'green'
+                        : selectedRequest.invite_status === 'rejected'
+                          ? 'red'
+                          : 'purple'
+                    "
+                    dark
+                    class="font-weight-bold"
+                  >
+                    {{ selectedRequest.invite_status }}
+                  </v-chip>
+                  <p v-if="selectedRequest.invite_status === 'accepted'" class="mt-2 text-caption">
+                    {{ selectedRequest.invitee_name }} has accepted. The match is confirmed!
+                  </p>
+                  <p
+                    v-else-if="selectedRequest.invite_status === 'rejected'"
+                    class="mt-2 text-caption"
+                  >
+                    {{ selectedRequest.invitee_name }} rejected the invite. The slot is now open for
+                    a regular join, or you can send a new invite.
+                  </p>
+                  <p v-else class="mt-2 text-caption">
+                    The invitation is still pending a response from
+                    {{ selectedRequest.invitee_name }}.
+                  </p>
+                </div>
+
+                <v-list-item
+                  v-if="participants.length === 1 && selectedRequest.match_type !== 'direct_invite'"
+                >
                   <v-list-item-content>
                     <v-list-item-title class="grey--Text">{{
                       selectedRequest.match_type === 'team'
@@ -500,7 +614,15 @@
                 </v-list-item>
               </v-list>
 
-              <v-alert v-if="selectedRequest.status === 'full'" type="success" class="mt-4" dense>
+              <v-alert
+                v-if="
+                  selectedRequest.status === 'full' &&
+                  selectedRequest.match_type !== 'direct_invite'
+                "
+                type="success"
+                class="mt-4"
+                dense
+              >
                 {{
                   selectedRequest.match_type === 'team'
                     ? 'This match has been accepted!'
@@ -516,7 +638,9 @@
                   :value="
                     selectedRequest.match_type === 'team'
                       ? 'Seeking Opponent Team'
-                      : 'Seeking Individual Players'
+                      : selectedRequest.match_type === 'direct_invite'
+                        ? `Direct Invite to ${selectedRequest.invitee_name}`
+                        : 'Seeking Individual Players'
                   "
                   label="Match Type"
                   readonly
@@ -676,6 +800,15 @@
 
               <v-list-item>
                 <v-list-item-content>
+                  <v-list-item-title class="grey--text text-caption">Sport</v-list-item-title>
+                  <v-list-item-subtitle>{{ profile.sports || '—' }}</v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-divider class="my-2"></v-divider>
+
+              <v-list-item>
+                <v-list-item-content>
                   <v-list-item-title class="grey--text text-caption">Phone</v-list-item-title>
                   <v-list-item-subtitle>{{ profile.phone_number || '—' }}</v-list-item-subtitle>
                 </v-list-item-content>
@@ -777,7 +910,7 @@ export default {
   data: () => ({
     loading: false,
     creating: false,
-    dialog: false, // For Create Request
+    dialog: false, // For Create/Invite Request (Single Dialog)
     manageDialog: false, // For Manage Request
     manageTab: 0, // 0 for Participants, 1 for Edit
     valid: true,
@@ -792,6 +925,7 @@ export default {
     otherSportText: '',
     facilities: [],
     facilityLoading: false,
+    lockedSport: false,
     otherLocationText: '',
     newRequest: {
       sport: null,
@@ -806,7 +940,7 @@ export default {
     todayDate: new Date().toISOString().split('T')[0],
 
     // DATA PROPERTIES FOR TABS AND RATING
-    mainTab: 0, // 0 for Active Requests, 1 for Recently Played
+    mainTab: 0, // 0 for Active Matches, 1 for Users, 2 for Recently Played
     finishedPlaymates: [],
     ratingDialog: false,
     selectedPlayerToRate: null,
@@ -829,9 +963,16 @@ export default {
       zip_code: null,
       phone_number: null,
       updated_at: null,
+      sports: null,
     },
     profileRatings: [],
     statusCheckTimer: null,
+
+    // NEW & UPDATED DATA PROPERTIES FOR DIRECT INVITE
+    allUsers: [],
+    isDirectInvite: false, // New flag to control dialog behavior
+    selectedUserToMatch: { id: null, full_name: '', sports: '', city: '' }, // Full user data
+    // END NEW DATA PROPERTIES
   }),
   computed: {
     // Calculates the average rating for the viewed user
@@ -855,20 +996,66 @@ export default {
     isLocationOther() {
       return this.newRequest.location === 'Other (Specify)'
     },
-    filteredRequests() {
+    // Only filters by matchTypeFilter for Tab 0, but still includes search filter.
+    filteredMatches() {
       const searchTerm = this.search ? this.search.toLowerCase() : ''
       const matchTypeFiltered = this.playmateRequests.filter((request) => {
+        // Apply match type filter
         if (this.matchTypeFilter === 'all') return true
+
+        // Direct Invites need special handling because they use the 'direct_invite' type
+        if (this.matchTypeFilter === 'direct_invite') {
+          return request.match_type === 'direct_invite'
+        }
+
+        // Filter out other direct invites unless explicitly requested
+        if (request.match_type === 'direct_invite') return false
+
         return request.match_type === this.matchTypeFilter
       })
 
+      // Apply search filter (Sport, Location, or Creator Name)
       return matchTypeFiltered.filter(
         (request) =>
+          !searchTerm || // Always show all if no search term, or if search term matches one of the fields
           (request.sport || '').toLowerCase().includes(searchTerm) ||
           (request.location || '').toLowerCase().includes(searchTerm) ||
           (request.creator_name || '').toLowerCase().includes(searchTerm),
       )
     },
+    // NEW COMPUTED PROPERTY: Filters all users by search term on their sports or location/name for Tab 1
+    filteredUsers() {
+      const searchTerm = this.search ? this.search.toLowerCase() : ''
+      if (!searchTerm) return []
+
+      // Filter users whose 'sports' or 'city' or 'full_name' includes the search term, and exclude the current user
+      return this.allUsers.filter((user) => {
+        const userSports = (user.sports || '').toLowerCase()
+        const userLocation = (user.city || '').toLowerCase()
+        const userFullName = (user.full_name || '').toLowerCase()
+
+        return (
+          user.id !== this.currentUserId &&
+          (userSports.includes(searchTerm) ||
+            userLocation.includes(searchTerm) ||
+            userFullName.includes(searchTerm))
+        )
+      })
+    },
+
+    playersDisplay() {
+      return (request) => {
+        const joined = Math.max(request.joins_count - 1, 0) // exclude creator
+        const needed = request.max_joins
+
+        if (request.match_type === 'team') {
+          return `Opponent team: ${joined} / 1`
+        }
+
+        return `Players: ${joined} / ${needed}`
+      }
+    },
+
     profileInitials() {
       if (!this.profile.full_name) return ''
       return this.profile.full_name
@@ -889,18 +1076,21 @@ export default {
   watch: {
     mainTab(newVal) {
       // Fetch data when the tab is switched
-      if (newVal === 1) {
+      if (newVal === 2) {
         this.fetchFinishedPlaymates()
       } else if (newVal === 0) {
         this.fetchRequestsAndJoins()
+      } else if (newVal === 1) {
+        this.fetchAllUsers() // Fetch all users when switching to the Users tab
       }
     },
   },
   async mounted() {
     await this.getCurrentUser()
     this.fetchRequestsAndJoins()
-    this.fetchFacilities() // Call fetchFinishedPlaymates on initial load so data is ready when user switches tab
+    this.fetchFacilities() // Call fetchFacilities on initial load
     this.fetchFinishedPlaymates()
+    this.fetchAllUsers() // Initial fetch of all users
     this.startStatusCheckTimer()
   },
   beforeUnmount() {
@@ -913,6 +1103,17 @@ export default {
       const requestEnd = new Date(`${date}T${endTime}`) // Add a 30-second buffer to account for minor clock discrepancies
       requestEnd.setSeconds(requestEnd.getSeconds() + 30)
       return new Date() > requestEnd
+    },
+
+    getCapacity(request) {
+      const joinedPlayers = Math.max(request.joins_count - 1, 0) // exclude creator
+      const maxPlayers = request.max_joins
+
+      return {
+        joinedPlayers,
+        maxPlayers,
+        isFull: joinedPlayers >= maxPlayers,
+      }
     },
 
     startStatusCheckTimer() {
@@ -977,7 +1178,7 @@ export default {
       const expiryDate = new Date(endTimeTimestamp)
       expiryDate.setDate(expiryDate.getDate() + 7)
       return new Date() > expiryDate
-    }, //  Fetches all ratings for a given user ID
+    }, //  Fetches all ratings for a given user ID
 
     async fetchUserRatings(userId) {
       if (!userId) {
@@ -1231,14 +1432,19 @@ export default {
       const maxJoins = data.max_joins
       const currentStatus = data.status
       const isTeamMatch = data.match_type === 'team'
+      const isDirectInvite = data.match_type === 'direct_invite'
       let newStatus = currentStatus
 
       if (currentStatus === 'canceled') return
 
-      if (isTeamMatch) {
-        newStatus = currentJoins >= 1 ? 'full' : 'open'
+      if (isDirectInvite) {
+        newStatus = currentJoins >= maxJoins + 1 ? 'full' : 'open'
+      } else if (isTeamMatch) {
+        // Team matches only need 1 opponent to join (creator + 1 opponent team)
+        newStatus = currentJoins > 1 ? 'full' : 'open'
       } else {
-        newStatus = currentJoins >= maxJoins ? 'full' : 'open'
+        // Individual matches check against max_joins
+        newStatus = currentJoins >= maxJoins + 1 ? 'full' : 'open' // Includes creator in count
       }
 
       if (newStatus !== currentStatus) {
@@ -1256,7 +1462,7 @@ export default {
     async fetchRequestsAndJoins() {
       this.loading = true
       try {
-        // Fetch requests starting from today
+        // 1. Fetch base requests
         const { data: requestsData, error: requestsError } = await supabase
           .from('playmate_requests')
           .select('*, creator:creator_id (full_name), playmate_joins(count), match_type')
@@ -1268,7 +1474,10 @@ export default {
 
         const requestIds = (requestsData || []).map((r) => r.id)
         let allJoinsData = []
+        let allInvitesData = []
+
         if (requestIds.length > 0) {
+          // 2. Fetch all joins for active requests
           const { data: joins, error: joinsError } = await supabase
             .from('playmate_joins')
             .select('request_id, user_id, user:user_id (full_name)')
@@ -1276,6 +1485,22 @@ export default {
 
           if (joinsError) throw joinsError
           allJoinsData = joins || []
+
+          // 3. Fetch all invites for active requests (Conceptual Table)
+          // Fetch invites where the current user is EITHER the invited_user_id OR the creator_id
+          const { data: invites, error: invitesError } = await supabase
+            .from('playmate_invites')
+            .select('id, request_id, invited_user_id, status, user:invited_user_id(full_name)')
+            .in('request_id', requestIds) // Filter by requestIds from the original fetch
+
+          if (invitesError) {
+            console.warn(
+              'Could not fetch playmate_invites, skipping invite data:',
+              invitesError.message,
+            )
+          } else {
+            allInvitesData = invites || []
+          }
         }
 
         const joinsByRequest = allJoinsData.reduce((acc, join) => {
@@ -1287,13 +1512,37 @@ export default {
           return acc
         }, {})
 
-        this.playmateRequests = (requestsData || [])
-          .map((request) => ({
-            ...request,
-            creator_name: request.creator?.full_name || 'Anonymous User',
-            joins_count: request.playmate_joins[0]?.count || 0,
-            joiners: joinsByRequest[request.id] || [],
-          })) // Filter out expired requests based on end_time for the Active list
+        const invitesByRequest = allInvitesData.reduce((acc, invite) => {
+          // Note: Since a direct invite request is 1v1, only one invite record is expected per request.
+          acc[invite.request_id] = {
+            id: invite.id,
+            invited_user_id: invite.invited_user_id,
+            status: invite.status,
+            full_name: invite.user?.full_name || 'Invited User',
+          }
+          return acc
+        }, {})
+
+        // Process requests
+        let processedRequests = (requestsData || [])
+          .map((request) => {
+            const inviteData = invitesByRequest[request.id]
+            const isInvitedUser = inviteData?.invited_user_id === this.currentUserId
+
+            return {
+              ...request,
+              creator_name: request.creator?.full_name || 'Anonymous User',
+              joins_count: request.playmate_joins[0]?.count || 0,
+              joiners: joinsByRequest[request.id] || [],
+
+              // Direct Invite Properties
+              invite_id: inviteData ? inviteData.id : null,
+              invite_status: inviteData ? inviteData.status : null,
+              invitee_name: inviteData ? inviteData.full_name : null,
+              is_invited: isInvitedUser,
+            }
+          })
+          // Filter out expired requests based on end_time for the Active list
           .filter((request) => !this.isPastEndTime(request.date, request.end_time))
 
         if (this.currentUserId) {
@@ -1307,9 +1556,36 @@ export default {
           this.userJoins = joinsData.map((j) => j.request_id)
         }
 
-        this.playmateRequests = this.playmateRequests.filter(
-          (r) => r.status !== 'canceled' || r.creator_id === this.currentUserId,
-        )
+        // --- FINAL CLIENT-SIDE VISIBILITY LOGIC (CRUCIAL FOR INVITES) ---
+        // Filter the requests down to only those the current user should see:
+        this.playmateRequests = processedRequests.filter((r) => {
+          const isCreator = r.creator_id === this.currentUserId
+          const isJoined = this.userJoins.includes(r.id)
+          const isInvited = r.is_invited
+
+          // 1️⃣ Creator always sees their own request
+          if (isCreator) return true
+
+          // 2️⃣ Joined users always see it
+          if (isJoined) return true
+
+          // 3️⃣ Invited user sees direct invite (unless rejected)
+          if (r.match_type === 'direct_invite' && isInvited && r.invite_status !== 'rejected') {
+            return true
+          }
+
+          // 4️⃣ PUBLIC VISIBILITY RULE (KEY FIX)
+          // Any OPEN request that still has slots should be visible
+          const totalAllowed = r.max_joins + 1 // creator included
+
+          if (r.status === 'open' && r.joins_count < totalAllowed) {
+            return true
+          }
+
+          return false
+        })
+
+        // --- END FINAL CLIENT-SIDE VISIBILITY LOGIC ---
       } catch (err) {
         console.error('Error fetching playmate data:', err.message)
       } finally {
@@ -1354,24 +1630,89 @@ export default {
       this.fetchJoinsForRequest(request.id)
     },
 
-    async handleJoinToggle(request) {
-      if (this.isCreator(request.creator_id)) {
-        this.openManageDialog(request)
-        return
-      }
+    async handleInviteResponse(request, response) {
+      if (!request.is_invited || request.invite_status !== 'pending') return
 
+      this.creating = true
+      try {
+        // 1️⃣ Update invite status using invite_id (CRITICAL FIX)
+        const { error: inviteError } = await supabase
+          .from('playmate_invites')
+          .update({ status: response })
+          .eq('id', request.invite_id)
+
+        if (inviteError) throw inviteError
+
+        // 2️⃣ Optimistic UI update (IMMEDIATE FIX)
+        request.invite_status = response
+
+        if (response === 'accepted') {
+          // 3️⃣ Insert join
+          const { error: joinError } = await supabase
+            .from('playmate_joins')
+            .insert([{ request_id: request.id, user_id: this.currentUserId }])
+
+          if (joinError) throw joinError
+
+          // 4️⃣ Mark request as full
+          request.status = 'full'
+
+          alert(`Match with ${request.creator_name} accepted!`)
+        } else {
+          alert(`You rejected the match from ${request.creator_name}.`)
+        }
+
+        // 5️⃣ Force refresh from DB
+        await this.fetchRequestsAndJoins()
+      } catch (err) {
+        console.error('Invite response failed:', err.message)
+        alert('Failed to update invitation.')
+      } finally {
+        this.creating = false
+      }
+    },
+
+    async handleJoinToggle(request) {
       const requestId = request.id
       const isTeamMatch = request.match_type === 'team'
+      const isDirectInvite = request.match_type === 'direct_invite'
 
       if (!this.currentUserId) {
         alert('Please log in to join or manage requests.')
         return
       }
 
+      // Creator can manage the request
+      if (this.isCreator(request.creator_id)) {
+        this.openManageDialog(request)
+        return
+      }
+
+      // Direct invite: only the invited user can accept/reject if pending
+      if (isDirectInvite && request.is_invited && request.invite_status === 'pending') {
+        if (request.invited_user_id !== this.currentUserId) {
+          alert('Only the invited user can join this request.')
+          return
+        }
+        // The invited user can continue to accept/reject normally
+      }
+
+      // Determine max allowed participants
+      const maxAllowed = isTeamMatch
+        ? 2 // creator + 1 team
+        : request.max_joins + 1 // creator + max_joins
+
+      if (request.joins_count >= maxAllowed) {
+        alert('This play request is currently full and cannot be joined.')
+        return
+      }
+
+      // Handle join/withdraw
       if (this.isJoined(requestId)) {
         const msg = isTeamMatch
           ? 'Successfully withdrawn the opponent team from the challenge.'
           : 'Successfully withdrawn from the request.'
+
         await this.supabaseAction(
           supabase
             .from('playmate_joins')
@@ -1382,16 +1723,10 @@ export default {
           'Failed to withdraw from request.',
         )
       } else {
-        const isFull = isTeamMatch ? request.joins_count >= 1 : request.status === 'full'
-
-        if (isFull) {
-          alert(`This play request is currently full and cannot be joined.`)
-          return
-        }
-
         const msg = isTeamMatch
           ? 'You have successfully accepted the team challenge!'
           : 'Successfully joined the request!'
+
         await this.supabaseAction(
           supabase
             .from('playmate_joins')
@@ -1404,7 +1739,6 @@ export default {
       await this.checkRequestStatus(requestId)
       await this.fetchRequestsAndJoins()
     },
-
     async editRequest() {
       if (this.$refs.editForm && !this.$refs.editForm.validate()) {
         alert('Please correct the validation errors before saving.')
@@ -1454,6 +1788,7 @@ export default {
       if (!confirmCancel) return
 
       try {
+        // Delete the request, which should cascade delete joins and invites (if you set up cascading deletes)
         const { error } = await supabase
           .from('playmate_requests')
           .delete()
@@ -1503,6 +1838,7 @@ export default {
       }
     },
 
+    // REFACTORED METHOD: Handles both standard creation and direct invite creation
     async createRequest() {
       if (!this.$refs.form.validate() || !this.currentUserId) {
         if (!this.currentUserId) {
@@ -1529,39 +1865,147 @@ export default {
         finalLocation = this.otherLocationText.trim()
       }
 
+      this.creating = true
       try {
-        await this.supabaseAction(
-          supabase.from('playmate_requests').insert([
+        const basePayload = {
+          creator_id: this.currentUserId,
+          sport: finalSport,
+          location: finalLocation,
+          max_joins: this.newRequest.max_joins,
+          date: this.newRequest.date,
+          start_time: this.newRequest.start_time,
+          end_time: this.newRequest.end_time,
+          description: this.newRequest.description,
+          status: this.isDirectInvite ? 'open' : 'open',
+          match_type: this.isDirectInvite ? 'direct_invite' : this.newRequest.match_type,
+        }
+
+        // --- 1. CREATE THE PLAYMATE REQUEST ---
+        const { data: requestData, error: requestError } = await supabase
+          .from('playmate_requests')
+          .insert([basePayload])
+          .select('id')
+          .single()
+
+        if (requestError) throw requestError
+        const newRequestId = requestData.id
+
+        // --- 2. ADD CREATOR TO playmate_joins ---
+        const { error: creatorJoinError } = await supabase
+          .from('playmate_joins')
+          .insert([{ request_id: newRequestId, user_id: this.currentUserId }])
+
+        if (creatorJoinError) throw creatorJoinError
+
+        // --- 3. (CONDITIONAL) INSERT INVITE IF IT'S A DIRECT INVITE ---
+        if (this.isDirectInvite) {
+          const invitedUserId = this.selectedUserToMatch.id
+          const { error: inviteError } = await supabase.from('playmate_invites').insert([
             {
-              creator_id: this.currentUserId,
-              sport: finalSport,
-              location: finalLocation,
-              max_joins: this.newRequest.max_joins,
-              date: this.newRequest.date,
-              start_time: this.newRequest.start_time,
-              end_time: this.newRequest.end_time,
-              description: this.newRequest.description,
-              status: 'open',
-              match_type: this.newRequest.match_type,
+              request_id: newRequestId,
+              invited_user_id: invitedUserId,
+              status: 'pending', // Initial status
             },
-          ]),
-          'Playmate request created successfully!',
-          'Failed to create request. See console for error details.',
-        )
+          ])
+
+          if (inviteError) {
+            // If invite fails, still report the request creation but alert on the invite fail
+            console.error('Failed to insert playmate_invites record:', inviteError.message)
+            alert(
+              `Playmate Request created, but failed to send the direct invite: ${inviteError.message}. CRITICAL: Check your 'playmate_invites' table setup and RLS!`,
+            )
+          } else {
+            alert(
+              `Direct Match Request created and sent successfully to ${this.selectedUserToMatch.full_name}! Waiting for acceptance.`,
+            )
+          }
+        } else {
+          alert('Playmate request created successfully!')
+        }
 
         this.dialog = false
-        this.$refs.form.reset()
-        this.newRequest.sport = null
-        this.newRequest.location = ''
-        this.newRequest.match_type = 'individual'
-        this.otherSportText = ''
-        this.otherLocationText = ''
-        this.fetchRequestsAndJoins() // Explicitly switch to the Active Requests tab to show the newly created item
+        this.resetFormState()
+        this.fetchRequestsAndJoins()
         this.mainTab = 0
       } catch (e) {
-        console.log('Create request process aborted after failure.')
+        console.error('Create request process aborted after failure:', e.message)
+        alert('Failed to create request. See console for error details.')
+      } finally {
+        this.creating = false
       }
     },
+
+    // METHOD TO RESET FORM STATE AFTER SUBMISSION/CANCELLATION
+    resetFormState() {
+      if (this.$refs.form) {
+        this.$refs.form.reset()
+      }
+      this.newRequest = {
+        sport: null,
+        location: '',
+        max_joins: 4,
+        date: this.todayDate,
+        start_time: '',
+        end_time: '',
+        description: '',
+        match_type: 'individual',
+      }
+      this.otherSportText = ''
+      this.otherLocationText = ''
+      this.isDirectInvite = false
+      this.selectedUserToMatch = { id: null, full_name: '', sports: '', city: '' }
+    },
+
+    // METHOD TO OPEN STANDARD CREATE DIALOG
+    openCreateDialog() {
+      this.isDirectInvite = false
+      this.lockedSport = false
+      this.selectedUserToMatch = null
+      this.newRequest = {
+        sport: '',
+        match_type: '',
+        location: '',
+        max_joins: 1,
+        date: '',
+        start_time: '',
+        end_time: '',
+        description: '',
+      }
+      this.dialog = true
+    },
+    // NEW METHOD: Handles the "Let's Have a Match" button click
+    openMatchRequestDialog(user) {
+      if (!this.currentUserId) {
+        alert('You must be logged in to send a match request.')
+        return
+      }
+
+      this.resetFormState()
+
+      this.isDirectInvite = true
+      this.selectedUserToMatch = { ...user }
+
+      this.lockedSport = true
+      this.newRequest.sport = user.sports
+
+      this.newRequest.location = user.city || ''
+      this.newRequest.date = this.todayDate
+      this.newRequest.start_time = '18:00'
+      this.newRequest.end_time = '19:00'
+
+      this.newRequest.description = `Inviting ${user.full_name} for a ${user.sports} match.`
+
+      // ✅ DEFAULTS — USER CAN CHANGE THESE
+      this.newRequest.match_type = 'individual'
+      this.newRequest.max_joins = 1
+
+      this.dialog = true
+
+      setTimeout(() => {
+        this.$refs.form?.resetValidation()
+      }, 50)
+    },
+    // END NEW METHODS
 
     async viewUserProfile(userId) {
       if (!userId) return
@@ -1582,13 +2026,14 @@ export default {
         zip_code: null,
         phone_number: null,
         updated_at: null,
+        sports: null,
       }
 
       try {
         // 1. Fetch basic profile data
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, full_name, role, address, city, zip_code, phone_number, updated_at')
+          .select('id, full_name, role, address, city, zip_code, phone_number, updated_at, sports')
           .eq('id', userId)
           .single()
 
@@ -1627,10 +2072,28 @@ export default {
           zip_code: null,
           phone_number: null,
           updated_at: null,
+          sports: null,
         }
         this.profileRatings = []
         this.profileFound = false
       }, 250)
+    },
+
+    // NEW METHODS FOR USER SEARCH AND MATCH REQUEST
+    async fetchAllUsers() {
+      // Fetches a list of all users/profiles for the 'Users' tab
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, full_name, sports, city') // Select only necessary fields
+          .not('sports', 'is', null) // Only show users who have specified a sport
+
+        if (error) throw error
+
+        this.allUsers = data || []
+      } catch (err) {
+        console.error('Error fetching all users:', err.message)
+      }
     },
   },
 }

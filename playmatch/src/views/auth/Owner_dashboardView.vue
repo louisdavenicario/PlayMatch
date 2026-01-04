@@ -6,7 +6,6 @@
         url('/images/logo.jpg') center/cover no-repeat;
     "
   >
-
     <v-navigation-drawer
       v-model="drawer"
       :permanent="$vuetify.display.mdAndUp"
@@ -19,17 +18,15 @@
           {{ facilityDetails?.facility_name }}
         </v-list-item-title>
       </v-list-item>
-      
-      <v-divider
-        style="border-color: black; border-width: 2px"
-      ></v-divider>
+
+      <v-divider style="border-color: black; border-width: 2px"></v-divider>
 
       <v-list dense nav>
-          <v-list-item
-            :class="{ 'v-list-item--active': currentPage === 'dashboard' }"
-            @click="navigate('dashboard')"
-            link
-          >
+        <v-list-item
+          :class="{ 'v-list-item--active': currentPage === 'dashboard' }"
+          @click="navigate('dashboard')"
+          link
+        >
           <v-list-item-title>
             <v-icon class="mr-2">mdi-view-dashboard</v-icon>
             Dashboard
@@ -849,7 +846,8 @@ const currentPage = ref(localStorage.getItem('ownerCurrentPage') || 'dashboard')
 function navigate(page) {
   currentPage.value = page
   // Automatically close the drawer if on mobile
-  if (window.innerWidth <= 960) { // mimic Vuetify's smAndDown behavior
+  if (window.innerWidth <= 960) {
+    // mimic Vuetify's smAndDown behavior
     drawer.value = false
   }
 }

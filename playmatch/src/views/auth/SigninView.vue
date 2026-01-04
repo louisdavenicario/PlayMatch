@@ -9,11 +9,12 @@ const password = ref('')
 const role = ref(null)
 const showPassword = ref(false)
 const errorMessage = ref(null)
+const theme = ref('light')
 
 const router = useRouter()
 
 const handleLogin = async () => {
-  errorMessage.value = null // Clear previous errors
+  errorMessage.value = null
 
   if (!email.value || !password.value || !role.value) {
     errorMessage.value = 'Please fill in all fields.'
@@ -67,8 +68,7 @@ const handleLogin = async () => {
   } catch (error) {
     console.error('Login failed:', error)
     errorMessage.value = error.message || 'An unexpected error occurred.'
-  }
-  finally {
+  } finally {
     loading.value = false
   }
 }
@@ -77,38 +77,39 @@ const handleLogin = async () => {
 <template>
   <v-app :theme="theme">
     <div
-      class="d-flex align-center justify-center"
-      style="
-        min-height: 100dvh;
-        background:
-          linear-gradient(to bottom right,rgba(26, 101, 162, 0.6), rgba(119, 154, 229, 0.6)),
-          url('/images/logo.jpg') center/cover no-repeat;
-      "
+      class="d-flex align-center justify-center animated-background-container"
+      style="min-height: 100dvh; background: url('/images/logo.jpg') center/cover no-repeat"
     >
-      <v-row justify="center" align="center" style="max-width: 1100px; width: 100%;" class="mx-auto pa-4 pa-md-10">
+      <v-row
+        justify="center"
+        align="center"
+        style="max-width: 1100px; width: 100%"
+        class="mx-auto pa-4 pa-md-10"
+      >
         <v-col cols="12" md="6" class="hidden-sm-and-down">
-              <div class="text-white text-md-left text-center pa-4">
-                <h1 class="text-h2 font-weight-bold text-white mb-2">PlayMatch</h1>
-                <p class="text-h5 font-weight-light">
-                  Connect with sports enthusiasts and book available courts around you.
-                </p>
-              </div>
+          <div class="text-white text-md-left text-center pa-4">
+            <h1 class="text-h2 font-weight-bold text-white mb-2">PlayMatch</h1>
+            <p class="text-h5 font-weight-light">
+              Connect with sports enthusiasts and book available courts around you.
+            </p>
+          </div>
         </v-col>
 
         <v-col cols="12" md="6">
           <v-card
             class="mx-auto pa-8"
-            max-width="600"
+            max-width="500"
             elevation="10"
             style="
               background-color: rgba(255, 255, 255, 0.88);
               backdrop-filter: blur(4px);
               border: 2px solid #2196f3;
               border-radius: 20px;
+              z-index: 10;
             "
           >
             <div class="d-flex align-center mb-4">
-              <v-btn icon @click="$router.push('/')" class="mr-2">
+              <v-btn icon @click="$router.push('/')" class="mr-2" variant="text">
                 <v-icon>mdi-arrow-left</v-icon>
               </v-btn>
               <div class="flex-grow-1"></div>
@@ -116,7 +117,7 @@ const handleLogin = async () => {
 
             <div class="text-center">
               <v-img
-                class="mx-auto mb-6"
+                class="mx-auto mb-6 animated-logo"
                 src="/images/logo.png"
                 width="100"
                 alt="Playmatch Logo"
@@ -160,19 +161,32 @@ const handleLogin = async () => {
                 class="mb-4"
               ></v-select>
 
-              <v-btn type="submit" color="primary" size="large" block rounded="lg" class="my-4" :loading="loading">
+              <v-btn
+                type="submit"
+                color="primary"
+                size="large"
+                block
+                rounded="lg"
+                class="my-4"
+                :loading="loading"
+              >
                 Sign In
               </v-btn>
             </v-form>
-            <v-alert v-if="errorMessage" type="error" closable class="mt-4">
+
+            <v-alert v-if="errorMessage" type="error" closable class="mt-4" density="compact">
               {{ errorMessage }}
             </v-alert>
+
             <p class="text-center text-body-2 mt-4">
-                    Don't have an account? 
-                    <router-link :to="{ path: '/choose-role' }" class="text-primary font-weight-bold text-decoration-none">
-                      Register here
-                    </router-link>
-                  </p>
+              Don't have an account?
+              <router-link
+                :to="{ path: '/choose-role' }"
+                class="text-primary font-weight-bold text-decoration-none"
+              >
+                Register here
+              </router-link>
+            </p>
           </v-card>
         </v-col>
       </v-row>
@@ -181,8 +195,53 @@ const handleLogin = async () => {
 </template>
 
 <style scoped>
-.min-h-screen {
-  min-height: 100vh;
-  min-height: 100dvh;
+.animated-background-container {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.animated-background-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  background: linear-gradient(225deg, #1a65a2 0%, #779ae5 50%, #1a65a2 100%);
+  background-size: 400% 400%;
+  opacity: 0.85;
+  animation: smoothBackgroundShift 20s ease infinite;
+}
+
+@keyframes smoothBackgroundShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes logoRotate {
+  0% {
+    transform: rotateY(0deg);
+  }
+  50% {
+    transform: rotateY(180deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
+}
+
+.animated-logo {
+  animation: logoRotate 4s ease-in-out infinite;
+  transform-style: preserve-3d;
+  perspective: 1000px;
 }
 </style>
