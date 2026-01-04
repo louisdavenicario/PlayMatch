@@ -71,6 +71,8 @@
             prepend-icon="mdi-logout"
             :loading="loading"
             :disabled="loading"
+            rounded="xl"
+            class="text-none"
           >
             <strong>Logout</strong>
           </v-btn>
@@ -102,7 +104,7 @@
         <div v-if="currentPage === 'dashboard'">
           <v-row align="stretch">
             <v-col cols="12" sm="6" lg="3">
-              <v-card class="pa-4 dashboard-card fill-height" rounded="lg">
+              <v-card class="pa-4 dashboard-card fill-height" rounded="xl">
                 <div class="d-flex justify-space-between align-center mb-2">
                   <div class="text-subtitle-1 font-weight-medium">Today's Bookings</div>
                   <v-icon size="30" color="primary">mdi-calendar-today</v-icon>
@@ -114,7 +116,7 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-              <v-card class="pa-4 dashboard-card fill-height" rounded="lg">
+              <v-card class="pa-4 dashboard-card fill-height" rounded="xl">
                 <div class="d-flex justify-space-between align-center mb-2">
                   <div class="text-subtitle-1 font-weight-medium">Monthly Revenue</div>
                   <v-icon size="30" color="green-darken-2">mdi-currency-php</v-icon>
@@ -126,7 +128,7 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-              <v-card class="pa-4 dashboard-card fill-height" rounded="lg">
+              <v-card class="pa-4 dashboard-card fill-height" rounded="xl">
                 <div class="d-flex justify-space-between align-center mb-2">
                   <div class="text-subtitle-1 font-weight-medium">Pending Requests</div>
                   <v-icon size="30" color="orange-darken-2">mdi-alert-circle-outline</v-icon>
@@ -138,7 +140,7 @@
             </v-col>
 
             <v-col cols="12" sm="6" lg="3">
-              <v-card class="pa-4 dashboard-card fill-height" rounded="lg">
+              <v-card class="pa-4 dashboard-card fill-height" rounded="xl">
                 <div class="d-flex justify-space-between align-center mb-2">
                   <div class="text-subtitle-1 font-weight-medium">Facility Rating</div>
                   <v-icon size="30" color="amber-darken-2">mdi-star</v-icon>
@@ -162,7 +164,7 @@
 
           <v-row>
             <v-col cols="12">
-              <v-card class="pa-4" rounded="lg">
+              <v-card class="pa-4" rounded="xl">
                 <v-card-title class="font-weight-bold d-flex justify-space-between align-center">
                   <span>My Facility</span>
                   <v-btn icon size="small" @click="openEditModal" color="primary">
@@ -252,7 +254,7 @@
                     <!-- RIGHT SIDE: All Photos (Primary + Gallery) -->
                     <v-col cols="12" md="4">
                       <!-- Primary Photo -->
-                      <p class="mt-5"><strong>Primary Photo:</strong></p>
+                      <p class="mt-5 mb-2"><strong>Primary Photo:</strong></p>
                       <v-img
                         v-if="facilityDetails?.image_url"
                         :src="facilityDetails.image_url"
@@ -271,7 +273,7 @@
 
                       <!-- Gallery Photos -->
                       <template v-if="facilityDetails?.additional_photos?.length">
-                        <p class="mt-5 mb-3">
+                        <p class="mt-5 mb-2">
                           <strong
                             >Gallery Photos ({{
                               facilityDetails.additional_photos.length
@@ -300,7 +302,7 @@
           </v-row>
           <v-row>
             <v-col cols="12">
-              <v-card class="pa-4" rounded="lg">
+              <v-card class="pa-4" rounded="xl">
                 <v-card-title class="font-weight-bold">Recent Bookings</v-card-title>
                 <v-card-subtitle> Latest 5 accepted bookings for your facility </v-card-subtitle>
                 <v-card-text>
@@ -317,7 +319,7 @@
                       </v-list-item-subtitle>
                     </v-list-item>
                   </v-list>
-                  <v-alert v-else type="info" class="mt-4">No recent bookings.</v-alert>
+                  <v-alert v-else type="info" class="mt-4 rounded-xl">No recent bookings.</v-alert>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -326,7 +328,7 @@
         <div v-if="currentPage === 'bookings'">
           <v-row>
             <v-col cols="12">
-              <v-card class="pa-4" rounded="lg">
+              <v-card class="pa-4" rounded="xl">
                 <v-card-title class="font-weight-bold d-flex justify-space-between align-center">
                   <span>All Bookings History 📅</span>
                   <v-btn
@@ -335,6 +337,8 @@
                     :loading="loadingBookings"
                     @click="fetchAllBookings"
                     prepend-icon="mdi-refresh"
+                    rounded="xl"
+                    class="text-none"
                   >
                     Refresh
                   </v-btn>
@@ -355,6 +359,7 @@
                         variant="outlined"
                         density="compact"
                         hide-details
+                        rounded="lg"
                       ></v-select>
                     </v-col>
 
@@ -367,6 +372,7 @@
                         variant="outlined"
                         density="compact"
                         hide-details
+                        rounded="lg"
                       ></v-select>
                     </v-col>
 
@@ -379,6 +385,7 @@
                         variant="outlined"
                         density="compact"
                         hide-details
+                        rounded="lg"
                       ></v-select>
                     </v-col>
                   </v-row>
@@ -388,7 +395,7 @@
                     :items="paginatedBookings"
                     :loading="loadingBookings"
                     item-value="id"
-                    class="elevation-1"
+                    class="elevation-3 rounded-xl"
                     :items-per-page="itemsPerPageAllBookings"
                     hide-default-footer
                     hide-default-header
@@ -398,7 +405,7 @@
                         :color="getStatusColor(item.status)"
                         label
                         size="small"
-                        class="font-weight-bold"
+                        class="font-weight-bold rounded-xl text-none"
                       >
                         {{ item.status.charAt(0).toUpperCase() + item.status.slice(1) }}
                       </v-chip>
@@ -411,7 +418,7 @@
                         <v-btn
                           color="success"
                           size="small"
-                          class="mr-2"
+                          class="mr-2 rounded-xl text-none"
                           @click="handleBookingStatus(item.id, 'accepted')"
                         >
                           Accept
@@ -420,6 +427,7 @@
                         <v-btn
                           color="error"
                           size="small"
+                          class="text-none rounded-xl" 
                           @click="handleBookingStatus(item.id, 'rejected')"
                         >
                           Reject
@@ -485,7 +493,7 @@
         <div v-if="currentPage === 'availability'">
           <v-row>
             <v-col cols="12">
-              <v-card class="pa-4" rounded="lg">
+              <v-card class="pa-4" rounded="xl">
                 <v-card-title class="font-weight-bold">Regular Operating Hours</v-card-title>
                 <v-card-text>
                   <v-row v-for="day in daysOfWeek" :key="day">
@@ -502,6 +510,7 @@
                         type="time"
                         :disabled="!regularHours[day].isOpen"
                         variant="outlined"
+                        rounded="lg"
                       ></v-text-field>
                     </v-col>
                     <v-col cols="12" sm="4">
@@ -511,16 +520,17 @@
                         type="time"
                         :disabled="!regularHours[day].isOpen"
                         variant="outlined"
+                        rounded="lg"
                       ></v-text-field>
                     </v-col>
                   </v-row>
-                  <v-btn color="primary" @click="saveRegularHours">Save Regular Hours</v-btn>
+                  <v-btn color="primary" @click="saveRegularHours" rounded="xl" class="text-none">Save Regular Hours</v-btn>
                 </v-card-text>
               </v-card>
             </v-col>
             <v-col cols="12">
-              <v-card class="pa-4 mt-4" rounded="lg">
-                <v-card-title class="font-weight-bold"
+              <v-card class="pa-4 mt-4" rounded="xl">
+                <v-card-title class="font-weight-bold mb-3"
                   >Custom Schedules (Closures, Special Hours)</v-card-title
                 >
                 <v-card-text>
@@ -532,6 +542,7 @@
                           label="Date"
                           type="date"
                           variant="outlined"
+                          rounded="lg"
                         ></v-text-field>
                       </v-col>
                       <v-col cols="12" sm="4">
@@ -540,6 +551,7 @@
                           label="Start Time"
                           type="time"
                           variant="outlined"
+                          rounded="lg"
                         ></v-text-field>
                       </v-col>
                       <v-col cols="12" sm="4">
@@ -548,6 +560,7 @@
                           label="End Time"
                           type="time"
                           variant="outlined"
+                          rounded="lg"
                         ></v-text-field>
                       </v-col>
                       <v-col cols="12">
@@ -555,13 +568,14 @@
                           v-model="newCustomSchedule.reason"
                           label="Reason"
                           variant="outlined"
+                          rounded="lg"
                         ></v-text-field>
                       </v-col>
                     </v-row>
-                    <v-btn color="secondary" type="submit">Add Custom Schedule</v-btn>
+                    <v-btn color="secondary" type="submit" rounded="xl" class="text-none">Add Custom Schedule</v-btn>
                   </v-form>
                   <v-divider class="my-4"></v-divider>
-                  <v-list>
+                  <v-list class="elevation-1 rounded-xl" density="compact">
                     <v-list-item v-for="schedule in customSchedules" :key="schedule.id">
                       <v-list-item-title>{{ schedule.date }}</v-list-item-title>
                       <v-list-item-subtitle>
@@ -586,7 +600,7 @@
           </v-row>
         </div>
         <div v-if="currentPage === 'settings'">
-          <v-card class="pa-4" rounded="lg">
+          <v-card class="pa-4" rounded="xl">
             <v-card-title class="font-weight-bold">Account Settings</v-card-title>
             <v-card-text>
               <p>User ID: {{ userId }}</p>
@@ -603,8 +617,8 @@
           background-color: rgba(255, 255, 255, 0.88);
           backdrop-filter: blur(4px);
           border: 2px solid #2196f3;
-          border-radius: 20px;
         "
+        rounded="xl"
       >
         <v-card-title class="text-h5">Edit Facility Details</v-card-title>
         <v-card-text>
@@ -613,40 +627,45 @@
               v-model="editedFacility.facility_name"
               label="Facility Name"
               variant="outlined"
+              rounded="lg"
             ></v-text-field>
 
             <v-text-field
               v-model="editedFacility.price_per_hour"
               label="Price per hour"
               variant="outlined"
+              rounded="lg"
             ></v-text-field>
 
             <v-text-field
               v-model="editedFacility.amenities"
               label="Amenities"
               variant="outlined"
+              rounded="lg"
             ></v-text-field>
 
             <v-text-field
               v-model="editedFacility.address"
               label="Address"
               variant="outlined"
+              rounded="lg"
             ></v-text-field>
 
             <v-text-field
               v-model="editedFacility.phone_number"
               label="Contact Number"
               variant="outlined"
+              rounded="lg"
             ></v-text-field>
 
             <v-textarea
               v-model="editedFacility.briefdescription"
               label="Brief Description"
               variant="outlined"
+              rounded="lg"
             ></v-textarea>
 
             <h3 class="mt-4 mb-2">Primary Facility Photo</h3>
-            <v-divider class="mb-4"></v-divider>
 
             <v-img
               v-if="editedFacility.image_url"
@@ -668,6 +687,7 @@
               hint="Select a new image. It will be uploaded when you click 'Save Facility Details'."
               persistent-hint
               class="mb-2"
+              rounded="lg"
             ></v-file-input>
 
             <v-btn
@@ -676,29 +696,30 @@
               variant="text"
               prepend-icon="mdi-delete"
               @click="removePrimaryPhoto"
+              class="text-none"
             >
               Remove Current Photo
             </v-btn>
 
             <v-divider class="my-4"></v-divider>
 
-            <h3 class="mt-4 mb-2">Additional Facility Photos (Gallery)</h3>
-
-            <v-divider class="mb-4"></v-divider>
+            <h3 class="mt-4 mb-4">Additional Facility Photos (Gallery)</h3>
 
             <v-row v-if="existingPhotoUrls.length">
               <v-col cols="12">
                 <p class="text-subtitle-1">Current Gallery Photos:</p>
                 <div class="d-flex flex-wrap gap-2">
                   <div v-for="(url, index) in existingPhotoUrls" :key="url" class="ma-2">
-                    <v-card class="pa-2" outlined>
+                    <v-card class="pa-2 rounded-lg" outlined style="width: 120px">
                       <v-img :src="url" height="100px" width="100px" cover></v-img>
                       <v-btn
                         color="red"
                         size="x-small"
                         block
                         @click="removeExistingPhoto(index)"
-                        class="mt-1"
+                        class="mt-1 text-none"
+                        variant="text"
+                        prepend-icon="mdi-delete"
                       >
                         Remove
                       </v-btn>
@@ -718,6 +739,7 @@
                   variant="outlined"
                   prepend-icon="mdi-camera-plus"
                   clearable
+                  rounded="lg"
                 ></v-file-input>
               </v-col>
             </v-row>
@@ -725,7 +747,7 @@
             <v-row v-if="newGalleryFiles.length">
               <v-col cols="12">
                 <p class="text-subtitle-1">New Photos Queued for Upload:</p>
-                <v-list density="compact">
+                <v-list density="compact" class="elevation-1 rounded-lg">
                   <v-list-item v-for="(file, index) in newGalleryFiles" :key="index">
                     <v-list-item-title>{{ file.name }}</v-list-item-title>
                     <template v-slot:append>
@@ -745,8 +767,8 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="grey" text @click="showEditModal = false">Cancel</v-btn>
-          <v-btn color="primary" @click="saveFacilityDetails">Save</v-btn>
+          <v-btn color="grey" text @click="showEditModal = false" class="text-none">Cancel</v-btn>
+          <v-btn color="primary" @click="saveFacilityDetails" class="text-none">Save</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -1717,6 +1739,7 @@ const openEditModal = () => {
 
 .sidebar .v-list-item {
   transition: background-color 0.3s ease;
+  border-radius: 18px;
 }
 .sidebar .v-list-item:hover {
   background-color: rgba(158, 208, 248, 1);

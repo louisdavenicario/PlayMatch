@@ -29,7 +29,7 @@
       }"
     >
       <v-container>
-        <v-card class="pa-4 mb-4" rounded="lg" elevation="1">
+        <v-card class="pa-4 mb-4" rounded="xl" elevation="1">
           <v-text-field
             v-model="search"
             label="Search by Sport or Location"
@@ -37,15 +37,16 @@
             clearable
             solo
             dense
+            rounded
             hide-details
           ></v-text-field>
         </v-card>
 
-        <v-card class="pa-3 mb-4" rounded="lg" elevation="1">
+        <v-card class="pa-3 mb-4" rounded="xl" elevation="1">
           <v-tabs v-model="mainTab" background-color="transparent" grow>
-            <v-tab>Active Matches</v-tab>
-            <v-tab>Users</v-tab>
-            <v-tab>Recently Played</v-tab>
+            <v-tab class="text-none">Active Matches</v-tab>
+            <v-tab class="text-none">Users</v-tab>
+            <v-tab class="text-none">Recently Played</v-tab>
           </v-tabs>
 
           <div v-if="mainTab === 0" class="pt-3">
@@ -77,14 +78,14 @@
               No active requests found for your current filters.
             </h3>
             <p class="grey--text">Be the first to create a playmate request!</p>
-            <v-btn color="blue" dark class="mt-4" rounded @click="openCreateDialog()">
-              <v-icon left>mdi-plus-circle-outline</v-icon> Create Request
+            <v-btn color="blue" dark class="mt-4 text-none" rounded @click="openCreateDialog()">
+              <v-icon left class="mr-1">mdi-plus-circle-outline</v-icon> Create Request
             </v-btn>
           </div>
 
           <v-row v-else>
             <v-col cols="12" v-for="request in filteredMatches" :key="request.id">
-              <v-card class="pa-4" rounded="lg" elevation="2">
+              <v-card class="pa-4" rounded="xl" elevation="2">
                 <div class="d-flex align-center">
                   <v-avatar
                     color="blue lighten-4"
@@ -243,6 +244,7 @@
                     dark
                     rounded
                     block
+                    class="text-none"
                     :disabled="
                       getCapacity(request).isFull &&
                       !isCreator(request.creator_id) &&
@@ -272,11 +274,11 @@
           <v-subheader v-if="filteredUsers.length > 0" class="font-weight-bold"
             >Users matching "{{ search }}"</v-subheader
           >
-          <v-alert v-else type="info" text class="mt-4">
-            Start searching to find users to play with!
+          <v-alert v-else type="info" text class="mt-4 rounded-xl" elevation="1">
+            Start searching for a name or even type a letter to find users to play with!"
           </v-alert>
 
-          <v-list v-if="filteredUsers.length > 0" two-line class="mt-2">
+          <v-list v-if="filteredUsers.length > 0" two-line class="mt-2 rounded-xl" elevation="1">
             <v-list-item v-for="user in filteredUsers" :key="user.id">
               <v-list-item-avatar color="blue lighten-4" size="50">
                 <span class="white--text font-weight-bold">{{ user.full_name[0] }}</span>
@@ -319,7 +321,7 @@
         <div v-else-if="mainTab === 2">
           <v-alert
             type="info"
-            class="mt-4 mb-4"
+            class="mt-4 mb-4 rounded-xl"
             variant="tonal"
             title="Rating Window"
             text="Matches that ended in the last 24 hours are displayed here for rating. The rating window closes 7 days after the match ends."
@@ -392,7 +394,7 @@
     </v-main>
 
     <v-dialog v-model="dialog" max-width="500px">
-      <v-card rounded="lg">
+      <v-card rounded="xl">
         <v-card-title class="text-h5 blue white--text">
           {{
             isDirectInvite
@@ -506,7 +508,7 @@
               class="mb-3"
             ></v-textarea>
 
-            <v-alert v-if="isDirectInvite" type="info" dense outlined class="mt-4">
+            <v-alert v-if="isDirectInvite" type="info" dense outlined class="mt-4 rounded-xl">
               This will create a Direct Invite request for {{ selectedUserToMatch.full_name }}. It
               is pending until they accept or decline.
             </v-alert>
@@ -515,8 +517,8 @@
 
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn color="grey" text @click="dialog = false">Cancel</v-btn>
-          <v-btn color="blue darken-1" text @click="createRequest" :loading="creating">
+          <v-btn color="grey" text @click="dialog = false" class="text-none">Cancel</v-btn>
+          <v-btn color="blue darken-1" text @click="createRequest" :loading="creating" class="text-none">
             {{ isDirectInvite ? 'Send Invite' : 'Create' }}
           </v-btn>
         </v-card-actions>
@@ -528,14 +530,14 @@
         <v-card-title class="text-h5 orange darken-1 white--text">Manage Your Request</v-card-title>
         <v-card-text class="pt-4">
           <v-tabs v-model="manageTab" background-color="transparent" color="orange darken-1">
-            <v-tab>{{
+            <v-tab class="text-none">{{
               selectedRequest.match_type === 'team'
                 ? 'Opponent Status'
                 : selectedRequest.match_type === 'direct_invite'
                   ? 'Invite Status'
                   : `Participants (${participants.length})`
             }}</v-tab>
-            <v-tab>Edit Details</v-tab>
+            <v-tab class="text-none">Edit Details</v-tab>
           </v-tabs>
 
           <v-tabs-items v-model="manageTab" class="mt-4">
@@ -643,6 +645,7 @@
                         : 'Seeking Individual Players'
                   "
                   label="Match Type"
+                  persistent-placeholder
                   readonly
                   class="mb-3"
                   prepend-icon="mdi-information-outline"
@@ -742,6 +745,7 @@
           <v-btn
             color="red darken-1"
             text
+            class="text-none"
             @click="cancelRequest"
             :disabled="selectedRequest.status === 'canceled'"
           >
@@ -749,10 +753,11 @@
             {{ selectedRequest.status === 'canceled' ? 'Canceled' : 'Cancel Request' }}
           </v-btn>
           <div>
-            <v-btn color="grey" text @click="manageDialog = false">Close</v-btn>
+            <v-btn class="text-none" color="grey" text @click="manageDialog = false">Close</v-btn>
             <v-btn
               color="orange darken-1"
               dark
+              class="text-none"
               @click="editRequest"
               :loading="creating"
               :disabled="manageTab === 0 || selectedRequest.status === 'canceled'"
@@ -765,7 +770,7 @@
     </v-dialog>
 
     <v-dialog v-model="profileDialog" max-width="480px">
-      <v-card rounded="lg">
+      <v-card rounded="xl">
         <v-card-title class="d-flex align-center mt-4">
           <v-avatar size="48" class="mr-3" color="blue lighten-4">
             <span class="white--text font-weight-bold">{{ profileInitials }}</span>
@@ -870,7 +875,7 @@
 
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn text color="grey" @click="closeProfileDialog">Close</v-btn>
+          <v-btn text color="grey" @click="closeProfileDialog" class="text-none">Close</v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -2100,6 +2105,35 @@ export default {
 </script>
 
 <style scoped>
+/* 1. Base Tab Styling */
+.v-tab {
+  background-color: transparent !important;
+  border-radius: 15px !important; /* Higher value for a perfect pill shape */
+  margin: 0 4px;
+  min-width: 100px;
+  text-transform: none !important;
+  letter-spacing: normal;
+  transition: background-color 0.3s ease !important; /* Smooth hover */
+}
+
+/* 2. Style the Hover State */
+.v-tab:hover {
+  background-color: rgba(25, 118, 210, 0.05) !important; /* Very subtle blue tint */
+}
+
+/* 3. Style the Active Tab */
+.v-tab--active {
+  background-color: rgba(25, 118, 210, 0.1) !important; /* Light blue pill background */
+  color: #1976D2 !important;
+  font-weight: 600 !important;
+}
+
+/* 4. The Critical Fix: Remove the default square overlay */
+/* Vuetify uses ::before for the hover/focus grey box. We must kill it. */
+.v-tab::before {
+  display: none !important;
+}
+
 .text-truncate {
   overflow: hidden;
   text-overflow: ellipsis;

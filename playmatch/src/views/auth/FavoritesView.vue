@@ -45,20 +45,18 @@
           <v-col v-for="facility in favorites" :key="facility.id" cols="12" sm="6" md="4">
             <v-card
               class="mb-4"
-              rounded="lg"
+              rounded="xl"
               elevation="2"
               @click="$router.push({ name: 'facility-details', params: { id: facility.id } })"
             >
-              <v-img
-                height="150"
-                :src="facility.image_url || '/images/default-facility.jpg'"
-                class="grey lighten-3"
-              >
+
+            <div class="pa-3">
+              <v-img :src="facility.image_url || '/images/default-facility.jpg'" height="200" class="grey lighten-3 rounded-xl" cover>
                 <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
                   <v-chip
                     x-small
                     dark
-                    color="black"
+                    color="white"
                     class="text-overline font-weight-bold"
                     style="opacity: 0.7"
                   >
@@ -70,6 +68,7 @@
                   </v-btn>
                 </v-card-text>
               </v-img>
+            </div>
 
               <v-card-title class="pb-1 text-body-1 font-weight-semibold pt-3">
                 {{ facility.facility_name }}

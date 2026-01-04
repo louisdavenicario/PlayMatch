@@ -25,7 +25,7 @@
       }"
     >
       <v-container>
-        <v-card class="pa-4" rounded="lg" elevation="2">
+        <v-card class="pa-4" rounded="xl" elevation="2">
           <v-row v-if="allPhotos.length === 1" class="mb-4 mx-auto" style="max-width: 1200px">
             <v-col cols="12" class="pa-1">
               <v-img
@@ -177,11 +177,13 @@
                 outlined
                 rows="2"
                 class="mb-0"
+                rounded="lg"
               />
               <v-btn
                 color="blue"
                 dark
                 rounded
+                class="text-none"
                 @click="submitReview"
                 :loading="submittingReview"
                 :disabled="!newComment.trim()"
@@ -225,6 +227,7 @@
               text
               rounded
               color="blue"
+              class="text-none"
               @click="showAllReviews = true"
             >
               See More Reviews
@@ -243,20 +246,24 @@
 
         <v-divider class="my-6"></v-divider>
 
-        <v-card class="pa-4 mt-6" rounded="lg" elevation="2">
+        <v-card class="pa-4 mt-6" rounded="xl" elevation="2">
           <h3 class="text-h6 font-weight-medium mb-3">Book this Facility</h3>
 
           <v-skeleton-loader v-if="loadingSchedules" type="date-picker, text" />
 
           <div v-else>
-            <v-date-picker
-              v-model="selectedDate"
-              :allowed-dates="allowedDates"
-              :events="availableDates"
-              event-color="blue"
-              color="blue"
-              class="mb-4"
-            />
+            <div class="d-flex justify-center calendar-container">
+              <v-date-picker
+                v-model="selectedDate"
+                :allowed-dates="allowedDates"
+                :events="availableDates"
+                event-color="blue"
+                color="blue"
+                class="rounded-xl mb-4 calendar-border"
+                flat
+                outlined
+              />
+            </div>
 
             <v-alert
               v-if="selectedDateHasCustomSchedule"
@@ -266,6 +273,7 @@
               border-color="blue-darken-2"
               icon="mdi-information"
               class="mb-4"
+              rounded="xl"
             >
               {{ selectedCustomSchedule?.reason }}
             </v-alert>
@@ -327,6 +335,7 @@
               <v-text-field
                 v-model.number="selectedDuration"
                 label="Enter Duration in Hours"
+                rounded="lg"
                 type="number"
                 min="1"
                 :max="MAX_BOOKING_HOURS"
@@ -343,7 +352,7 @@
               text
               color="green"
               icon="mdi-check-circle"
-              class="mt-4"
+              class="mt-4 rounded-xl"
             >
               <div class="font-weight-bold">Selected Booking:</div>
               Date: {{ selectedDate }}<br />
@@ -370,7 +379,7 @@
               color="blue"
               dark
               rounded
-              class="mt-4"
+              class="mt-4 text-none"
               @click="bookFacility"
               :loading="loading"
               :disabled="!selectedStartSlot || !isDurationValid(selectedDuration)"
@@ -412,25 +421,43 @@
         </v-dialog>
 
         <v-dialog v-model="receiptDialog" max-width="500">
-          <v-card>
+          <v-card rounded="xl" elevation="4">
             <v-toolbar color="blue" dark flat class="px-4">
               <v-icon left>mdi-calendar-check</v-icon>
-              <v-toolbar-title class="font-weight-bold">Booking Confirmed!</v-toolbar-title>
+              <v-toolbar-title class="font-weight-bold">Booking Submitted!</v-toolbar-title>
             </v-toolbar>
 
             <v-card-text class="pt-4">
               <p class="text-h6 font-weight-bold">{{ facility.facility_name }}</p>
               <v-divider class="my-3"></v-divider>
-              <p>
-                <strong>Status:</strong> <v-chip color="orange" dark small>Pending Approval</v-chip>
-              </p>
-              <p><strong>Date:</strong> {{ receiptDetails.date }}</p>
-              <p>
-                <strong>Time:</strong> {{ receiptDetails.startTime }} -
-                {{ receiptDetails.endTime }} ({{ receiptDetails.duration }} hours)
-              </p>
-              <p><strong>Total Cost:</strong> ₱{{ receiptDetails.cost }}</p>
+              <div class="d-flex justify-space-between align-center mb-2">
+                <span class="grey--text">Status:</span>
+                <v-chip color="orange" dark small>Pending Approval</v-chip>
+              </div>
 
+              <div class="d-flex justify-space-between mb-2">
+                <span class="grey--text">Date:</span>
+                <span class="font-weight-medium">{{ receiptDetails.date }}</span>
+              </div>
+
+              <div class="d-flex justify-space-between mb-2">
+                <span class="grey--text">Time:</span>
+                <span class="font-weight-medium">
+                  {{ receiptDetails.startTime }} - {{ receiptDetails.endTime }}
+                </span>
+              </div>
+
+              <div class="d-flex justify-space-between mb-2">
+                <span class="grey--text">Duration:</span>
+                <span class="font-weight-medium">{{ receiptDetails.duration }} hour(s)</span>
+              </div>
+
+              <v-divider class="my-2" style="border-style: dashed"></v-divider>
+
+              <div class="d-flex justify-space-between text-h6 mt-2">
+                <span>Total Cost:</span>
+                <span class="blue--text font-weight-bold">₱{{ receiptDetails.cost }}</span>
+              </div>
               <v-alert
                 type="warning"
                 color="orange-lighten-4"
@@ -438,20 +465,24 @@
                 border-color="orange-darken-2"
                 icon="mdi-camera"
                 class="mt-4"
+                rounded="xl"
               >
-                <div class="font-weight-medium">
-                  <v-icon color="orange darken-2" left>mdi-alert-circle</v-icon>
-                  Please take a screenshot as proof of booking.
+                <div class="font-weight-bold">
+                  Please take a screenshot of this receipt.
+                </div>
+                <div class="caption">
+                  This serves as your proof of booking while awaiting approval.
                 </div>
               </v-alert>
-              <p class="caption mt-3">
-                You will be notified once the facility manager approves your booking.
+              <p class="caption grey--text text-center mt-4">
+                The facility manager will review your request. You will be notified once the status
+                changes.
               </p>
             </v-card-text>
 
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn color="blue darken-1" text @click="receiptDialog = false"> Close </v-btn>
+              <v-btn color="blue darken-1" text @click="receiptDialog = false" class="text-none"> Close </v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
@@ -1077,6 +1108,61 @@ export default {
 </script>
 
 <style scoped>
+.calendar-border {
+  border: 1px solid #e0e0e0 !important;
+  overflow: hidden !important;
+  width: 100% !important; /* Forces it to span the whole card */
+}
+
+/* This targets the internal Vuetify picker table to ensure it stretches */
+.calendar-border >>> .v-picker__body {
+  width: 100% !important;
+}
+
+/* Optional: If you want the border to be slightly darker when active */
+.calendar-border:focus-within {
+  border-color: #2196F3 !important;
+}
+
+/* Specific styling for the container */
+.calendar-container {
+  width: 100%;
+  display: flex;
+  justify-content: center; /* Keeps it centered if it hits max-width */
+  margin-bottom: 16px;
+}
+
+/* --- Responsive Rules --- */
+
+/* 1. Cellphones (Small screens) */
+@media (max-width: 600px) {
+  .calendar-container {
+    max-width: 100%; /* Spans full width of the card on mobile */
+  }
+}
+
+/* 2. Tablets & iPads (Medium screens) */
+@media (min-width: 601px) and (max-width: 959px) {
+  .calendar-container {
+    max-width: 400px; /* Comfortable size for iPad portrait/landscape */
+    margin: 0 auto 20px auto;
+  }
+}
+
+/* 3. Laptops & Desktops (Large screens) */
+@media (min-width: 960px) {
+  .calendar-container {
+    max-width: 450px; /* Prevents the "too big" look on laptops */
+    margin: 0 auto 24px auto;
+  }
+}
+
+/* Optional: Make the calendar font slightly more compact on large screens */
+.calendar-border >>> .v-date-picker-table {
+  height: auto !important;
+  padding: 12px !important;
+}
+
 .gradient-background {
   background: linear-gradient(to bottom right, rgba(26, 101, 162, 0.6), rgba(119, 154, 229, 0.6));
   min-height: 100vh;

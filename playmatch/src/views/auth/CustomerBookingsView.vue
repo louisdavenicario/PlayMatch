@@ -358,6 +358,7 @@ export default {
         <v-tabs
           v-model="tab"
           background-color="transparent"
+          :ripple="false"
           color="blue"
           class="mb-4 mt-2"
           fixed-tabs
@@ -399,12 +400,12 @@ export default {
                       :key="booking.id"
                       class="mb-3 pa-0"
                     >
-                      <v-card class="d-flex pa-3" width="100%" rounded="lg" elevation="1">
-                        <div class="mr-3 ml-1 d-flex flex-column align-center">
+                      <v-card class="d-flex pa-3 mb-1" width="100%" rounded="xl" elevation="1">
+                        <div class="mr-3 ml-1 mt-2 mb-2 d-flex flex-column align-center">
                           <v-img
                             :src="booking.image_url || '/images/default-facility.jpg'"
-                            height="100"
-                            width="100%"
+                            height="100%"
+                            width="130"
                             class="rounded-lg grey lighten-3"
                             cover
                           >
@@ -412,7 +413,7 @@ export default {
                               x-small
                               :color="getStatusColor(booking.status)"
                               dark
-                              class="ma-1 font-weight-bold"
+                              class="ma-1 mt-1 ml-3 font-weight-bold justify-center text-center"
                             >
                               {{ booking.status.toUpperCase() }}
                             </v-chip>
@@ -421,7 +422,7 @@ export default {
 
                         <div class="flex-grow-1">
                           <v-list-item-title
-                            class="font-weight-semibold text-body-1 mb-2"
+                            class="font-weight-semibold text-body-1 mb-2 mt-1"
                             text-wrap
                           >
                             {{ booking.facility_name }}
@@ -444,9 +445,9 @@ export default {
                                 v-if="['accepted', 'pending'].includes(booking.status)"
                                 small
                                 text
-                                color="red darken-1"
+                                color="red"
                                 @click="cancelBooking(booking.id)"
-                                class="btn-cancel"
+                                class="btn-cancel text-none rounded-xl mb-2 mt-1"
                               >
                                 Cancel
                               </v-btn>
@@ -456,8 +457,8 @@ export default {
                                 v-if="booking.status === 'accepted'"
                                 small
                                 text
-                                color="green darken-2"
-                                class="ml-2"
+                                color="green"
+                                class="ml-2 text-none rounded-xl mb-2 mt-1"
                                 @click="markAsCompleted(booking.id)"
                               >
                                 Completed
@@ -466,8 +467,10 @@ export default {
                               <v-chip
                                 v-else-if="booking.status === 'pending'"
                                 small
+                                text
                                 outlined
-                                color="orange"
+                                color="orange darken-2"
+                                class="ml-2 text-none rounded-xl mb-2 mt-1"
                               >
                                 Awaiting Approval
                               </v-chip>
@@ -477,6 +480,7 @@ export default {
                                 small
                                 text
                                 color="amber"
+                                class="text-none rounded-xl mb-2 mt-1"
                                 @click="
                                   $router.push({
                                     name: 'facility-details',
@@ -495,6 +499,7 @@ export default {
                                 small
                                 outlined
                                 color="grey"
+                                class="text-none rounded-lg mb-2 mt-1"
                               >
                                 {{
                                   booking.status.charAt(0).toUpperCase() + booking.status.slice(1)
@@ -533,38 +538,60 @@ export default {
 </template>
 
 <style scoped>
-/* Inherit background style for cards in the window/list */
-.transparent-card {
-  background-color: transparent !important;
-}
+/* --- Layout & List Styles --- */
 .transparent-list {
   background-color: transparent !important;
 }
 
 .v-list-item-title {
-  white-space: normal !important; /* Forces wrapping */
-  word-break: break-word !important; /* Helps with long words */
+  white-space: normal !important; 
+  word-break: break-word !important; 
 }
 
+.v-card:hover {
+  transform: scale(1.02);
+}
+
+.v-card {
+  transition: 0.3s ease;
+}
+
+/* --- Tabs Styling Fix --- */
+
+/* 1. Reset all tabs: Remove default backgrounds and overlays */
 .v-tab {
-  border-radius: 8px !important;
-  margin: 0 4px; /* Add slight margin between tabs for separation */
+  background-color: transparent !important;
+  border-radius: 15px !important;
+  margin: 0 4px;
+  transition: none !important;
+  text-transform: none !important; /* Makes it look less "boxy" */
 }
 
-.v-tab--active {
-  border-radius: 8px !important;
-  background-color: rgba(26, 101, 162, 0.1) !important; /* Light blue background for active state */
-}
-
-/* Targets the tab hover and focus state */
-.v-tab:hover,
-.v-tab:focus {
-  border-radius: 8px !important;
-  background-color: rgba(26, 101, 162, 0.05) !important; /* Lighter blue background for hover */
-}
-
-/* This is crucial: Hide the default square slider/indicator line */
-.v-tabs-slider-wrapper {
+/* 2. Remove the "overlay" pseudo-element (the primary cause of the solid box) */
+.v-tab::before, 
+.v-tab--active::before,
+.v-tab:hover::before,
+.v-tab:focus::before {
   display: none !important;
+  opacity: 0 !important;
+}
+
+/* 3. Style the Active Tab: No background, just blue text and an underline */
+.v-tab--active {
+  background-color: transparent !important; /* Removed the rgba blue background */
+  color: #1976D2 !important; 
+  font-weight: bold !important;
+  /* Optional: Add a subtle underline instead of a background box */
+  border-bottom: 2px solid #1976D2 !important;
+}
+
+/* 4. Hide the default Vuetify slider/line */
+::v-deep .v-tabs-slider-wrapper {
+  display: none !important;
+}
+
+/* 5. Clean up Ripple effect */
+.v-tab .v-ripple__container {
+  color: rgba(26, 101, 162, 0.1) !important;
 }
 </style>

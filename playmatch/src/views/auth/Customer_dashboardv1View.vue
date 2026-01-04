@@ -732,7 +732,7 @@ export default {
           </v-btn>
         </template>
 
-        <v-card width="320" max-height="400" rounded="lg" elevation="2">
+        <v-card width="350" max-height="400" rounded="xl" elevation="3">
           <v-card-title
             class="text-body-1 font-weight-bold pb-1 d-flex justify-space-between align-center"
           >
@@ -804,7 +804,7 @@ export default {
       }"
     >
       <v-container fluid class="pa-0">
-        <v-row no-gutters class="px-4 pt-10 pb-4">
+        <v-row no-gutters class="px-4 pt-10 pb-4 mb-2">
           <v-col cols="12">
             <v-card
               dark
@@ -831,8 +831,8 @@ export default {
         </v-row>
         <v-row no-gutters class="px-4">
           <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
-            <h2 class="text-h6 font-weight-medium">Available Playmate Requests</h2>
-            <v-btn text small color="blue" @click="goToPlaymateRequests">
+            <h2 class="text-h6 font-weight-medium mb-2">Available Playmate Requests</h2>
+            <v-btn text small color="blue" class="rounded-lg text-none" @click="goToPlaymateRequests">
               View All <v-icon right small>mdi-chevron-right</v-icon>
             </v-btn>
           </v-col>
@@ -847,7 +847,7 @@ export default {
             </div>
 
             <v-col v-else cols="12" v-for="req in playmateRequests" :key="req.id" class="mb-3 pa-0">
-              <v-card class="pa-3 d-flex align-center" rounded="lg" elevation="1">
+              <v-card class="pa-6 d-flex align-center" rounded="xl" elevation="1">
                 <v-avatar color="blue lighten-4" size="44" class="mr-4">
                   <span class="white--text font-weight-bold">{{ req.creator_name[0] }}</span>
                 </v-avatar>
@@ -868,6 +868,7 @@ export default {
                   :color="isCreator(req.creator_id) ? 'orange darken-1' : 'blue'"
                   dark
                   rounded
+                  class="text-none"
                   @click="handlePlaymateAction(req)"
                 >
                   {{ isCreator(req.creator_id) ? 'Manage' : 'View' }}
@@ -897,12 +898,15 @@ export default {
                 :key="facility.id"
                 class="mr-4 flex-shrink-0"
                 width="280"
-                rounded="lg"
+                rounded="xl"
+                elevation="2"
                 @click="$router.push({ name: 'facility-details', params: { id: facility.id } })"
               >
-                <v-img :src="facility.image" height="150" class="grey lighten-3">
+
+              <div class="pa-3">
+                <v-img :src="facility.image" height="200" class="grey lighten-3 rounded-xl" cover>
                   <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
-                    <v-chip x-small dark color="black" class="text-overline font-weight-bold">
+                    <v-chip x-small dark color="white" class="text-overline font-weight-bold">
                       {{ facility.type }}
                     </v-chip>
                     <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
@@ -912,6 +916,7 @@ export default {
                     </v-btn>
                   </v-card-text>
                 </v-img>
+              </div>
 
                 <v-card-title class="pb-1 text-body-1 font-weight-semibold pt-3">
                   {{ facility.name }}
@@ -938,6 +943,7 @@ export default {
                     color="blue"
                     dark
                     rounded
+                    class="text-none"
                     @click.stop="
                       $router.push({ name: 'facility-details', params: { id: facility.id } })
                     "
@@ -948,6 +954,7 @@ export default {
                     :color="facility.myRating > 0 ? 'orange darken-1' : 'amber'"
                     dark
                     rounded
+                    class="text-none"
                     @click.stop="openRatingDialog(facility)"
                   >
                     {{ facility.myRating > 0 ? 'Edit Rate' : 'Rate' }}
@@ -990,13 +997,17 @@ export default {
                   lg="3"
                 >
                   <v-card
-                    class="facility-card"
-                    rounded="lg"
+                    class="mr-2 mb-2 facility-card"
+                    rounded="xl"
                     @click="$router.push({ name: 'facility-details', params: { id: facility.id } })"
                   >
-                    <v-img :src="facility.image" height="150">
+
+                  <div class="pa-3">
+                    <v-img :src="facility.image" height="200" class="grey lighten-3 rounded-xl" cover>
                       <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
-                        <v-chip x-small dark color="black">{{ facility.type }}</v-chip>
+                        <v-chip x-small dark color="white" class="text-overline font-weight-bold">
+                          {{ facility.type }}
+                        </v-chip>
                         <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
                           <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
                             {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
@@ -1004,13 +1015,14 @@ export default {
                         </v-btn>
                       </v-card-text>
                     </v-img>
+                  </div>
 
                     <v-card-title class="pb-1 text-body-1 font-weight-semibold pt-3">
                       {{ facility.name }}
                     </v-card-title>
 
                     <v-card-text class="py-0">
-                      <div class="text-caption grey--text mb-2">{{ facility.address }}</div>
+                      <div class="text-caption grey--text text-truncate mb-2">{{ facility.address }}</div>
                       <div class="d-flex align-center justify-space-between mb-3">
                         <div class="d-flex align-center">
                           <v-icon small color="amber">mdi-star</v-icon>
@@ -1029,6 +1041,7 @@ export default {
                         color="blue"
                         dark
                         rounded
+                        class="text-none"
                         @click.stop="
                           $router.push({ name: 'facility-details', params: { id: facility.id } })
                         "
@@ -1039,6 +1052,7 @@ export default {
                         :color="facility.myRating > 0 ? 'orange darken-1' : 'amber'"
                         dark
                         rounded
+                        class="text-none"
                         @click.stop="openRatingDialog(facility)"
                       >
                         {{ facility.myRating > 0 ? 'Edit Rate' : 'Rate' }}
@@ -1052,25 +1066,28 @@ export default {
                 <v-card
                   v-for="facility in searchQuery ? filteredFacilities : facilities"
                   :key="facility.id"
-                  class="d-flex pa-3 mb-3 align-start"
+                  class="d-flex pa-3 mb-4 align-start"
                   elevation="1"
-                  rounded="lg"
+                  rounded="xl"
                   width="100%"
                   @click.stop="
                     $router.push({ name: 'facility-details', params: { id: facility.id } })
                   "
                 >
                   <div
-                    class="mr-3 ml-2 mb-2 mt-2 d-flex flex-column align-center"
+                    class="mr-3 ml-2 d-flex flex-column align-center"
                     style="width: 100px"
                   >
-                    <v-img
-                      :src="facility.image || '/images/default-facility.jpg'"
-                      height="100"
-                      width="100"
-                      class="rounded-lg grey lighten-3"
-                      cover
-                    />
+                  
+                    <div class="pa-1">
+                      <v-img
+                        :src="facility.image || '/images/default-facility.jpg'"
+                        height="100"
+                        width="100"
+                        class="mr-2 rounded-xl grey lighten-3"
+                        cover
+                      />
+                    </div>
                   </div>
 
                   <div class="flex-grow-1 text-left">

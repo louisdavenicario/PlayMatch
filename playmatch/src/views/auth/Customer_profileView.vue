@@ -205,7 +205,7 @@ onMounted(() => {
       <v-container class="py-8">
         <v-row justify="center">
           <v-col cols="12" md="8" lg="6">
-            <v-card class="pa-6" elevation="5" rounded="lg">
+            <v-card class="pa-6" elevation="5" rounded="xl">
               <div v-if="loading" class="text-center py-10">
                 <v-progress-circular indeterminate color="primary" size="64"></v-progress-circular>
                 <p class="mt-3 grey--text">Loading user data...</p>
@@ -238,11 +238,11 @@ onMounted(() => {
                   grow
                   class="mb-4"
                 >
-                  <v-tab value="details">
+                  <v-tab value="details" class="text-none">
                     <v-icon start>mdi-account-details-outline</v-icon>
                     Details
                   </v-tab>
-                  <v-tab value="ratings">
+                  <v-tab value="ratings" class="text-none">
                     <v-icon start>mdi-star-face</v-icon>
                     Ratings ({{ receivedRatings.length }})
                   </v-tab>
@@ -365,6 +365,8 @@ onMounted(() => {
                       <v-text-field
                         :value="profileData.email"
                         label="Email Address (Read Only)"
+                        persistent-placeholder
+                        readonly
                         prepend-icon="mdi-email"
                         disabled
                         class="mb-3"
@@ -480,6 +482,7 @@ onMounted(() => {
                   large
                   @click="toggleEdit"
                   :disabled="saving"
+                  class="text-none"
                 >
                   <v-icon left>mdi-cancel</v-icon> Cancel
                 </v-btn>
@@ -490,6 +493,7 @@ onMounted(() => {
                   large
                   @click="toggleEdit"
                   :disabled="loading"
+                  class="text-none"
                 >
                   <v-icon left>mdi-pencil-outline</v-icon> Edit Profile
                 </v-btn>
@@ -502,6 +506,7 @@ onMounted(() => {
                   :loading="saving"
                   :disabled="saving"
                   type="submit"
+                  class="text-none"
                 >
                   <v-icon left>mdi-content-save-outline</v-icon> Save Changes
                 </v-btn>
