@@ -109,7 +109,7 @@ const handleLogin = async () => {
             "
           >
             <div class="d-flex align-center mb-4">
-              <v-btn icon @click="$router.push('/')" class="mr-2" variant="text">
+              <v-btn icon @click="$router.push('/')" class="mb-4">
                 <v-icon>mdi-arrow-left</v-icon>
               </v-btn>
               <div class="flex-grow-1"></div>
@@ -135,6 +135,7 @@ const handleLogin = async () => {
                 density="compact"
                 required
                 class="mb-4"
+                rounded="lg"
               ></v-text-field>
 
               <v-text-field
@@ -148,6 +149,7 @@ const handleLogin = async () => {
                 density="compact"
                 required
                 class="mb-4"
+                rounded="lg"
               ></v-text-field>
 
               <v-select
@@ -159,6 +161,7 @@ const handleLogin = async () => {
                 density="compact"
                 required
                 class="mb-4"
+                rounded="lg"
               ></v-select>
 
               <v-btn
@@ -167,7 +170,7 @@ const handleLogin = async () => {
                 size="large"
                 block
                 rounded="lg"
-                class="my-4"
+                class="my-4 text-none"
                 :loading="loading"
               >
                 Sign In

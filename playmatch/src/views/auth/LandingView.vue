@@ -68,6 +68,7 @@ const theme = ref('light')
                   block
                   color="primary"
                   size="large"
+                  rounded="lg"
                   @click="$router.push('/choose-role')"
                 >
                   Get Started

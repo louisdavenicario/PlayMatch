@@ -136,7 +136,7 @@
                               : 'light-blue'
                         "
                         dark
-                        class="ml-1"
+                        class="ml-1 mb-2 mt-2"
                       >
                         {{
                           request.match_type === 'team'
@@ -206,7 +206,7 @@
                     color="green darken-1"
                     dark
                     rounded
-                    class="mr-2"
+                    class="mr-2 text-none"
                     @click="handleInviteResponse(request, 'accepted')"
                   >
                     <v-icon left>mdi-check-bold</v-icon> Accept Match
@@ -220,9 +220,10 @@
                     color="red darken-1"
                     dark
                     rounded
+                    class="text-none"
                     @click="handleInviteResponse(request, 'rejected')"
                   >
-                    <v-icon left>mdi-close</v-icon> Reject
+                    <v-icon left>mdi-close-thick</v-icon> Reject
                   </v-btn>
 
                   <v-btn
@@ -319,16 +320,10 @@
         </div>
 
         <div v-else-if="mainTab === 2">
-          <v-alert
-            type="info"
-            class="mt-4 mb-4 rounded-xl"
-            variant="tonal"
-            title="Rating Window"
-            text="Matches that ended in the last 24 hours are displayed here for rating. The rating window closes 7 days after the match ends."
-            colored-border
-            border="left"
-            prominent
-          >
+          <v-alert type="info" text class="mt-4 mb-4 rounded-xl" elevation="1">
+            <h3>Rating Window</h3>
+            <p>Matches that ended in the last 24 hours are displayed here for rating. The rating window closes 7 days after the match ends.</p>
+            Start searching for a name or even type a letter to find users to play with!"
           </v-alert>
 
           <div v-if="loading" class="text-center py-10">
@@ -898,7 +893,7 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn text @click="ratingDialog = false">Cancel</v-btn>
-          <v-btn color="blue" dark @click="submitRating" :disabled="newRating.rating === 0">
+          <v-btn color="blue" dark @click="submitRating" :disabled="newRating.rating === 0" class="text-none">
             Submit
           </v-btn>
         </v-card-actions>

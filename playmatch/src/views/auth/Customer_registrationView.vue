@@ -149,7 +149,7 @@ const goToSignIn = () => {
                 <v-card-text>
                   <!-- PERSONAL INFO -->
                   <v-list-item class="mb-4">
-                    <v-list-item-title class="font-weight-bold"
+                    <v-list-item-title class="font-weight-bold mb-3"
                       >Personal Information</v-list-item-title
                     >
                     <v-row>
@@ -159,6 +159,7 @@ const goToSignIn = () => {
                           label="Full Name"
                           :rules="requiredRule"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
 
@@ -168,6 +169,7 @@ const goToSignIn = () => {
                           label="Email Address"
                           :rules="emailRules"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
 
@@ -183,6 +185,7 @@ const goToSignIn = () => {
                           @focus="passwordFocused = true"
                           @blur="passwordFocused = false"
                           variant="outlined"
+                          rounded="lg"
                         />
                         <div v-if="formData.password || passwordFocused" class="password-rules">
                           <p class="text-caption font-weight-bold">Password must contain:</p>
@@ -244,6 +247,7 @@ const goToSignIn = () => {
                           :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
                           @click:append-inner="showConfirmPassword = !showConfirmPassword"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
                     </v-row>
@@ -251,7 +255,7 @@ const goToSignIn = () => {
 
                   <!-- CONTACT INFO -->
                   <v-list-item class="mb-4">
-                    <v-list-item-title class="font-weight-bold"
+                    <v-list-item-title class="font-weight-bold mb-3"
                       >Contact Information</v-list-item-title
                     >
                     <v-row>
@@ -261,6 +265,7 @@ const goToSignIn = () => {
                           label="Phone Number"
                           :rules="phoneRules"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
 
@@ -270,6 +275,7 @@ const goToSignIn = () => {
                           label="Address"
                           :rules="requiredRule"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
 
@@ -279,6 +285,7 @@ const goToSignIn = () => {
                           label="City"
                           :rules="requiredRule"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
 
@@ -288,6 +295,7 @@ const goToSignIn = () => {
                           label="Zip Code"
                           :rules="zipCodeRules"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
 
@@ -298,6 +306,7 @@ const goToSignIn = () => {
                           label="Sports (type your sports, e.g. Basketball, Tennis)"
                           :rules="requiredRule"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
                     </v-row>
@@ -315,7 +324,7 @@ const goToSignIn = () => {
                     size="large"
                     rounded
                     block
-                    class="submit-button"
+                    class="submit-button text-none"
                     :loading="loading"
                     :disabled="loading"
                   >
@@ -335,7 +344,7 @@ const goToSignIn = () => {
         <v-card-title class="text-h5 text-green-darken-2">Registration Successful</v-card-title>
         <v-card-text>Your account has been created successfully.</v-card-text>
         <v-card-actions class="justify-center">
-          <v-btn color="primary" rounded block @click="goToSignIn" class="sign-in-button">
+          <v-btn color="primary" rounded block @click="goToSignIn" class="sign-in-button text-none">
             Sign In
           </v-btn>
         </v-card-actions>

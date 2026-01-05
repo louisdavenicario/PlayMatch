@@ -226,7 +226,7 @@ const goToSignIn = () => {
               <v-form ref="form" @submit.prevent="validateAndSubmit">
                 <v-card-text>
                   <v-list-item class="mb-4">
-                    <v-list-item-title class="font-weight-bold"
+                    <v-list-item-title class="font-weight-bold mb-3"
                       >Account Information</v-list-item-title
                     >
                     <v-row>
@@ -236,6 +236,7 @@ const goToSignIn = () => {
                           label="Email Address"
                           :rules="emailRules"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
                       <v-col cols="12">
@@ -244,6 +245,7 @@ const goToSignIn = () => {
                           label="Phone Number"
                           :rules="phoneRules"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
                       <v-col cols="12" sm="6">
@@ -257,6 +259,7 @@ const goToSignIn = () => {
                           @focus="passwordFocused = true"
                           @blur="passwordFocused = false"
                           variant="outlined"
+                          rounded="lg"
                         />
                         <div v-if="formData.password || passwordFocused" class="password-rules">
                           <p class="text-caption font-weight-bold">Password must contain:</p>
@@ -317,13 +320,14 @@ const goToSignIn = () => {
                           :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
                           @click:append-inner="showConfirmPassword = !showConfirmPassword"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
                     </v-row>
                   </v-list-item>
 
                   <v-list-item class="mb-4">
-                    <v-list-item-title class="font-weight-bold">Facility Details</v-list-item-title>
+                    <v-list-item-title class="font-weight-bold mb-3">Facility Details</v-list-item-title>
                     <v-row>
                       <v-col cols="12" sm="6">
                         <v-text-field
@@ -331,6 +335,7 @@ const goToSignIn = () => {
                           label="Facility Name"
                           :rules="requiredRule"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
                       <v-col cols="12" sm="6">
@@ -340,6 +345,7 @@ const goToSignIn = () => {
                           placeholder="e.g. basketball, badminton, or..."
                           :rules="requiredRule"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
                       <v-col cols="12">
@@ -348,6 +354,7 @@ const goToSignIn = () => {
                           label="Address"
                           :rules="requiredRule"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
                       <v-col cols="12">
@@ -356,22 +363,23 @@ const goToSignIn = () => {
                           label="Amenities"
                           placeholder="What amenities do you offer?"
                           variant="outlined"
+                          rounded="lg"
                         />
                       </v-col>
                       <v-col cols="12">
                         <v-textarea
                           v-model="formData.briefdescription"
                           label="Brief Description"
-                          placeholder="Brief description of your facility..."
-                          :rules="requiredRule"
                           variant="outlined"
+                          :rules="requiredRule"
+                          rounded="lg"
                         />
                       </v-col>
                     </v-row>
                   </v-list-item>
 
                   <v-list-item class="mb-4">
-                    <v-list-item-title class="font-weight-bold"
+                    <v-list-item-title class="font-weight-bold mb-3"
                       >Operating Hours & Price</v-list-item-title
                     >
                     <v-row>
@@ -438,11 +446,11 @@ const goToSignIn = () => {
                     <div v-else class="uploaded-photo-container">
                       <img :src="previewUrl" alt="Uploaded Facility" class="preview-image" />
                       <div class="d-flex justify-center mt-2 gap-2">
-                        <v-btn color="primary" size="small" @click="triggerFileSelect">
+                        <v-btn color="primary" size="small" @click="triggerFileSelect" class="text-none mr-2 rounded-lg">
                           Replace
                         </v-btn>
 
-                        <v-btn color="error" size="small" @click="removePhoto" class="mr-2"
+                        <v-btn color="error" size="small" @click="removePhoto" class="text-none rounded-lg"
                           >Remove</v-btn
                         >
                       </div>
@@ -464,7 +472,7 @@ const goToSignIn = () => {
                     size="large"
                     rounded
                     block
-                    class="submit-button"
+                    class="submit-button text-none"
                   >
                     Submit
                   </v-btn>
@@ -491,7 +499,7 @@ const goToSignIn = () => {
           Your facility has been successfully registered. Click signin button to continue.
         </v-card-text>
         <v-card-actions class="justify-center">
-          <v-btn color="primary" rounded block @click="goToSignIn" class="sign-in-button">
+          <v-btn color="primary" rounded block @click="goToSignIn" class="sign-in-button text-none">
             Sign In
           </v-btn>
         </v-card-actions>

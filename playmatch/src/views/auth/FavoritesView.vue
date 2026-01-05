@@ -57,8 +57,7 @@
                     x-small
                     dark
                     color="white"
-                    class="text-overline font-weight-bold"
-                    style="opacity: 0.7"
+                    class="text-overline font-weight-bold glass-chip"
                   >
                     {{ facility.facility_type }}
                   </v-chip>
@@ -113,6 +112,27 @@
     </v-bottom-navigation>
   </v-app>
 </template>
+
+<style scoped>
+.glass-chip {
+  /* 1. Translucent white background */
+  background: rgba(255, 255, 255, 0.2) !important;
+  
+  /* 2. The glass blur effect */
+  backdrop-filter: blur(3px) !important;
+  -webkit-backdrop-filter: blur(3px) !important; /* For Safari support */
+  
+  /* 3. Subtle thin border to define the shape */
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  
+
+  /* 4. Soft shadow to give it lift */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+  
+  /* Ensure text is readable over the blur */
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.2);
+}
+</style>
 
 <script>
 import { supabase } from '@/supabaseClient'

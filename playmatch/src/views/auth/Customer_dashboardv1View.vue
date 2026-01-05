@@ -906,7 +906,7 @@ export default {
               <div class="pa-3">
                 <v-img :src="facility.image" height="200" class="grey lighten-3 rounded-xl" cover>
                   <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
-                    <v-chip x-small dark color="white" class="text-overline font-weight-bold">
+                    <v-chip x-small dark color="white" class="text-overline font-weight-bold glass-chip">
                       {{ facility.type }}
                     </v-chip>
                     <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
@@ -1005,7 +1005,7 @@ export default {
                   <div class="pa-3">
                     <v-img :src="facility.image" height="200" class="grey lighten-3 rounded-xl" cover>
                       <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
-                        <v-chip x-small dark color="white" class="text-overline font-weight-bold">
+                        <v-chip x-small dark color="white" class="text-overline font-weight-bold glass-chip">
                           {{ facility.type }}
                         </v-chip>
                         <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
@@ -1206,6 +1206,25 @@ export default {
 
 .v-app-bar .v-text-field {
   max-width: 300px;
+}
+
+.glass-chip {
+  /* 1. Translucent white background */
+  background: rgba(255, 255, 255, 0.2) !important;
+  
+  /* 2. The glass blur effect */
+  backdrop-filter: blur(3px) !important;
+  -webkit-backdrop-filter: blur(3px) !important; /* For Safari support */
+  
+  /* 3. Subtle thin border to define the shape */
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  
+
+  /* 4. Soft shadow to give it lift */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+  
+  /* Ensure text is readable over the blur */
+  text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 /* --- ANIMATIONS --- */

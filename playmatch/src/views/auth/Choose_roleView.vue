@@ -44,6 +44,7 @@ function continueAction() {
             :variant="selectedRole === 'customer' ? 'tonal' : 'outlined'"
             color="green"
             class="pa-4 cursor-pointer transition-all duration-300"
+            rounded="xl"
             @click="selectedRole = 'customer'"
           >
             <v-row align="center" no-gutters>
@@ -68,6 +69,7 @@ function continueAction() {
             :variant="selectedRole === 'owner' ? 'tonal' : 'outlined'"
             color="blue"
             class="pa-4 cursor-pointer transition-all duration-300"
+            rounded="xl"
             @click="selectedRole = 'owner'"
           >
             <v-row align="center" no-gutters>
@@ -90,7 +92,7 @@ function continueAction() {
         </v-col>
       </v-row>
 
-      <v-card class="mb-8" variant="outlined">
+      <v-card class="mb-8 rounded-xl" variant="outlined">
         <v-card-text>
           <h4 class="font-weight-medium mb-3">
             {{
@@ -133,7 +135,7 @@ function continueAction() {
         </v-card-text>
       </v-card>
 
-      <v-btn block color="primary" size="large" :disabled="!selectedRole" @click="continueAction">
+      <v-btn block color="primary" size="large" :disabled="!selectedRole" @click="continueAction" rounded="lg" class="text-none">
         Continue as
         {{
           selectedRole === 'customer'
