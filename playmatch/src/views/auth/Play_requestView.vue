@@ -390,7 +390,7 @@
     </v-main>
 
     <v-dialog v-model="dialog" max-width="500px">
-      <v-card rounded="xl">
+      <v-card rounded="xl" max-height="80vh">
         <v-card-title class="text-h5 blue white--text">
           {{
             isDirectInvite
