@@ -162,37 +162,38 @@
 
                 <v-divider class="my-3"></v-divider>
 
-                <div class="d-flex justify-space-between text-caption">
-                  <span class="d-flex align-center">
+                <v-row no-gutters class="text-caption mt-2 align-center justify-center">
+                  <v-col cols="6" sm="auto" class="d-flex align-center justify-center justify-sm-start pr-sm-4 pb-2 pb-sm-0">
                     <v-icon small class="mr-1">mdi-calendar-range</v-icon>
                     {{ formatDate(request.date) }}
-                  </span>
-                  <span class="d-flex align-center">
+                  </v-col>
+
+                  <v-col cols="6" sm="auto" class="d-flex align-center justify-center justify-sm-start pr-sm-4 pb-2 pb-sm-0">
                     <v-icon small class="mr-1">mdi-clock-time-four-outline</v-icon>
                     {{ formatTime(request.start_time) }} - {{ formatTime(request.end_time) }}
-                  </span>
+                  </v-col>
 
-                  <span class="d-flex align-center">
+                  <v-col cols="6" sm="auto" class="d-flex align-center justify-center justify-sm-start pr-sm-4">
                     <v-icon small class="mr-1">
                       {{ request.match_type === 'team' ? 'mdi-trophy' : 'mdi-account-group' }}
                     </v-icon>
-
                     {{ playersDisplay(request) }}
+                  </v-col>
 
-                    <!-- Extra hint for direct invite -->
+                  <v-col cols="6" sm="auto" class="d-flex align-center justify-center justify-sm-start">
                     <v-chip
                       v-if="request.match_type === 'direct_invite'"
                       x-small
                       color="purple"
                       outlined
-                      class="ml-2"
+                      class="ma-0"
                     >
                       Invite {{ request.invite_status || 'sent' }}
                     </v-chip>
-                  </span>
-                </div>
+                  </v-col>
+                </v-row>
 
-                <p class="text-body-2 mt-3 mb-1 grey--text text-truncate">
+                <p class="text-body-2 mt-3 mb-1 grey--text text-center mx-auto" style="max-width: 80%;">
                   {{ request.description || 'No specific notes provided.' }}
                 </p>
 
@@ -520,8 +521,8 @@
       </v-card>
     </v-dialog>
 
-    <v-dialog v-model="manageDialog" max-width="600px">
-      <v-card rounded="lg">
+    <v-dialog v-model="manageDialog" max-width="600px" scrollable>
+      <v-card rounded="xl" max-height="80vh">
         <v-card-title class="text-h5 orange darken-1 white--text">Manage Your Request</v-card-title>
         <v-card-text class="pt-4">
           <v-tabs v-model="manageTab" background-color="transparent" color="orange darken-1">
@@ -736,23 +737,32 @@
           </v-tabs-items>
         </v-card-text>
 
-        <v-card-actions class="d-flex justify-space-between pa-4 pt-0">
+        <v-card-actions class="d-flex flex-column flex-sm-row justify-space-between pa-4 pt-0">
           <v-btn
             color="red darken-1"
             text
-            class="text-none"
+            class="text-none w-100 w-sm-auto mb-2 mb-sm-0"
             @click="cancelRequest"
             :disabled="selectedRequest.status === 'canceled'"
           >
             <v-icon left>mdi-cancel</v-icon>
             {{ selectedRequest.status === 'canceled' ? 'Canceled' : 'Cancel Request' }}
           </v-btn>
-          <div>
-            <v-btn class="text-none" color="grey" text @click="manageDialog = false">Close</v-btn>
+
+          <div class="d-flex w-100 w-sm-auto justify-end">
+            <v-btn 
+              class="text-none flex-grow-1 flex-sm-grow-0 mr-2" 
+              color="grey" 
+              text 
+              @click="manageDialog = false"
+            >
+              Close
+            </v-btn>
+            
             <v-btn
               color="orange darken-1"
               dark
-              class="text-none"
+              class="text-none flex-grow-1 flex-sm-grow-0"
               @click="editRequest"
               :loading="creating"
               :disabled="manageTab === 0 || selectedRequest.status === 'canceled'"
