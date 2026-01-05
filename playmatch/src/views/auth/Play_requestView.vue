@@ -737,32 +737,23 @@
           </v-tabs-items>
         </v-card-text>
 
-        <v-card-actions class="d-flex flex-column flex-sm-row justify-space-between pa-4 pt-0">
+        <v-card-actions class="d-flex justify-space-between pa-4 pt-0">
           <v-btn
             color="red darken-1"
             text
-            class="text-none w-100 w-sm-auto mb-2 mb-sm-0"
+            class="text-none"
             @click="cancelRequest"
             :disabled="selectedRequest.status === 'canceled'"
           >
             <v-icon left>mdi-cancel</v-icon>
             {{ selectedRequest.status === 'canceled' ? 'Canceled' : 'Cancel Request' }}
           </v-btn>
-
-          <div class="d-flex w-100 w-sm-auto justify-end">
-            <v-btn 
-              class="text-none flex-grow-1 flex-sm-grow-0 mr-2" 
-              color="grey" 
-              text 
-              @click="manageDialog = false"
-            >
-              Close
-            </v-btn>
-            
+          <div>
+            <v-btn class="text-none" color="grey" text @click="manageDialog = false">Close</v-btn>
             <v-btn
               color="orange darken-1"
               dark
-              class="text-none flex-grow-1 flex-sm-grow-0"
+              class="text-none"
               @click="editRequest"
               :loading="creating"
               :disabled="manageTab === 0 || selectedRequest.status === 'canceled'"
