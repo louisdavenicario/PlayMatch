@@ -467,9 +467,7 @@
                 class="mt-4"
                 rounded="xl"
               >
-                <div class="font-weight-bold">
-                  Please take a screenshot of this receipt.
-                </div>
+                <div class="font-weight-bold">Please take a screenshot of this receipt.</div>
                 <div class="caption">
                   This serves as your proof of booking while awaiting approval.
                 </div>
@@ -482,7 +480,9 @@
 
             <v-card-actions>
               <v-spacer></v-spacer>
-              <v-btn color="blue darken-1" text @click="receiptDialog = false" class="text-none"> Close </v-btn>
+              <v-btn color="blue darken-1" text @click="receiptDialog = false" class="text-none">
+                Close
+              </v-btn>
             </v-card-actions>
           </v-card>
         </v-dialog>
@@ -1121,7 +1121,7 @@ export default {
 
 /* Optional: If you want the border to be slightly darker when active */
 .calendar-border:focus-within {
-  border-color: #2196F3 !important;
+  border-color: #2196f3 !important;
 }
 
 /* Specific styling for the container */

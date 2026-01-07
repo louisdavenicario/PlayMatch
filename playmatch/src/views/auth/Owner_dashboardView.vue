@@ -102,6 +102,196 @@
         </v-row>
 
         <div v-if="currentPage === 'dashboard'">
+          <v-row>
+            <v-col>
+              <v-btn icon @click="toggleNotifications">
+                <v-badge :content="unreadCount" :value="unreadCount" color="red" overlap>
+                  <v-icon size="26">mdi-bell-outline</v-icon>
+                </v-badge>
+              </v-btn>
+
+              <!-- Notifications Dropdown Menu -->
+              <v-menu
+                v-model="showNotifications"
+                location="bottom end"
+                :close-on-content-click="false"
+                max-width="400"
+              >
+                <v-card width="400">
+                  <v-card-title class="d-flex align-center justify-space-between pa-3">
+                    <div class="d-flex align-center">
+                      <span class="font-weight-bold mr-2">Notifications</span>
+
+                      <!-- Close Button -->
+                      <v-btn icon size="small" variant="text" @click="showNotifications = false">
+                        <v-icon size="20">mdi-close</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Close</v-tooltip>
+                      </v-btn>
+                    </div>
+
+                    <div>
+                      <v-btn
+                        icon
+                        size="small"
+                        variant="text"
+                        @click="markAllAsRead"
+                        :disabled="unreadCount === 0"
+                      >
+                        <v-icon size="20">mdi-check-all</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Mark all as read</v-tooltip>
+                      </v-btn>
+                      <v-btn
+                        icon
+                        size="small"
+                        variant="text"
+                        @click="deleteAllNotifications"
+                        :disabled="notifications.length === 0"
+                      >
+                        <v-icon size="20">mdi-delete-sweep</v-icon>
+                        <v-tooltip activator="parent" location="bottom">Delete all</v-tooltip>
+                      </v-btn>
+                    </div>
+                  </v-card-title>
+
+                  <v-divider></v-divider>
+
+                  <v-list density="compact" max-height="400" class="overflow-y-auto pa-0">
+                    <div
+                      v-for="notif in notifications"
+                      :key="notif.id"
+                      :class="{ 'bg-blue-lighten-5': !notif.read }"
+                      class="notification-item pa-3"
+                    >
+                      <div class="d-flex align-start">
+                        <v-avatar color="primary" size="40" class="mr-3 flex-shrink-0">
+                          <v-icon color="white">mdi-bell</v-icon>
+                        </v-avatar>
+
+                        <div class="flex-grow-1" style="min-width: 0">
+                          <div class="d-flex align-center justify-space-between mb-1">
+                            <span class="font-weight-medium text-subtitle-2">{{
+                              notif.title
+                            }}</span>
+                            <v-chip v-if="!notif.read" color="primary" size="x-small" class="ml-2"
+                              >New</v-chip
+                            >
+                          </div>
+
+                          <div class="text-body-2 text-grey-darken-1 mb-2" style="line-height: 1.4">
+                            {{
+                              notif.message.length > 80
+                                ? notif.message.substring(0, 80) + '...'
+                                : notif.message
+                            }}
+                          </div>
+
+                          <div class="d-flex align-center justify-space-between">
+                            <span class="text-caption text-grey">
+                              {{ formatNotificationDate(notif.created_at) }}
+                            </span>
+
+                            <div class="d-flex" style="gap: 8px">
+                              <v-btn
+                                size="small"
+                                variant="outlined"
+                                color="primary"
+                                @click="viewNotification(notif)"
+                              >
+                                <v-icon size="16" class="mr-1">mdi-eye</v-icon>
+                                View Full
+                              </v-btn>
+                              <v-btn
+                                icon
+                                size="small"
+                                variant="text"
+                                color="error"
+                                @click="deleteNotification(notif.id)"
+                              >
+                                <v-icon size="18">mdi-delete</v-icon>
+                                <v-tooltip activator="parent" location="bottom">Delete</v-tooltip>
+                              </v-btn>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <v-divider
+                        v-if="notif !== notifications[notifications.length - 1]"
+                        class="mt-3"
+                      ></v-divider>
+                    </div>
+                  </v-list>
+
+                  <v-alert v-if="!notifications.length" type="info" variant="tonal" class="ma-3">
+                    No notifications
+                  </v-alert>
+                </v-card>
+              </v-menu>
+
+              <!-- Full Notification View Dialog -->
+              <v-dialog v-model="showNotificationDialog" max-width="500">
+                <v-card v-if="selectedNotification">
+                  <v-card-title
+                    class="d-flex align-center justify-space-between text-white notification-gradient"
+                  >
+                    <span>{{ selectedNotification.title }}</span>
+                    <v-btn icon size="small" variant="text" @click="showNotificationDialog = false">
+                      <v-icon color="white">mdi-close</v-icon>
+                    </v-btn>
+                  </v-card-title>
+
+                  <v-divider></v-divider>
+
+                  <v-card-text class="pa-4">
+                    <div class="d-flex align-center mb-3">
+                      <v-avatar color="primary" size="50" class="mr-3">
+                        <v-icon color="white" size="30">mdi-bell</v-icon>
+                      </v-avatar>
+                      <div>
+                        <div class="text-caption text-grey">
+                          {{ formatNotificationDate(selectedNotification.created_at) }}
+                        </div>
+                        <v-chip
+                          v-if="!selectedNotification.read"
+                          color="primary"
+                          size="x-small"
+                          class="mt-1"
+                        >
+                          Unread
+                        </v-chip>
+                      </div>
+                    </div>
+
+                    <div class="text-body-1" style="line-height: 1.6">
+                      {{ selectedNotification.message }}
+                    </div>
+                  </v-card-text>
+
+                  <v-divider></v-divider>
+
+                  <v-card-actions class="pa-3">
+                    <v-spacer></v-spacer>
+                    <v-btn
+                      color="error"
+                      variant="text"
+                      @click="deleteNotification(selectedNotification.id)"
+                    >
+                      <v-icon left>mdi-delete</v-icon>
+                      Delete
+                    </v-btn>
+                    <v-btn
+                      class="notification-gradient-btn text-white"
+                      variant="flat"
+                      @click="showNotificationDialog = false"
+                    >
+                      Close
+                    </v-btn>
+                  </v-card-actions>
+                </v-card>
+              </v-dialog>
+            </v-col>
+          </v-row>
+
           <v-row align="stretch">
             <v-col cols="12" sm="6" lg="3">
               <v-card class="pa-4 dashboard-card fill-height" rounded="xl">
@@ -427,7 +617,7 @@
                         <v-btn
                           color="error"
                           size="small"
-                          class="text-none rounded-xl" 
+                          class="text-none rounded-xl"
                           @click="handleBookingStatus(item.id, 'rejected')"
                         >
                           Reject
@@ -524,7 +714,9 @@
                       ></v-text-field>
                     </v-col>
                   </v-row>
-                  <v-btn color="primary" @click="saveRegularHours" rounded="xl" class="text-none">Save Regular Hours</v-btn>
+                  <v-btn color="primary" @click="saveRegularHours" rounded="xl" class="text-none"
+                    >Save Regular Hours</v-btn
+                  >
                 </v-card-text>
               </v-card>
             </v-col>
@@ -572,7 +764,9 @@
                         ></v-text-field>
                       </v-col>
                     </v-row>
-                    <v-btn color="secondary" type="submit" rounded="xl" class="text-none">Add Custom Schedule</v-btn>
+                    <v-btn color="secondary" type="submit" rounded="xl" class="text-none"
+                      >Add Custom Schedule</v-btn
+                    >
                   </v-form>
                   <v-divider class="my-4"></v-divider>
                   <v-list class="elevation-1 rounded-xl" density="compact">
@@ -827,6 +1021,14 @@ const showDeleteConfirmModal = ref(false)
 const scheduleToDeleteId = ref(null)
 const scheduleToDeleteDate = ref('')
 
+const notifications = ref([])
+const unreadCount = ref(0)
+const showNotifications = ref(false)
+const showNotificationDialog = ref(false)
+const selectedNotification = ref(null)
+
+let notificationSubscription = null
+
 const acceptedBookings = ref([])
 const selectedDateBookings = ref([])
 const calendarDate = ref(new Date().toISOString().substring(0, 10))
@@ -999,6 +1201,350 @@ const sortedAllBookings = computed(() => {
 
   return sortedList
 })
+
+// Function to fetch notifications from Supabase
+const fetchNotifications = async () => {
+  if (!userId.value) return
+
+  try {
+    const { data, error } = await supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', userId.value)
+      .order('created_at', { ascending: false })
+      .limit(20)
+
+    if (error) throw error
+
+    notifications.value = data || []
+    unreadCount.value = notifications.value.filter((n) => !n.read).length
+  } catch (error) {
+    console.error('Error fetching notifications:', error.message)
+  }
+}
+
+// Function to subscribe to real-time notifications
+const subscribeToNotifications = () => {
+  if (!userId.value) return
+
+  notificationSubscription = supabase
+    .channel('notifications_channel')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${userId.value}`,
+      },
+      (payload) => {
+        console.log('New notification received:', payload)
+        notifications.value.unshift(payload.new)
+        unreadCount.value++
+
+        // Optional: Show a browser notification
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(payload.new.title, {
+            body: payload.new.message,
+            icon: '/favicon.ico',
+          })
+        }
+      },
+    )
+    .subscribe()
+}
+
+// Function to toggle notifications dropdown
+const toggleNotifications = () => {
+  showNotifications.value = !showNotifications.value
+  if (showNotifications.value) {
+    fetchNotifications()
+  }
+}
+
+const viewNotification = async (notif) => {
+  selectedNotification.value = notif
+  showNotificationDialog.value = true
+  showNotifications.value = false
+
+  // Mark as read when opened
+  if (!notif.read) {
+    await markAsRead(notif)
+  }
+}
+
+// Function to mark notification as read
+const markAsRead = async (notification) => {
+  if (notification.read) return
+
+  try {
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .eq('id', notification.id)
+
+    if (error) throw error
+
+    // Update local state
+    const index = notifications.value.findIndex((n) => n.id === notification.id)
+    if (index !== -1) {
+      notifications.value[index].read = true
+      unreadCount.value = Math.max(0, unreadCount.value - 1)
+    }
+  } catch (error) {
+    console.error('Error marking notification as read:', error.message)
+  }
+}
+
+// Function to mark all notifications as read
+const markAllAsRead = async () => {
+  try {
+    const unreadIds = notifications.value.filter((n) => !n.read).map((n) => n.id)
+
+    if (unreadIds.length === 0) {
+      alertMessage('No unread notifications', 'info')
+      return
+    }
+
+    const { error } = await supabase
+      .from('notifications')
+      .update({ read: true })
+      .in('id', unreadIds)
+
+    if (error) throw error
+
+    // Update local state
+    notifications.value = notifications.value.map((n) => ({ ...n, read: true }))
+    unreadCount.value = 0
+
+    alertMessage('All notifications marked as read', 'success')
+  } catch (error) {
+    console.error('Error marking all as read:', error.message)
+    alertMessage('Failed to mark all as read', 'error')
+  }
+}
+
+// Function to delete a single notification
+const deleteNotification = async (notificationId) => {
+  try {
+    const { error } = await supabase.from('notifications').delete().eq('id', notificationId)
+
+    if (error) throw error
+
+    // Update local state
+    const deletedNotif = notifications.value.find((n) => n.id === notificationId)
+    notifications.value = notifications.value.filter((n) => n.id !== notificationId)
+
+    if (deletedNotif && !deletedNotif.read) {
+      unreadCount.value = Math.max(0, unreadCount.value - 1)
+    }
+
+    // Close dialog if viewing the deleted notification
+    if (selectedNotification.value?.id === notificationId) {
+      showNotificationDialog.value = false
+      selectedNotification.value = null
+    }
+
+    alertMessage('Notification deleted', 'success')
+  } catch (error) {
+    console.error('Error deleting notification:', error.message)
+    alertMessage('Failed to delete notification', 'error')
+  }
+}
+
+// Function to delete all notifications
+const deleteAllNotifications = async () => {
+  try {
+    if (notifications.value.length === 0) {
+      alertMessage('No notifications to delete', 'info')
+      return
+    }
+
+    const notificationIds = notifications.value.map((n) => n.id)
+
+    const { error } = await supabase.from('notifications').delete().in('id', notificationIds)
+
+    if (error) throw error
+
+    notifications.value = []
+    unreadCount.value = 0
+    showNotifications.value = false
+
+    alertMessage('All notifications deleted', 'success')
+  } catch (error) {
+    console.error('Error deleting all notifications:', error.message)
+    alertMessage('Failed to delete all notifications', 'error')
+  }
+}
+
+// Function to format notification date
+const formatNotificationDate = (dateString) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInMinutes = Math.floor((now - date) / 60000)
+
+  if (diffInMinutes < 1) return 'Just now'
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+
+  const diffInHours = Math.floor(diffInMinutes / 60)
+  if (diffInHours < 24) return `${diffInHours}h ago`
+
+  const diffInDays = Math.floor(diffInHours / 24)
+  if (diffInDays < 7) return `${diffInDays}d ago`
+
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+// Function to create notifications when booking status changes
+const createNotificationForBooking = async (booking, newStatus) => {
+  if (!booking || !facilityDetails.value) return
+
+  let notificationData = null
+  const customerName = booking.profiles?.full_name || 'A customer'
+  const startTime = new Date(booking.start_time).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  if (newStatus === 'pending') {
+    notificationData = {
+      user_id: userId.value,
+      type: 'booking_status',
+      title: 'New Booking Request',
+      message: `${customerName} has requested to book ${facilityDetails.value.facility_name} on ${startTime}`,
+      read: false,
+    }
+  } else if (newStatus === 'cancelled') {
+    notificationData = {
+      user_id: userId.value,
+      type: 'booking_status',
+      title: 'Booking Cancelled',
+      message: `${customerName} has cancelled their booking for ${facilityDetails.value.facility_name} on ${startTime}`,
+      read: false,
+    }
+  }
+
+  if (notificationData) {
+    try {
+      const { error } = await supabase.from('notifications').insert(notificationData)
+
+      if (error) throw error
+    } catch (error) {
+      console.error('Error creating notification:', error.message)
+    }
+  }
+}
+
+const checkForNewBookings = async () => {
+  if (!facilityDetails.value?.id) return
+
+  try {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('*, profiles(full_name)')
+      .eq('facility_id', facilityDetails.value.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    // Check if there are new pending bookings since last check
+    const storedPendingIds = JSON.parse(
+      localStorage.getItem(`pending_bookings_${facilityDetails.value.id}`) || '[]',
+    )
+    const currentPendingIds = data.map((b) => b.id)
+
+    const newBookings = data.filter((b) => !storedPendingIds.includes(b.id))
+
+    if (newBookings.length > 0) {
+      for (const booking of newBookings) {
+        await createNotificationForBooking(booking, 'pending')
+      }
+    }
+
+    localStorage.setItem(
+      `pending_bookings_${facilityDetails.value.id}`,
+      JSON.stringify(currentPendingIds),
+    )
+  } catch (error) {
+    console.error('Error checking for new bookings:', error.message)
+  }
+}
+
+// Subscribe to booking changes for cancelled bookings
+const subscribeToBookingChanges = () => {
+  if (!facilityDetails.value?.id) return
+
+  supabase
+    .channel('booking_changes')
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'bookings',
+        filter: `facility_id=eq.${facilityDetails.value.id}`,
+      },
+      async (payload) => {
+        const oldStatus = payload.old.status
+        const newStatus = payload.new.status
+
+        // Only create notification if status changed to cancelled
+        if (oldStatus !== 'cancelled' && newStatus === 'cancelled') {
+          // Fetch the booking with profile data
+          const { data: booking } = await supabase
+            .from('bookings')
+            .select('*, profiles(full_name)')
+            .eq('id', payload.new.id)
+            .single()
+
+          if (booking) {
+            await createNotificationForBooking(booking, 'cancelled')
+          }
+        }
+
+        // Refresh bookings data
+        await fetchAllOwnerData()
+        await fetchAllBookings()
+      },
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'bookings',
+        filter: `facility_id=eq.${facilityDetails.value.id}`,
+      },
+      async (payload) => {
+        // Fetch the full booking with profile data
+        const { data: booking } = await supabase
+          .from('bookings')
+          .select('*, profiles(full_name)')
+          .eq('id', payload.new.id)
+          .single()
+
+        if (booking && booking.status === 'pending') {
+          await createNotificationForBooking(booking, 'pending')
+        }
+
+        // Refresh bookings data
+        await fetchAllOwnerData()
+        await fetchAllBookings()
+      },
+    )
+    .subscribe()
+}
+
+// Request browser notification permission (optional)
+const requestNotificationPermission = async () => {
+  if ('Notification' in window && Notification.permission === 'default') {
+    await Notification.requestPermission()
+  }
+}
 
 // Computed property to apply pagination to the filtered and sorted list.
 const paginatedBookings = computed(() => {
@@ -1694,6 +2240,18 @@ onMounted(async () => {
       userId.value = session.user.id
       await fetchAllOwnerData()
       await fetchAllBookings()
+
+      // Initialize notifications
+      await fetchNotifications()
+      subscribeToNotifications()
+      subscribeToBookingChanges()
+
+      // Check for new bookings periodically
+      await checkForNewBookings()
+      setInterval(checkForNewBookings, 60000) // Check every minute
+
+      // Optional: Request notification permission
+      await requestNotificationPermission()
     } else {
       router.push({ name: 'signin' })
     }
@@ -1839,5 +2397,23 @@ const openEditModal = () => {
 
 .grey-background {
   background-color: #e0e0e0;
+}
+
+.notification-gradient {
+  background: linear-gradient(to bottom right, rgba(34, 88, 132, 0.6), rgba(48, 98, 207, 0.6));
+}
+
+.notification-gradient-btn {
+  background: linear-gradient(
+    to bottom right,
+    rgba(19, 81, 131, 0.6),
+    rgba(23, 72, 178, 0.6)
+  ) !important;
+  color: white !important;
+}
+
+/* Optional hover effect */
+.notification-gradient-btn:hover {
+  filter: brightness(1.1);
 }
 </style>
