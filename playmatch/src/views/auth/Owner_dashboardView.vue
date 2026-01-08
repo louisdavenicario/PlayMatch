@@ -106,7 +106,7 @@
             <v-col>
               <v-btn icon @click="toggleNotifications">
                 <v-badge :content="unreadCount" :value="unreadCount" color="red" overlap>
-                  <v-icon size="26">mdi-bell-outline</v-icon>
+                  <v-icon size="26" class="ml-2">mdi-bell-outline</v-icon>
                 </v-badge>
               </v-btn>
 
@@ -116,17 +116,12 @@
                 location="bottom end"
                 :close-on-content-click="false"
                 max-width="400"
+                class="mt-3 ml-3"
               >
-                <v-card width="400">
+                <v-card width="350" height="450" class="rounded-xl">
                   <v-card-title class="d-flex align-center justify-space-between pa-3">
                     <div class="d-flex align-center">
                       <span class="font-weight-bold mr-2">Notifications</span>
-
-                      <!-- Close Button -->
-                      <v-btn icon size="small" variant="text" @click="showNotifications = false">
-                        <v-icon size="20">mdi-close</v-icon>
-                        <v-tooltip activator="parent" location="bottom">Close</v-tooltip>
-                      </v-btn>
                     </div>
 
                     <div>
@@ -147,7 +142,7 @@
                         @click="deleteAllNotifications"
                         :disabled="notifications.length === 0"
                       >
-                        <v-icon size="20">mdi-delete-sweep</v-icon>
+                        <v-icon size="20" class="ml-3">mdi-delete-sweep</v-icon>
                         <v-tooltip activator="parent" location="bottom">Delete all</v-tooltip>
                       </v-btn>
                     </div>
@@ -163,8 +158,8 @@
                       class="notification-item pa-3"
                     >
                       <div class="d-flex align-start">
-                        <v-avatar color="primary" size="40" class="mr-3 flex-shrink-0">
-                          <v-icon color="white">mdi-bell</v-icon>
+                        <v-avatar color="primary" size="39" class="mr-3 flex-shrink-0">
+                          <v-icon color="white" class="ml-2" size="25">mdi-bell</v-icon>
                         </v-avatar>
 
                         <div class="flex-grow-1" style="min-width: 0">
@@ -172,12 +167,15 @@
                             <span class="font-weight-medium text-subtitle-2">{{
                               notif.title
                             }}</span>
+                            <span class="text-caption text-grey">
+                              {{ formatNotificationDate(notif.created_at) }}
+                            </span>
                             <v-chip v-if="!notif.read" color="primary" size="x-small" class="ml-2"
                               >New</v-chip
                             >
                           </div>
 
-                          <div class="text-body-2 text-grey-darken-1 mb-2" style="line-height: 1.4">
+                          <div class="text-body-2 text-grey-darken-1 mb-3" style="line-height: 1.4">
                             {{
                               notif.message.length > 80
                                 ? notif.message.substring(0, 80) + '...'
@@ -185,16 +183,14 @@
                             }}
                           </div>
 
-                          <div class="d-flex align-center justify-space-between">
-                            <span class="text-caption text-grey">
-                              {{ formatNotificationDate(notif.created_at) }}
-                            </span>
-
+                          <div class="d-flex align-center justify-end">
                             <div class="d-flex" style="gap: 8px">
                               <v-btn
                                 size="small"
                                 variant="outlined"
                                 color="primary"
+                                class="text-none mt-2"
+                                rounded="xl"
                                 @click="viewNotification(notif)"
                               >
                                 <v-icon size="16" class="mr-1">mdi-eye</v-icon>
@@ -207,7 +203,7 @@
                                 color="error"
                                 @click="deleteNotification(notif.id)"
                               >
-                                <v-icon size="18">mdi-delete</v-icon>
+                                <v-icon size="18" class="ml-3">mdi-delete</v-icon>
                                 <v-tooltip activator="parent" location="bottom">Delete</v-tooltip>
                               </v-btn>
                             </div>
@@ -230,13 +226,13 @@
 
               <!-- Full Notification View Dialog -->
               <v-dialog v-model="showNotificationDialog" max-width="500">
-                <v-card v-if="selectedNotification">
+                <v-card v-if="selectedNotification" class="rounded-xl">
                   <v-card-title
                     class="d-flex align-center justify-space-between text-white notification-gradient"
                   >
                     <span>{{ selectedNotification.title }}</span>
                     <v-btn icon size="small" variant="text" @click="showNotificationDialog = false">
-                      <v-icon color="white">mdi-close</v-icon>
+                      <v-icon color="white ml-3" size="25">mdi-close</v-icon>
                     </v-btn>
                   </v-card-title>
 
@@ -244,9 +240,6 @@
 
                   <v-card-text class="pa-4">
                     <div class="d-flex align-center mb-3">
-                      <v-avatar color="primary" size="50" class="mr-3">
-                        <v-icon color="white" size="30">mdi-bell</v-icon>
-                      </v-avatar>
                       <div>
                         <div class="text-caption text-grey">
                           {{ formatNotificationDate(selectedNotification.created_at) }}
@@ -274,17 +267,11 @@
                     <v-btn
                       color="error"
                       variant="text"
+                      class="text-none"
                       @click="deleteNotification(selectedNotification.id)"
                     >
-                      <v-icon left>mdi-delete</v-icon>
+                      <v-icon left size="23">mdi-delete</v-icon>
                       Delete
-                    </v-btn>
-                    <v-btn
-                      class="notification-gradient-btn text-white"
-                      variant="flat"
-                      @click="showNotificationDialog = false"
-                    >
-                      Close
                     </v-btn>
                   </v-card-actions>
                 </v-card>
