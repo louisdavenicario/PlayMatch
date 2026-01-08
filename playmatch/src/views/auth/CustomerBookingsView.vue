@@ -14,6 +14,10 @@ export default {
     bookings: [],
     loading: true,
     error: null,
+
+    scrollThumbWidth: 20, // Initial width of the thumb
+    scrollThumbLeft: 0,   // Position of the thumb
+    trackWidth: 80, // Must match the width in your CSS
   }),
 
   computed: {
@@ -75,10 +79,36 @@ export default {
     if (this.$route.query.tab !== undefined) {
       this.tab = parseInt(this.$route.query.tab)
     }
+
+    // Set up the scroll listener
+    this.$nextTick(() => {
+      const scrollEl = this.$el.querySelector('.v-slide-group__wrapper');
+      if (scrollEl) {
+        scrollEl.addEventListener('scroll', () => {
+          const maxScroll = scrollEl.scrollWidth - scrollEl.clientWidth;
+          if (maxScroll > 0) {
+            const scrollFraction = scrollEl.scrollLeft / maxScroll;
+            const availableSpace = this.trackWidth - this.scrollThumbWidth;
+            this.scrollThumbLeft = scrollFraction * availableSpace;
+          }
+        });
+      }
+    });
   },
 
   beforeUnmount() {
     if (this.bookingSubscription) this.bookingSubscription.unsubscribe()
+  },
+
+  // ADD THIS WATCHER to move the bar when tabs are clicked
+  watch: {
+    tab(newVal) {
+      // Calculate position based on which tab index is active (0 to 4)
+      const totalTabs = this.tabs.length;
+      const scrollFraction = newVal / (totalTabs - 1);
+      const availableSpace = this.trackWidth - this.scrollThumbWidth;
+      this.scrollThumbLeft = scrollFraction * availableSpace;
+    }
   },
 
   methods: {
@@ -360,16 +390,27 @@ export default {
           background-color="transparent"
           :ripple="false"
           color="blue"
-          class="mb-4 mt-2"
+          class="custom-scroll-tabs mb-4 mt-2"
           fixed-tabs
           slider-color="blue darken-2"
           centered
           :slider-size="0"
           next-icon="mdi-arrow-right"
           prev-icon="mdi-arrow-left"
+          show-arrows="false"
+          @native-scroll="syncScroll"
         >
           <v-tab v-for="item in tabs" :key="item">{{ item }}</v-tab>
         </v-tabs>
+
+        <div class="custom-scrollbar-container d-sm-none">
+          <div class="scroll-track">
+            <div 
+              class="scroll-thumb" 
+              :style="{ width: scrollThumbWidth + 'px', left: scrollThumbLeft + 'px' }"
+            ></div>
+          </div>
+        </div>
 
         <v-window v-model="tab">
           <v-window-item v-for="n in tabs.length" :key="n" :value="n - 1">
@@ -439,74 +480,72 @@ export default {
                             {{ formatTime(booking.end_time) }}
                           </v-list-item-subtitle>
 
-                          <v-list-item-subtitle class="text-caption">
-                            <div class="d-flex align-center ml-auto mt-2">
-                              <v-btn
-                                v-if="['accepted', 'pending'].includes(booking.status)"
-                                small
-                                text
-                                color="red"
-                                @click="cancelBooking(booking.id)"
-                                class="btn-cancel text-none rounded-xl mb-2 mt-1"
-                              >
-                                Cancel
-                              </v-btn>
+                          <div class="d-flex align-center ml-auto mt-2">
+                            <v-btn
+                              v-if="['accepted', 'pending'].includes(booking.status)"
+                              small
+                              text
+                              color="red"
+                              @click="cancelBooking(booking.id)"
+                              class="btn-cancel text-none rounded-xl mb-2 mt-1"
+                            >
+                              Cancel
+                            </v-btn>
 
-                              <!-- ✅ New Completed Button -->
-                              <v-btn
-                                v-if="booking.status === 'accepted'"
-                                small
-                                text
-                                color="green"
-                                class="ml-2 text-none rounded-xl mb-2 mt-1"
-                                @click="markAsCompleted(booking.id)"
-                              >
-                                Completed
-                              </v-btn>
+                            <!-- ✅ New Completed Button -->
+                            <v-btn
+                              v-if="booking.status === 'accepted'"
+                              small
+                              text
+                              color="green"
+                              class="ml-2 text-none rounded-xl mb-2 mt-1"
+                              @click="markAsCompleted(booking.id)"
+                            >
+                              Completed
+                            </v-btn>
 
-                              <v-chip
-                                v-else-if="booking.status === 'pending'"
-                                small
-                                text
-                                outlined
-                                color="orange darken-2"
-                                class="ml-2 text-none rounded-xl mb-2 mt-1"
-                              >
-                                Awaiting Approval
-                              </v-chip>
+                            <v-chip
+                              v-else-if="booking.status === 'pending'"
+                              small
+                              text
+                              outlined
+                              color="orange darken-2"
+                              class="ml-2 text-none rounded-xl mb-2 mt-1"
+                            >
+                              Awaiting Approval
+                            </v-chip>
 
-                              <v-btn
-                                v-else-if="booking.status === 'completed'"
-                                small
-                                text
-                                color="amber"
-                                class="text-none rounded-xl mb-2 mt-1"
-                                @click="
-                                  $router.push({
-                                    name: 'facility-details',
-                                    params: { id: booking.facility_id },
-                                  })
-                                "
-                              >
-                                Rate
-                              </v-btn>
+                            <v-btn
+                              v-else-if="booking.status === 'completed'"
+                              small
+                              text
+                              color="amber"
+                              class="text-none rounded-xl mb-2 mt-1"
+                              @click="
+                                $router.push({
+                                  name: 'facility-details',
+                                  params: { id: booking.facility_id },
+                                })
+                              "
+                            >
+                              Rate
+                            </v-btn>
 
-                              <!-- Cancelled or Rejected: show static chip -->
-                              <v-chip
-                                v-else-if="
-                                  ['cancelled', 'rejected', 'declined'].includes(booking.status)
-                                "
-                                small
-                                outlined
-                                color="grey"
-                                class="text-none rounded-lg mb-2 mt-1"
-                              >
-                                {{
-                                  booking.status.charAt(0).toUpperCase() + booking.status.slice(1)
-                                }}
-                              </v-chip>
-                            </div>
-                          </v-list-item-subtitle>
+                            <!-- Cancelled or Rejected: show static chip -->
+                            <v-chip
+                              v-else-if="
+                                ['cancelled', 'rejected', 'declined'].includes(booking.status)
+                              "
+                              small
+                              outlined
+                              color="grey"
+                              class="text-none rounded-lg mb-2 mt-1"
+                            >
+                              {{
+                                booking.status.charAt(0).toUpperCase() + booking.status.slice(1)
+                              }}
+                            </v-chip>
+                          </div>
                         </div>
                       </v-card>
                     </v-list-item>
@@ -548,12 +587,21 @@ export default {
   word-break: break-word !important; 
 }
 
-.v-card:hover {
-  transform: scale(1.02);
+.v-btn {
+  transition: 0.2s ease;
 }
 
-.v-card {
-  transition: 0.3s ease;
+.v-btn:hover {
+  transform: scale(1.05);
+}
+
+.v-bottom-navigation .v-btn{
+  /* Make the button shape a circle */
+  border-radius: 27% !important;
+}
+
+.v-bottom-navigation .v-btn:hover{
+  transform: scale(1.1);
 }
 
 /* --- Tabs Styling Fix --- */
@@ -593,5 +641,57 @@ export default {
 /* 5. Clean up Ripple effect */
 .v-tab .v-ripple__container {
   color: rgba(26, 101, 162, 0.1) !important;
+}
+
+/* Container for the separate scrollbar */
+.custom-scrollbar-container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+  margin-top: -10px; /* Pull it closer to the tabs */
+}
+
+/* The light gray track */
+.scroll-track {
+  width: 80px; /* Total width of the mini-scrollbar */
+  height: 7px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* The moving pill/thumb */
+.scroll-thumb {
+  position: absolute;
+  height: 100%;
+  background: #A0A0A0; /* Gray color from your image */
+  border-radius: 10px;
+  transition: left 0.1s ease-out; /* Smooth movement */
+}
+
+/* Hide the default browser scrollbar so only our custom one shows */
+@media (max-width: 600px) {
+  /* Force the tabs to be slightly wider than the screen to enable scrolling */
+  ::v-deep .v-slide-group__content {
+    display: flex !important;
+    justify-content: center !important; /* This keeps them centered */
+    min-width: 120vw !important; /* Forces the container to be wider than the phone */
+  }
+
+  ::v-deep .v-slide-group__wrapper {
+    overflow-x: auto !important;
+  }
+
+  /* Hide the ugly default scrollbar */
+  ::v-deep .v-slide-group__wrapper::-webkit-scrollbar {
+    display: none !important;
+  }
+  
+  .v-tab {
+    min-width: 100px !important;
+    flex: 0 0 auto !important;
+  }
 }
 </style>

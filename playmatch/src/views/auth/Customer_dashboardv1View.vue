@@ -21,6 +21,8 @@ export default {
     unreadCount: 0,
     notificationMenu: false,
     showMobileSearch: false,
+    showSwipeHint: false,
+    isScrollable: false,
 
     // Search Query Data Property
     searchQuery: '',
@@ -81,14 +83,58 @@ export default {
     setInterval(() => {
       this.fetchPlaymateRequests()
     }, 30000)
+
+    // Initial check after the page renders
+    this.$nextTick(() => {
+      this.checkIfScrollable(); // Corrected name
+    });
+    
+    // Use the same name for the resize listener
+    window.addEventListener('resize', this.checkIfScrollable);
   },
 
   beforeUnmount() {
     if (this.favSubscription) this.favSubscription.unsubscribe()
     if (this.ratingSubscription) this.ratingSubscription.unsubscribe()
+    window.removeEventListener('resize', this.checkIfScrollable);
+  },
+
+  watch: {
+    // Trigger when facilities are loaded
+    popularFacilities(newVal) {
+      if (newVal.length > 1) {
+        this.triggerSwipeHint();
+      }
+    }
   },
 
   methods: {
+    // Method to show swipe hint temporarily
+    triggerSwipeHint() {
+      // Determine if we should show it
+      const isMobileOrTablet = this.$vuetify.display.smAndDown;
+      const isLongList = this.popularFacilities.length > 2;
+
+      // Only show if there are enough items to actually swipe
+      if (this.popularFacilities.length > 1) {
+        this.showSwipeHint = true;
+        
+        // Changed to 7000ms (7 seconds) so users have time to see it
+        setTimeout(() => {
+          this.showSwipeHint = false;
+        }, 8000);
+      }
+    },
+
+    // Independent method for checking scroll
+    checkIfScrollable() { 
+      const container = this.$refs.popularContainer;
+      if (container) {
+        // Only true if items actually overflow the screen
+        this.isScrollable = container.scrollWidth > container.clientWidth;
+      }
+    },
+
     // NEW: Method to fetch the user's name from the 'profiles' table
     async fetchUserName() {
       if (!this.currentUserId) return
@@ -892,75 +938,86 @@ export default {
               No rated facilities found to display as popular.
             </div>
 
-            <div v-else class="d-flex overflow-x-auto pb-2 facility-scroll-container">
-              <v-card
-                v-for="facility in popularFacilities"
-                :key="facility.id"
-                class="mr-4 flex-shrink-0"
-                width="280"
-                rounded="xl"
-                elevation="2"
-                @click="$router.push({ name: 'facility-details', params: { id: facility.id } })"
-              >
-
-              <div class="pa-3">
-                <v-img :src="facility.image" height="200" class="grey lighten-3 rounded-xl" cover>
-                  <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
-                    <v-chip x-small dark color="white" class="text-overline font-weight-bold glass-chip">
-                      {{ facility.type }}
-                    </v-chip>
-                    <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
-                      <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
-                        {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
-                      </v-icon>
-                    </v-btn>
-                  </v-card-text>
-                </v-img>
-              </div>
-
-                <v-card-title class="pb-1 text-body-1 font-weight-semibold pt-3">
-                  {{ facility.name }}
-                </v-card-title>
-
-                <v-card-text class="py-0">
-                  <div class="text-caption grey--text text-truncate mb-2">
-                    {{ facility.address }}
+            <div v-else class="position-relative">
+              <transition name="fade">
+                <div v-if="showSwipeHint && isScrollable" class="swipe-hint d-flex align-center justify-center">
+                  <div class="swipe-hint-content py-2 px-4 rounded-pill">
+                    <v-icon size="20" color="white" class="mr-2 swipe-animation">mdi-gesture-swipe-left</v-icon>
+                    <span class="text-caption white--text font-weight-medium">Swipe to see more</span>
                   </div>
-                  <div class="d-flex align-center justify-space-between mb-3">
-                    <div class="d-flex align-center">
-                      <v-icon small color="amber">mdi-star</v-icon>
-                      <span class="text-caption ml-1 font-weight-medium">
-                        {{ facility.rating }} ({{ facility.reviews }})
-                      </span>
+                </div>
+              </transition>
+
+              <div class="d-flex overflow-x-auto pb-2 facility-scroll-container" ref="popularContainer">
+                <v-card
+                  v-for="facility in popularFacilities"
+                  :key="facility.id"
+                  class="mr-4 flex-shrink-0 mt-2"
+                  width="280"
+                  rounded="xl"
+                  elevation="2"
+                  @click="$router.push({ name: 'facility-details', params: { id: facility.id } })"
+                >
+
+                <div class="pa-3">
+                  <v-img :src="facility.image" height="200" class="grey lighten-3 rounded-xl" cover>
+                    <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
+                      <v-chip x-small dark color="white" class="text-overline font-weight-bold glass-chip">
+                        {{ facility.type }}
+                      </v-chip>
+                      <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
+                        <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
+                          {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                        </v-icon>
+                      </v-btn>
+                    </v-card-text>
+                  </v-img>
+                </div>
+
+                  <v-card-title class="pb-1 text-body-1 font-weight-semibold pt-3">
+                    {{ facility.name }}
+                  </v-card-title>
+
+                  <v-card-text class="py-0">
+                    <div class="text-caption grey--text text-truncate mb-2">
+                      {{ facility.address }}
                     </div>
-                    <v-chip color="green darken-1" dark small> ₱{{ facility.price }}/hour </v-chip>
-                  </div>
-                </v-card-text>
+                    <div class="d-flex align-center justify-space-between mb-3">
+                      <div class="d-flex align-center">
+                        <v-icon small color="amber">mdi-star</v-icon>
+                        <span class="text-caption ml-1 font-weight-medium">
+                          {{ facility.rating }} ({{ facility.reviews }})
+                        </span>
+                      </div>
+                      <v-chip color="green darken-1" dark small> ₱{{ facility.price }}/hour </v-chip>
+                    </div>
+                  </v-card-text>
 
-                <v-card-actions class="pt-0 pr-3 pb-3 justify-center">
-                  <v-btn
-                    small
-                    color="blue"
-                    dark
-                    rounded
-                    class="text-none"
-                    @click.stop="
-                      $router.push({ name: 'facility-details', params: { id: facility.id } })
-                    "
-                    >View Details</v-btn
-                  >
-                  <v-btn
-                    small
-                    :color="facility.myRating > 0 ? 'orange darken-1' : 'amber'"
-                    dark
-                    rounded
-                    class="text-none"
-                    @click.stop="openRatingDialog(facility)"
-                  >
-                    {{ facility.myRating > 0 ? 'Edit Rate' : 'Rate' }}
-                  </v-btn>
-                </v-card-actions>
-              </v-card>
+                  <v-card-actions class="pt-0 pr-3 pb-3 justify-center">
+                    <v-btn
+                      small
+                      color="blue"
+                      dark
+                      rounded
+                      class="text-none"
+                      @click.stop="
+                        $router.push({ name: 'facility-details', params: { id: facility.id } })
+                      "
+                      >View Details</v-btn
+                    >
+                    <v-btn
+                      small
+                      :color="facility.myRating > 0 ? 'orange darken-1' : 'amber'"
+                      dark
+                      rounded
+                      class="text-none"
+                      @click.stop="openRatingDialog(facility)"
+                    >
+                      {{ facility.myRating > 0 ? 'Edit Rate' : 'Rate' }}
+                    </v-btn>
+                  </v-card-actions>
+                </v-card>
+              </div>
             </div>
           </v-col>
         </v-row>
@@ -1204,6 +1261,15 @@ export default {
   transition: 0.3s ease;
 }
 
+.v-bottom-navigation .v-btn{
+  /* Make the button shape a circle */
+  border-radius: 27% !important;
+}
+
+.v-bottom-navigation .v-btn:hover{
+  transform: scale(1.1);
+}
+
 .v-app-bar .v-text-field {
   max-width: 300px;
 }
@@ -1305,5 +1371,60 @@ export default {
   50% {
     border-color: white;
   }
+}
+
+.position-relative {
+  position: relative;
+}
+
+.swipe-hint {
+  position: absolute;
+  top: 50%;
+  right: 15px; /* Moves it to the right side */
+  transform: translateY(-45%);
+  z-index: 10;
+  pointer-events: none; /* User can click "through" it to the cards */
+}
+
+.swipe-hint-content {
+  background: rgba(41, 41, 41, 0.6); /* Semi-transparent dark glass */
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px) !important; /* For Safari support */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Force the text to be pure white if Vuetify classes are failing */
+.swipe-hint-content span {
+  color: #ffffff !important;
+}
+
+/* Animation for the hand icon */
+@keyframes swipeAnimation {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(-10px); }
+  100% { transform: translateX(0); }
+}
+
+.swipe-animation {
+  animation: swipeAnimation 1.5s infinite ease-in-out;
+}
+
+/* Fade transition for the whole hint */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.8s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+/* Ensure the scroll container doesn't show scrollbars but allows swiping */
+.facility-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+.facility-scroll-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
 }
 </style>

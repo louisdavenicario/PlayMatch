@@ -132,6 +132,15 @@
   /* Ensure text is readable over the blur */
   text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.2);
 }
+
+.v-bottom-navigation .v-btn{
+  /* Make the button shape a circle */
+  border-radius: 27% !important;
+}
+
+.v-bottom-navigation .v-btn:hover{
+  transform: scale(1.1);
+}
 </style>
 
 <script>
