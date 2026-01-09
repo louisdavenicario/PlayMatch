@@ -857,8 +857,13 @@ export default {
                 @click="handleNotificationClick(n)"
                 :style="!n.read ? 'background-color: #e3f2fd;' : ''"
               >
-                <v-list-item-avatar>
-                  <v-icon color="blue">
+                <!-- TITLE ROW -->
+                <v-list-item-title class="d-flex align-center mt-2">
+                  <v-icon
+                    color="blue"
+                    size="20"
+                    class="mr-2"
+                  >
                     {{
                       n.type === 'booking_status'
                         ? 'mdi-calendar-check'
@@ -869,27 +874,32 @@ export default {
                             : 'mdi-bell'
                     }}
                   </v-icon>
-                </v-list-item-avatar>
+
+                  {{ n.title }}
+                </v-list-item-title>
 
                 <v-list-item-content>
-                  <v-list-item-title>{{ n.title }}</v-list-item-title>
-                  <v-list-item-subtitle>{{ n.message }}</v-list-item-subtitle>
+                  <v-list-item-subtitle class="mt-2">{{ n.message }}</v-list-item-subtitle>
                   <div class="text-caption grey--text mt-1">
                     {{ formatDate(n.created_at) }} • {{ formatTime(n.created_at) }}
                   </div>
                 </v-list-item-content>
 
-                <v-list-item-action class="d-flex align-center">
-                  <!-- View -->
-                  <v-btn icon size="x-small" class="mr-1" @click.stop="viewNotification(n)">
-                    <v-icon size="18" color="blue">mdi-eye</v-icon>
-                  </v-btn>
+                <div class="d-flex justify-end">
+                  <div class="d-flex" style="gap: 8px">
+                    <v-list-item-action class="d-flex align-center mt-2 mb-2">
+                      <!-- View -->
+                      <v-btn icon size="x-small" class="mr-2" @click.stop="viewNotification(n)">
+                        <v-icon size="18" color="blue">mdi-eye</v-icon>
+                      </v-btn>
 
-                  <!-- Delete -->
-                  <v-btn icon size="x-small" @click.stop="deleteNotification(n.id)">
-                    <v-icon size="18" color="red">mdi-delete</v-icon>
-                  </v-btn>
-                </v-list-item-action>
+                      <!-- Delete -->
+                      <v-btn icon size="x-small" @click.stop="deleteNotification(n.id)">
+                        <v-icon size="18" color="red">mdi-delete</v-icon>
+                      </v-btn>
+                    </v-list-item-action>
+                  </div>
+                </div>
               </v-list-item>
 
               <!-- Divider between items -->
@@ -902,7 +912,7 @@ export default {
       <v-btn icon @click="logout"><v-icon color="red">mdi-logout</v-icon></v-btn>
 
       <v-dialog v-model="showNotificationDialog" max-width="500">
-        <v-card v-if="selectedNotification">
+        <v-card v-if="selectedNotification" class="rounded-xl">
           <!-- Header -->
           <v-card-title
             class="notification-gradient text-white d-flex justify-space-between align-center"
@@ -917,7 +927,7 @@ export default {
 
           <!-- Body -->
           <v-card-text class="pa-4">
-            <div class="text-caption grey--text mb-2">
+            <div class="text-caption grey--text mb-3">
               {{ formatDate(selectedNotification.created_at) }} •
               {{ formatTime(selectedNotification.created_at) }}
             </div>
@@ -936,6 +946,7 @@ export default {
             <v-btn
               color="error"
               variant="text"
+              class="text-none" 
               @click="deleteNotification(selectedNotification.id)"
             >
               <v-icon left>mdi-delete</v-icon>
@@ -1401,10 +1412,6 @@ export default {
 .v-bottom-navigation .v-btn {
   /* Make the button shape a circle */
   border-radius: 27% !important;
-}
-
-.v-bottom-navigation .v-btn:hover {
-  transform: scale(1.1);
 }
 
 .v-app-bar .v-text-field {

@@ -556,8 +556,4 @@ onMounted(() => {
   /* Make the button shape a circle */
   border-radius: 27% !important;
 }
-
-.v-bottom-navigation .v-btn:hover{
-  transform: scale(1.1);
-}
 </style>

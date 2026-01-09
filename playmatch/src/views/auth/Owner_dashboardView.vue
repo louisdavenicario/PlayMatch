@@ -118,7 +118,7 @@
                 max-width="400"
                 class="mt-3 ml-3"
               >
-                <v-card width="350" height="450" class="rounded-xl">
+                <v-card width="350" height="450" class="rounded-xl" style="overflow: hidden">
                   <v-card-title class="d-flex align-center justify-space-between pa-3">
                     <div class="d-flex align-center">
                       <span class="font-weight-bold mr-2">Notifications</span>

@@ -498,7 +498,7 @@ export default {
                               small
                               text
                               color="green"
-                              class="ml-2 text-none rounded-xl mb-2 mt-1"
+                              class="btn-completed ml-2 text-none rounded-xl mb-2 mt-1"
                               @click="markAsCompleted(booking.id)"
                             >
                               Completed
@@ -520,7 +520,7 @@ export default {
                               small
                               text
                               color="amber"
-                              class="text-none rounded-xl mb-2 mt-1"
+                              class="btn-rate text-none rounded-xl mb-2 mt-1"
                               @click="
                                 $router.push({
                                   name: 'facility-details',
@@ -587,21 +587,21 @@ export default {
   word-break: break-word !important; 
 }
 
-.v-btn {
-  transition: 0.2s ease;
+.btn-cancel:hover {
+  transform: scale(1.05);
 }
 
-.v-btn:hover {
+.btn-completed:hover {
+  transform: scale(1.05);
+}
+
+.btn-rate:hover {
   transform: scale(1.05);
 }
 
 .v-bottom-navigation .v-btn{
   /* Make the button shape a circle */
   border-radius: 27% !important;
-}
-
-.v-bottom-navigation .v-btn:hover{
-  transform: scale(1.1);
 }
 
 /* --- Tabs Styling Fix --- */
