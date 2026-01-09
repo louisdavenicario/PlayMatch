@@ -18,6 +18,8 @@ export default {
     error: null,
     isGridView: false,
     notifications: [],
+    selectedNotification: null,
+    showNotificationDialog: false,
     unreadCount: 0,
     notificationMenu: false,
     showMobileSearch: false,
@@ -86,52 +88,52 @@ export default {
 
     // Initial check after the page renders
     this.$nextTick(() => {
-      this.checkIfScrollable(); // Corrected name
-    });
-    
+      this.checkIfScrollable() // Corrected name
+    })
+
     // Use the same name for the resize listener
-    window.addEventListener('resize', this.checkIfScrollable);
+    window.addEventListener('resize', this.checkIfScrollable)
   },
 
   beforeUnmount() {
     if (this.favSubscription) this.favSubscription.unsubscribe()
     if (this.ratingSubscription) this.ratingSubscription.unsubscribe()
-    window.removeEventListener('resize', this.checkIfScrollable);
+    window.removeEventListener('resize', this.checkIfScrollable)
   },
 
   watch: {
     // Trigger when facilities are loaded
     popularFacilities(newVal) {
       if (newVal.length > 1) {
-        this.triggerSwipeHint();
+        this.triggerSwipeHint()
       }
-    }
+    },
   },
 
   methods: {
     // Method to show swipe hint temporarily
     triggerSwipeHint() {
       // Determine if we should show it
-      const isMobileOrTablet = this.$vuetify.display.smAndDown;
-      const isLongList = this.popularFacilities.length > 2;
+      const isMobileOrTablet = this.$vuetify.display.smAndDown
+      const isLongList = this.popularFacilities.length > 2
 
       // Only show if there are enough items to actually swipe
       if (this.popularFacilities.length > 1) {
-        this.showSwipeHint = true;
-        
+        this.showSwipeHint = true
+
         // Changed to 7000ms (7 seconds) so users have time to see it
         setTimeout(() => {
-          this.showSwipeHint = false;
-        }, 8000);
+          this.showSwipeHint = false
+        }, 8000)
       }
     },
 
     // Independent method for checking scroll
-    checkIfScrollable() { 
-      const container = this.$refs.popularContainer;
+    checkIfScrollable() {
+      const container = this.$refs.popularContainer
       if (container) {
         // Only true if items actually overflow the screen
-        this.isScrollable = container.scrollWidth > container.clientWidth;
+        this.isScrollable = container.scrollWidth > container.clientWidth
       }
     },
 
@@ -196,6 +198,53 @@ export default {
       this.notificationMenu = false
     },
 
+    viewNotification(notification) {
+      this.selectedNotification = notification
+      this.showNotificationDialog = true
+    },
+
+    async deleteNotification(notificationId) {
+      try {
+        const { error } = await supabase.from('notifications').delete().eq('id', notificationId)
+
+        if (error) throw error
+
+        // Refresh list
+        await this.fetchNotifications()
+
+        // Close dialog if deleted item is open
+        if (this.selectedNotification?.id === notificationId) {
+          this.showNotificationDialog = false
+          this.selectedNotification = null
+        }
+      } catch (err) {
+        console.error('Failed to delete notification:', err.message)
+      }
+    },
+
+    async deleteAllNotifications() {
+      if (!this.currentUserId) return
+
+      const confirmDelete = confirm('Are you sure you want to delete all notifications?')
+      if (!confirmDelete) return
+
+      try {
+        const { error } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('user_id', this.currentUserId)
+
+        if (error) throw error
+
+        // Reset local state
+        this.notifications = []
+        this.unreadCount = 0
+        this.notificationMenu = false
+      } catch (err) {
+        console.error('Failed to delete all notifications:', err.message)
+      }
+    },
+
     async markAllNotificationsAsRead() {
       if (!this.currentUserId) return
 
@@ -240,26 +289,6 @@ export default {
       if (!error) {
         this.fetchNotifications()
       }
-    },
-
-    async subscribeNotificationsRealtime() {
-      if (!this.currentUserId) return
-      this.notificationSubscription = supabase
-        .channel('notifications-user-updates')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT', // Only listen for new notifications
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${this.currentUserId}`,
-          },
-          (payload) => {
-            console.log('🔔 New notification:', payload.new)
-            this.fetchNotifications() // Refetch to show the new one
-          },
-        )
-        .subscribe()
     },
 
     async registerServiceWorker() {
@@ -780,23 +809,42 @@ export default {
 
         <v-card width="350" max-height="400" rounded="xl" elevation="3">
           <v-card-title
-            class="text-body-1 font-weight-bold pb-1 d-flex justify-space-between align-center"
+            class="text-body-1 font-weight-bold pb-1 d-flex justify-space-between align-center notification-gradient text-white"
           >
             Notifications
 
-            <v-btn
-              v-if="unreadCount > 0"
-              small
-              variant="text"
-              density="compact"
-              color="blue"
-              class="ma-0 pa-0 min-h-0 text-caption"
-              style="border: none !important; box-shadow: none !important"
-              @click.stop="markAllNotificationsAsRead"
-            >
-              Mark all as read
-            </v-btn>
+            <div class="d-flex align-center">
+              <!-- Mark all as read -->
+              <v-btn
+                v-if="unreadCount > 0"
+                small
+                variant="text"
+                density="compact"
+                class="ma-0 pa-0 mr-2 text-caption text-white"
+                @click.stop="markAllNotificationsAsRead"
+              >
+                Mark all
+              </v-btn>
+
+              <!-- Delete All -->
+              <v-btn
+                v-if="notifications.length > 0"
+                small
+                variant="text"
+                density="compact"
+                class="ma-0 pa-0 mr-2 text-caption text-white"
+                @click.stop="deleteAllNotifications"
+              >
+                Delete all
+              </v-btn>
+
+              <!-- Close Menu -->
+              <v-btn icon size="x-small" variant="text" @click="notificationMenu = false">
+                <v-icon color="white">mdi-close</v-icon>
+              </v-btn>
+            </div>
           </v-card-title>
+
           <v-divider></v-divider>
 
           <div v-if="notifications.length === 0" class="text-center py-4 grey--text">
@@ -804,43 +852,98 @@ export default {
           </div>
 
           <v-list v-else class="py-0" style="overflow-y: auto; max-height: 350px">
-            <v-list-item
-              v-for="n in notifications"
-              :key="n.id"
-              @click="handleNotificationClick(n)"
-              :style="!n.read ? 'background-color: #e3f2fd;' : ''"
-            >
-              <v-list-item-avatar>
-                <v-icon color="blue">
-                  {{
-                    n.type === 'booking_status'
-                      ? 'mdi-calendar-check'
-                      : n.type === 'playmate_join'
-                        ? 'mdi-account-plus'
-                        : n.type === 'playmate_withdraw'
-                          ? 'mdi-account-remove'
-                          : 'mdi-bell'
-                  }}
-                </v-icon>
-              </v-list-item-avatar>
+            <template v-for="(n, index) in notifications" :key="n.id">
+              <v-list-item
+                @click="handleNotificationClick(n)"
+                :style="!n.read ? 'background-color: #e3f2fd;' : ''"
+              >
+                <v-list-item-avatar>
+                  <v-icon color="blue">
+                    {{
+                      n.type === 'booking_status'
+                        ? 'mdi-calendar-check'
+                        : n.type === 'playmate_join'
+                          ? 'mdi-account-plus'
+                          : n.type === 'playmate_withdraw'
+                            ? 'mdi-account-remove'
+                            : 'mdi-bell'
+                    }}
+                  </v-icon>
+                </v-list-item-avatar>
 
-              <v-list-item-content>
-                <v-list-item-title>{{ n.title }}</v-list-item-title>
-                <v-list-item-subtitle>{{ n.message }}</v-list-item-subtitle>
-                <div class="text-caption grey--text mt-1">
-                  {{ formatDate(n.created_at) }} • {{ formatTime(n.created_at) }}
-                </div>
-              </v-list-item-content>
+                <v-list-item-content>
+                  <v-list-item-title>{{ n.title }}</v-list-item-title>
+                  <v-list-item-subtitle>{{ n.message }}</v-list-item-subtitle>
+                  <div class="text-caption grey--text mt-1">
+                    {{ formatDate(n.created_at) }} • {{ formatTime(n.created_at) }}
+                  </div>
+                </v-list-item-content>
 
-              <v-list-item-action>
-                <v-icon small color="grey">mdi-chevron-right</v-icon>
-              </v-list-item-action>
-            </v-list-item>
+                <v-list-item-action class="d-flex align-center">
+                  <!-- View -->
+                  <v-btn icon size="x-small" class="mr-1" @click.stop="viewNotification(n)">
+                    <v-icon size="18" color="blue">mdi-eye</v-icon>
+                  </v-btn>
+
+                  <!-- Delete -->
+                  <v-btn icon size="x-small" @click.stop="deleteNotification(n.id)">
+                    <v-icon size="18" color="red">mdi-delete</v-icon>
+                  </v-btn>
+                </v-list-item-action>
+              </v-list-item>
+
+              <!-- Divider between items -->
+              <v-divider v-if="index < notifications.length - 1" />
+            </template>
           </v-list>
         </v-card>
       </v-menu>
 
       <v-btn icon @click="logout"><v-icon color="red">mdi-logout</v-icon></v-btn>
+
+      <v-dialog v-model="showNotificationDialog" max-width="500">
+        <v-card v-if="selectedNotification">
+          <!-- Header -->
+          <v-card-title
+            class="notification-gradient text-white d-flex justify-space-between align-center"
+          >
+            <span>{{ selectedNotification.title }}</span>
+            <v-btn icon size="small" variant="text" @click="showNotificationDialog = false">
+              <v-icon color="white">mdi-close</v-icon>
+            </v-btn>
+          </v-card-title>
+
+          <v-divider />
+
+          <!-- Body -->
+          <v-card-text class="pa-4">
+            <div class="text-caption grey--text mb-2">
+              {{ formatDate(selectedNotification.created_at) }} •
+              {{ formatTime(selectedNotification.created_at) }}
+            </div>
+
+            <div class="text-body-1">
+              {{ selectedNotification.message }}
+            </div>
+          </v-card-text>
+
+          <v-divider />
+
+          <!-- Actions -->
+          <v-card-actions class="pa-3">
+            <v-spacer />
+
+            <v-btn
+              color="error"
+              variant="text"
+              @click="deleteNotification(selectedNotification.id)"
+            >
+              <v-icon left>mdi-delete</v-icon>
+              Delete
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </v-app-bar>
 
     <v-main
@@ -878,7 +981,13 @@ export default {
         <v-row no-gutters class="px-4">
           <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
             <h2 class="text-h6 font-weight-medium mb-2">Available Playmate Requests</h2>
-            <v-btn text small color="blue" class="rounded-lg text-none" @click="goToPlaymateRequests">
+            <v-btn
+              text
+              small
+              color="blue"
+              class="rounded-lg text-none"
+              @click="goToPlaymateRequests"
+            >
               View All <v-icon right small>mdi-chevron-right</v-icon>
             </v-btn>
           </v-col>
@@ -940,15 +1049,25 @@ export default {
 
             <div v-else class="position-relative">
               <transition name="fade">
-                <div v-if="showSwipeHint && isScrollable" class="swipe-hint d-flex align-center justify-center">
+                <div
+                  v-if="showSwipeHint && isScrollable"
+                  class="swipe-hint d-flex align-center justify-center"
+                >
                   <div class="swipe-hint-content py-2 px-4 rounded-pill">
-                    <v-icon size="20" color="white" class="mr-2 swipe-animation">mdi-gesture-swipe-left</v-icon>
-                    <span class="text-caption white--text font-weight-medium">Swipe to see more</span>
+                    <v-icon size="20" color="white" class="mr-2 swipe-animation"
+                      >mdi-gesture-swipe-left</v-icon
+                    >
+                    <span class="text-caption white--text font-weight-medium"
+                      >Swipe to see more</span
+                    >
                   </div>
                 </div>
               </transition>
 
-              <div class="d-flex overflow-x-auto pb-2 facility-scroll-container" ref="popularContainer">
+              <div
+                class="d-flex overflow-x-auto pb-2 facility-scroll-container"
+                ref="popularContainer"
+              >
                 <v-card
                   v-for="facility in popularFacilities"
                   :key="facility.id"
@@ -958,21 +1077,30 @@ export default {
                   elevation="2"
                   @click="$router.push({ name: 'facility-details', params: { id: facility.id } })"
                 >
-
-                <div class="pa-3">
-                  <v-img :src="facility.image" height="200" class="grey lighten-3 rounded-xl" cover>
-                    <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
-                      <v-chip x-small dark color="white" class="text-overline font-weight-bold glass-chip">
-                        {{ facility.type }}
-                      </v-chip>
-                      <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
-                        <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
-                          {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
-                        </v-icon>
-                      </v-btn>
-                    </v-card-text>
-                  </v-img>
-                </div>
+                  <div class="pa-3">
+                    <v-img
+                      :src="facility.image"
+                      height="200"
+                      class="grey lighten-3 rounded-xl"
+                      cover
+                    >
+                      <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
+                        <v-chip
+                          x-small
+                          dark
+                          color="white"
+                          class="text-overline font-weight-bold glass-chip"
+                        >
+                          {{ facility.type }}
+                        </v-chip>
+                        <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
+                          <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
+                            {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                          </v-icon>
+                        </v-btn>
+                      </v-card-text>
+                    </v-img>
+                  </div>
 
                   <v-card-title class="pb-1 text-body-1 font-weight-semibold pt-3">
                     {{ facility.name }}
@@ -989,7 +1117,9 @@ export default {
                           {{ facility.rating }} ({{ facility.reviews }})
                         </span>
                       </div>
-                      <v-chip color="green darken-1" dark small> ₱{{ facility.price }}/hour </v-chip>
+                      <v-chip color="green darken-1" dark small>
+                        ₱{{ facility.price }}/hour
+                      </v-chip>
                     </div>
                   </v-card-text>
 
@@ -1058,28 +1188,39 @@ export default {
                     rounded="xl"
                     @click="$router.push({ name: 'facility-details', params: { id: facility.id } })"
                   >
-
-                  <div class="pa-3">
-                    <v-img :src="facility.image" height="200" class="grey lighten-3 rounded-xl" cover>
-                      <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
-                        <v-chip x-small dark color="white" class="text-overline font-weight-bold glass-chip">
-                          {{ facility.type }}
-                        </v-chip>
-                        <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
-                          <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
-                            {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
-                          </v-icon>
-                        </v-btn>
-                      </v-card-text>
-                    </v-img>
-                  </div>
+                    <div class="pa-3">
+                      <v-img
+                        :src="facility.image"
+                        height="200"
+                        class="grey lighten-3 rounded-xl"
+                        cover
+                      >
+                        <v-card-text class="d-flex justify-space-between align-start pt-2 pr-2">
+                          <v-chip
+                            x-small
+                            dark
+                            color="white"
+                            class="text-overline font-weight-bold glass-chip"
+                          >
+                            {{ facility.type }}
+                          </v-chip>
+                          <v-btn icon dark @click.stop="toggleFavorite(facility.id)">
+                            <v-icon :color="isFavorite(facility.id) ? 'red' : 'grey'">
+                              {{ isFavorite(facility.id) ? 'mdi-heart' : 'mdi-heart-outline' }}
+                            </v-icon>
+                          </v-btn>
+                        </v-card-text>
+                      </v-img>
+                    </div>
 
                     <v-card-title class="pb-1 text-body-1 font-weight-semibold pt-3">
                       {{ facility.name }}
                     </v-card-title>
 
                     <v-card-text class="py-0">
-                      <div class="text-caption grey--text text-truncate mb-2">{{ facility.address }}</div>
+                      <div class="text-caption grey--text text-truncate mb-2">
+                        {{ facility.address }}
+                      </div>
                       <div class="d-flex align-center justify-space-between mb-3">
                         <div class="d-flex align-center">
                           <v-icon small color="amber">mdi-star</v-icon>
@@ -1131,11 +1272,7 @@ export default {
                     $router.push({ name: 'facility-details', params: { id: facility.id } })
                   "
                 >
-                  <div
-                    class="mr-3 ml-2 d-flex flex-column align-center"
-                    style="width: 100px"
-                  >
-                  
+                  <div class="mr-3 ml-2 d-flex flex-column align-center" style="width: 100px">
                     <div class="pa-1">
                       <v-img
                         :src="facility.image || '/images/default-facility.jpg'"
@@ -1261,12 +1398,12 @@ export default {
   transition: 0.3s ease;
 }
 
-.v-bottom-navigation .v-btn{
+.v-bottom-navigation .v-btn {
   /* Make the button shape a circle */
   border-radius: 27% !important;
 }
 
-.v-bottom-navigation .v-btn:hover{
+.v-bottom-navigation .v-btn:hover {
   transform: scale(1.1);
 }
 
@@ -1277,18 +1414,17 @@ export default {
 .glass-chip {
   /* 1. Translucent white background */
   background: rgba(255, 255, 255, 0.2) !important;
-  
+
   /* 2. The glass blur effect */
   backdrop-filter: blur(3px) !important;
   -webkit-backdrop-filter: blur(3px) !important; /* For Safari support */
-  
+
   /* 3. Subtle thin border to define the shape */
   border: 1px solid rgba(255, 255, 255, 0.3) !important;
-  
 
   /* 4. Soft shadow to give it lift */
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
-  
+
   /* Ensure text is readable over the blur */
   text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.2);
 }
@@ -1401,9 +1537,15 @@ export default {
 
 /* Animation for the hand icon */
 @keyframes swipeAnimation {
-  0% { transform: translateX(0); }
-  50% { transform: translateX(-10px); }
-  100% { transform: translateX(0); }
+  0% {
+    transform: translateX(0);
+  }
+  50% {
+    transform: translateX(-10px);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 .swipe-animation {
@@ -1411,10 +1553,12 @@ export default {
 }
 
 /* Fade transition for the whole hint */
-.fade-enter-active, .fade-leave-active {
+.fade-enter-active,
+.fade-leave-active {
   transition: opacity 0.8s ease;
 }
-.fade-enter-from, .fade-leave-to {
+.fade-enter-from,
+.fade-leave-to {
   opacity: 0;
 }
 
@@ -1426,5 +1570,26 @@ export default {
   -ms-overflow-style: none;
   scrollbar-width: none;
   scroll-behavior: smooth;
+}
+
+.notification-gradient {
+  background: linear-gradient(
+    to bottom right,
+    rgba(26, 101, 162, 0.6),
+    rgba(119, 154, 229, 0.6)
+  ) !important;
+}
+
+.notification-gradient-btn {
+  background: linear-gradient(
+    to bottom right,
+    rgba(26, 101, 162, 0.6),
+    rgba(119, 154, 229, 0.6)
+  ) !important;
+  color: white !important;
+}
+
+.notification-gradient-btn:hover {
+  filter: brightness(1.1);
 }
 </style>
