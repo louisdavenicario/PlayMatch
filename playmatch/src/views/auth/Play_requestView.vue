@@ -13,9 +13,14 @@
       <v-btn icon @click="$router.go(-1)">
         <v-icon color="white">mdi-arrow-left</v-icon>
       </v-btn>
-      <v-toolbar-title class="font-weight-bold" style="color: white">
+
+      <v-toolbar-title 
+        class="font-weight-bold" 
+        style="color: white; overflow: visible; min-width: max-content;"
+      >
         Playmate Requests
       </v-toolbar-title>
+
       <v-spacer></v-spacer>
       <v-btn icon @click="openCreateDialog()" color="white">
         <v-icon>mdi-plus</v-icon>
