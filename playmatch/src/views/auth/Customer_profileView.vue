@@ -170,6 +170,24 @@ const saveProfile = async () => {
   }
 }
 
+//Logout function
+const logout = async () => {
+  try {
+    const { error: signOutError } = await supabase.auth.signOut()
+    if (signOutError) throw signOutError
+    
+    // Clear local data
+    localStorage.clear()
+    currentUserId.value = null
+    
+    // Redirect to signin
+    router.push({ name: 'signin' })
+  } catch (err) {
+    console.error('Logout failed:', err.message)
+    alert('Failed to logout. Please try again.')
+  }
+}
+
 onMounted(() => {
   fetchProfile()
 })
@@ -194,6 +212,10 @@ onMounted(() => {
         {{ isViewingOther ? 'User Profile View' : 'My Profile' }}
       </v-toolbar-title>
       <v-spacer></v-spacer>
+
+      <v-btn v-if="!isViewingOther" icon @click="logout">
+        <v-icon color="red">mdi-logout</v-icon>
+      </v-btn>
     </v-app-bar>
 
     <v-main

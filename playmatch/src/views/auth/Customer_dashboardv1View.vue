@@ -385,21 +385,6 @@ export default {
         .subscribe()
     },
 
-    // Logout
-    async logout() {
-      try {
-        const { error } = await supabase.auth.signOut()
-        if (error) throw error
-        localStorage.clear()
-        this.currentUserId = null
-        this.ratingDialog = { visible: false, facility: null, value: 0 }
-        this.$router.push({ name: 'signin' })
-      } catch (err) {
-        console.error('Logout failed:', err.message)
-        alert('Failed to logout. Please try again.')
-      }
-    },
-
     // Toggle favorites
     async toggleFavorite(facilityId) {
       if (!this.currentUserId) {
@@ -908,8 +893,6 @@ export default {
           </v-list>
         </v-card>
       </v-menu>
-
-      <v-btn icon @click="logout"><v-icon color="red">mdi-logout</v-icon></v-btn>
 
       <v-dialog v-model="showNotificationDialog" max-width="500">
         <v-card v-if="selectedNotification" class="rounded-xl">
