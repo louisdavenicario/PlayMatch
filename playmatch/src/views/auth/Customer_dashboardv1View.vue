@@ -385,6 +385,21 @@ export default {
         .subscribe()
     },
 
+    // Logout
+    async logout() {
+      try {
+        const { error } = await supabase.auth.signOut()
+        if (error) throw error
+        localStorage.clear()
+        this.currentUserId = null
+        this.ratingDialog = { visible: false, facility: null, value: 0 }
+        this.$router.push({ name: 'signin' })
+      } catch (err) {
+        console.error('Logout failed:', err.message)
+        alert('Failed to logout. Please try again.')
+      }
+    },
+
     // Toggle favorites
     async toggleFavorite(facilityId) {
       if (!this.currentUserId) {
@@ -844,11 +859,7 @@ export default {
               >
                 <!-- TITLE ROW -->
                 <v-list-item-title class="d-flex align-center mt-2">
-                  <v-icon
-                    color="blue"
-                    size="20"
-                    class="mr-2"
-                  >
+                  <v-icon color="blue" size="20" class="mr-2">
                     {{
                       n.type === 'booking_status'
                         ? 'mdi-calendar-check'
@@ -894,6 +905,8 @@ export default {
         </v-card>
       </v-menu>
 
+      <v-btn icon @click="logout"><v-icon color="red">mdi-logout</v-icon></v-btn>
+
       <v-dialog v-model="showNotificationDialog" max-width="500">
         <v-card v-if="selectedNotification" class="rounded-xl">
           <!-- Header -->
@@ -929,7 +942,7 @@ export default {
             <v-btn
               color="error"
               variant="text"
-              class="text-none" 
+              class="text-none"
               @click="deleteNotification(selectedNotification.id)"
             >
               <v-icon left>mdi-delete</v-icon>
@@ -960,7 +973,7 @@ export default {
               }"
             >
               <div>
-                <h2 class="text-h6 font-weight-bold">Welcome back, {{ userName }}!</h2>
+                <h2 class="text-h6 font-weight-bold">Welcome, {{ userName }}!</h2>
                 <div class="typing-container">
                   <p class="text-subtitle-2 mb-0 mt-1 typing-text">
                     Find and book the perfect facility for your next match.
@@ -972,7 +985,7 @@ export default {
             </v-card>
           </v-col>
         </v-row>
-        <v-row no-gutters class="px-4">
+        <v-row no-gutters class="px-4" v-if="!searchQuery">
           <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
             <h2 class="text-h6 font-weight-medium mb-2">Available Playmate Requests</h2>
             <v-btn
