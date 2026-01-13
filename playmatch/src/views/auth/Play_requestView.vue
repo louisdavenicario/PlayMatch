@@ -433,9 +433,9 @@
               class="mt-0 mb-3"
             />
 
-            <v-radio-group>
-              <v-radio label="Individual Players" value="individual"></v-radio>
-              <v-radio label="An Opponent Team" value="team"></v-radio>
+            <v-radio-group v-model="newRequest.match_type" class="mb-3">
+              <v-radio label="Seeking Individual Players" value="individual"></v-radio>
+              <v-radio label="Seeking an Opponent Team" value="team"></v-radio>
             </v-radio-group>
 
             <v-select
@@ -1010,29 +1010,36 @@ export default {
     // Only filters by matchTypeFilter for Tab 0, but still includes search filter.
     filteredMatches() {
       const searchTerm = this.search ? this.search.toLowerCase() : ''
+      
       const matchTypeFiltered = this.playmateRequests.filter((request) => {
-        // Apply match type filter
-        if (this.matchTypeFilter === 'all') return true
-
-        // Direct Invites need special handling because they use the 'direct_invite' type
-        if (this.matchTypeFilter === 'direct_invite') {
-          return request.match_type === 'direct_invite'
+        // 1. If 'All Requests' is selected
+        if (this.matchTypeFilter === 'all') {
+          // Show everything EXCEPT standard direct invites 
+          // (Unless I am the creator or the one invited)
+          if (request.match_type === 'direct_invite') {
+            return request.creator_id === this.currentUserId || request.is_invited;
+          }
+          return true;
         }
 
-        // Filter out other direct invites unless explicitly requested
-        if (request.match_type === 'direct_invite') return false
+        // 2. If 'Invites' chip is selected
+        if (this.matchTypeFilter === 'direct_invite') {
+          return request.match_type === 'direct_invite';
+        }
 
-        return request.match_type === this.matchTypeFilter
-      })
+        // 3. For 'individual' or 'team' chips, match exactly
+        // This is the line that fixes your 'Seeking Players' tab
+        return request.match_type === this.matchTypeFilter;
+      });
 
       // Apply search filter (Sport, Location, or Creator Name)
       return matchTypeFiltered.filter(
         (request) =>
-          !searchTerm || // Always show all if no search term, or if search term matches one of the fields
+          !searchTerm ||
           (request.sport || '').toLowerCase().includes(searchTerm) ||
           (request.location || '').toLowerCase().includes(searchTerm) ||
-          (request.creator_name || '').toLowerCase().includes(searchTerm),
-      )
+          (request.creator_name || '').toLowerCase().includes(searchTerm)
+      );
     },
     // NEW COMPUTED PROPERTY: Filters all users by search term on their sports or location/name for Tab 1
     filteredUsers() {
