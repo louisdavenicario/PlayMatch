@@ -22,8 +22,16 @@
       </v-toolbar-title>
 
       <v-spacer></v-spacer>
-      <v-btn icon @click="openCreateDialog()" color="white">
-        <v-icon>mdi-plus</v-icon>
+      <v-btn 
+        rounded 
+        depressed 
+        color="white" 
+        class="blue--text text-none font-weight-bold px-4"
+        small
+        @click="openCreateDialog()"
+      >
+        <v-icon left small>mdi-plus</v-icon>
+        Create Request
       </v-btn>
     </v-app-bar>
 
@@ -37,7 +45,7 @@
         <v-card class="pa-4 mb-4" rounded="xl" elevation="1">
           <v-text-field
             v-model="search"
-            label="Search by Sport or Location"
+            label="Search by Name, Sport, or Location"
             prepend-inner-icon="mdi-magnify"
             clearable
             solo
@@ -600,9 +608,6 @@
                   style="cursor: pointer"
                   @click="viewUserProfile(p.user_id)"
                 >
-                  <v-list-item-avatar color="grey lighten-3" size="40">
-                    <span class="font-weight-bold">{{ p.full_name[0] }}</span>
-                  </v-list-item-avatar>
                   <v-list-item-content>
                     <v-list-item-title class="font-weight-medium">{{
                       p.full_name
@@ -742,7 +747,7 @@
           </v-tabs-items>
         </v-card-text>
 
-        <v-card-actions class="d-flex justify-space-between pa-4 pt-0">
+        <v-card-actions class="d-flex justify-space-between pa-4 pt-0 mt-2">
           <v-btn
             color="red darken-1"
             text

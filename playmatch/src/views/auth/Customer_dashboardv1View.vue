@@ -52,6 +52,14 @@ export default {
           facility.address.toLowerCase().includes(query),
       )
     },
+    limitedPlaymateRequests() {
+      return {
+        // Only the first 3 items for the display
+        display: this.playmateRequests.slice(0, 3),
+        // The total number of requests
+        totalCount: this.playmateRequests.length
+      }
+    },
   },
 
   async mounted() {
@@ -383,21 +391,6 @@ export default {
           },
         )
         .subscribe()
-    },
-
-    // Logout
-    async logout() {
-      try {
-        const { error } = await supabase.auth.signOut()
-        if (error) throw error
-        localStorage.clear()
-        this.currentUserId = null
-        this.ratingDialog = { visible: false, facility: null, value: 0 }
-        this.$router.push({ name: 'signin' })
-      } catch (err) {
-        console.error('Logout failed:', err.message)
-        alert('Failed to logout. Please try again.')
-      }
     },
 
     // Toggle favorites
@@ -905,7 +898,6 @@ export default {
         </v-card>
       </v-menu>
 
-      <v-btn icon @click="logout"><v-icon color="red">mdi-logout</v-icon></v-btn>
 
       <v-dialog v-model="showNotificationDialog" max-width="500">
         <v-card v-if="selectedNotification" class="rounded-xl">
@@ -987,12 +979,15 @@ export default {
         </v-row>
         <v-row no-gutters class="px-4" v-if="!searchQuery">
           <v-col cols="12" class="d-flex align-center justify-space-between mb-3">
-            <h2 class="text-h6 font-weight-medium mb-2">Available Playmate Requests</h2>
+            <h2 class="text-h6 font-weight-medium mb-2">
+              Available Playmate Requests ({{ limitedPlaymateRequests.totalCount }})
+            </h2>
             <v-btn
               text
               small
               color="blue"
-              class="rounded-lg text-none"
+              class="rounded-lg text-none px-2"  
+              min-width="70"                   
               @click="goToPlaymateRequests"
             >
               View All <v-icon right small>mdi-chevron-right</v-icon>
@@ -1008,7 +1003,7 @@ export default {
               No playmate requests found.
             </div>
 
-            <v-col v-else cols="12" v-for="req in playmateRequests" :key="req.id" class="mb-3 pa-0">
+            <v-col v-else cols="12" v-for="req in limitedPlaymateRequests.display" :key="req.id" class="mb-3 pa-0">
               <v-card class="pa-6 d-flex align-center" rounded="xl" elevation="1">
                 <v-avatar color="blue lighten-4" size="44" class="mr-4">
                   <span class="white--text font-weight-bold">{{ req.creator_name[0] }}</span>
