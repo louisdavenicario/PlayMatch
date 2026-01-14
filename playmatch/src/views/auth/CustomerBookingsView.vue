@@ -24,6 +24,7 @@ export default {
       visible: false,
       booking: null,
       value: 0,
+      comment: '',
     },
   }),
 
@@ -232,7 +233,7 @@ export default {
 
         const { data, error } = await supabase
           .from('ratings')
-          .select('facility_id, rating_value')
+          .select('facility_id, rating_value, comment')
           .eq('user_id', this.currentUserId)
           .in('facility_id', facilityIds)
 
@@ -245,6 +246,7 @@ export default {
             return {
               ...booking,
               myRating: existingRating ? existingRating.rating_value : 0,
+              myComment: existingRating ? existingRating.comment : '',
             }
           })
         }
@@ -303,6 +305,7 @@ export default {
 
       this.ratingDialog.booking = booking
       this.ratingDialog.value = booking.myRating || 0
+      this.ratingDialog.comment = booking.myComment || ''
       this.ratingDialog.visible = true
     },
 
@@ -310,6 +313,7 @@ export default {
       this.ratingDialog.visible = false
       this.ratingDialog.booking = null
       this.ratingDialog.value = 0
+      this.ratingDialog.comment = ''
     },
 
     async submitRating() {
@@ -319,7 +323,7 @@ export default {
       }
 
       try {
-        const { booking, value } = this.ratingDialog
+        const { booking, value, comment } = this.ratingDialog
 
         const { data: existing, error: fetchError } = await supabase
           .from('ratings')
@@ -335,7 +339,10 @@ export default {
         if (existingRatingId) {
           const { error: updateError } = await supabase
             .from('ratings')
-            .update({ rating_value: value })
+            .update({
+              rating_value: value,
+              comment: comment || null,
+            })
             .eq('id', existingRatingId)
           if (updateError) throw updateError
         } else {
@@ -344,6 +351,7 @@ export default {
               user_id: this.currentUserId,
               facility_id: booking.facility_id,
               rating_value: value,
+              comment: comment || null,
             },
           ])
           if (insertError) throw insertError
@@ -523,6 +531,14 @@ export default {
                             class="rounded-lg grey lighten-3"
                             cover
                           >
+                            <v-chip
+                              x-small
+                              :color="getStatusColor(booking.status)"
+                              dark
+                              class="ma-1 mt-1 ml-3 font-weight-bold justify-center text-center"
+                            >
+                              {{ booking.status.toUpperCase() }}
+                            </v-chip>
                           </v-img>
                         </div>
 
@@ -634,9 +650,22 @@ export default {
               {{ n <= ratingDialog.value ? 'mdi-star' : 'mdi-star-outline' }}
             </v-icon>
           </div>
-          <p v-if="ratingDialog.value > 0" class="text-center text-body-2 mt-2">
+          <p v-if="ratingDialog.value > 0" class="text-center text-body-2 mt-2 mb-4">
             {{ ratingDialog.value }} star{{ ratingDialog.value > 1 ? 's' : '' }}
           </p>
+
+          <!-- Comment Section -->
+          <v-textarea
+            v-model="ratingDialog.comment"
+            label="Write your review (optional)"
+            placeholder="Share your experience with this facility..."
+            outlined
+            rows="4"
+            counter="500"
+            maxlength="500"
+            class="mt-2"
+            hide-details="auto"
+          ></v-textarea>
         </v-card-text>
         <v-card-actions class="justify-end px-4 pb-4">
           <v-btn text @click="closeRatingDialog" class="text-none">Cancel</v-btn>
