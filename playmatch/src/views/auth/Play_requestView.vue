@@ -14,18 +14,18 @@
         <v-icon color="white">mdi-arrow-left</v-icon>
       </v-btn>
 
-      <v-toolbar-title 
-        class="font-weight-bold" 
-        style="color: white; overflow: visible; min-width: max-content;"
+      <v-toolbar-title
+        class="font-weight-bold"
+        style="color: white; overflow: visible; min-width: max-content"
       >
         Playmate Requests
       </v-toolbar-title>
 
       <v-spacer></v-spacer>
-      <v-btn 
-        rounded 
-        depressed 
-        color="white" 
+      <v-btn
+        rounded
+        depressed
+        color="white"
         class="blue--text text-none font-weight-bold px-4"
         small
         @click="openCreateDialog()"
@@ -176,24 +176,40 @@
                 <v-divider class="my-3"></v-divider>
 
                 <v-row no-gutters class="text-caption mt-2 align-center justify-center">
-                  <v-col cols="6" sm="auto" class="d-flex align-center justify-center justify-sm-start pr-sm-4 pb-2 pb-sm-0">
+                  <v-col
+                    cols="6"
+                    sm="auto"
+                    class="d-flex align-center justify-center justify-sm-start pr-sm-4 pb-2 pb-sm-0"
+                  >
                     <v-icon small class="mr-1">mdi-calendar-range</v-icon>
                     {{ formatDate(request.date) }}
                   </v-col>
 
-                  <v-col cols="6" sm="auto" class="d-flex align-center justify-center justify-sm-start pr-sm-4 pb-2 pb-sm-0">
+                  <v-col
+                    cols="6"
+                    sm="auto"
+                    class="d-flex align-center justify-center justify-sm-start pr-sm-4 pb-2 pb-sm-0"
+                  >
                     <v-icon small class="mr-1">mdi-clock-time-four-outline</v-icon>
                     {{ formatTime(request.start_time) }} - {{ formatTime(request.end_time) }}
                   </v-col>
 
-                  <v-col cols="6" sm="auto" class="d-flex align-center justify-center justify-sm-start pr-sm-4">
+                  <v-col
+                    cols="6"
+                    sm="auto"
+                    class="d-flex align-center justify-center justify-sm-start pr-sm-4"
+                  >
                     <v-icon small class="mr-1">
                       {{ request.match_type === 'team' ? 'mdi-trophy' : 'mdi-account-group' }}
                     </v-icon>
                     {{ playersDisplay(request) }}
                   </v-col>
 
-                  <v-col cols="6" sm="auto" class="d-flex align-center justify-center justify-sm-start">
+                  <v-col
+                    cols="6"
+                    sm="auto"
+                    class="d-flex align-center justify-center justify-sm-start"
+                  >
                     <v-chip
                       v-if="request.match_type === 'direct_invite'"
                       x-small
@@ -206,7 +222,10 @@
                   </v-col>
                 </v-row>
 
-                <p class="text-body-2 mt-3 mb-1 grey--text text-center mx-auto" style="max-width: 80%;">
+                <p
+                  class="text-body-2 mt-3 mb-1 grey--text text-center mx-auto"
+                  style="max-width: 80%"
+                >
                   {{ request.description || 'No specific notes provided.' }}
                 </p>
 
@@ -336,7 +355,7 @@
         <div v-else-if="mainTab === 2">
           <v-alert type="info" text class="mt-4 mb-4 rounded-xl" elevation="1">
             <h3>Rating Window</h3>
-            <p>Matches that ended in the last 24 hours are displayed here for rating. The rating window closes 7 days after the match ends.</p>
+            <p>Matches that ended in the last 24 hours are displayed here for rating.</p>
             Start searching for a name or even type a letter to find users to play with!"
           </v-alert>
 
@@ -527,7 +546,13 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn color="grey" text @click="dialog = false" class="text-none">Cancel</v-btn>
-          <v-btn color="blue darken-1" text @click="createRequest" :loading="creating" class="text-none">
+          <v-btn
+            color="blue darken-1"
+            text
+            @click="createRequest"
+            :loading="creating"
+            class="text-none"
+          >
             {{ isDirectInvite ? 'Send Invite' : 'Create' }}
           </v-btn>
         </v-card-actions>
@@ -904,7 +929,13 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn text @click="ratingDialog = false">Cancel</v-btn>
-          <v-btn color="blue" dark @click="submitRating" :disabled="newRating.rating === 0" class="text-none">
+          <v-btn
+            color="blue"
+            dark
+            @click="submitRating"
+            :disabled="newRating.rating === 0"
+            class="text-none"
+          >
             Submit
           </v-btn>
         </v-card-actions>
@@ -1010,27 +1041,27 @@ export default {
     // Only filters by matchTypeFilter for Tab 0, but still includes search filter.
     filteredMatches() {
       const searchTerm = this.search ? this.search.toLowerCase() : ''
-      
+
       const matchTypeFiltered = this.playmateRequests.filter((request) => {
         // 1. If 'All Requests' is selected
         if (this.matchTypeFilter === 'all') {
-          // Show everything EXCEPT standard direct invites 
+          // Show everything EXCEPT standard direct invites
           // (Unless I am the creator or the one invited)
           if (request.match_type === 'direct_invite') {
-            return request.creator_id === this.currentUserId || request.is_invited;
+            return request.creator_id === this.currentUserId || request.is_invited
           }
-          return true;
+          return true
         }
 
         // 2. If 'Invites' chip is selected
         if (this.matchTypeFilter === 'direct_invite') {
-          return request.match_type === 'direct_invite';
+          return request.match_type === 'direct_invite'
         }
 
         // 3. For 'individual' or 'team' chips, match exactly
         // This is the line that fixes your 'Seeking Players' tab
-        return request.match_type === this.matchTypeFilter;
-      });
+        return request.match_type === this.matchTypeFilter
+      })
 
       // Apply search filter (Sport, Location, or Creator Name)
       return matchTypeFiltered.filter(
@@ -1038,8 +1069,8 @@ export default {
           !searchTerm ||
           (request.sport || '').toLowerCase().includes(searchTerm) ||
           (request.location || '').toLowerCase().includes(searchTerm) ||
-          (request.creator_name || '').toLowerCase().includes(searchTerm)
-      );
+          (request.creator_name || '').toLowerCase().includes(searchTerm),
+      )
     },
     // NEW COMPUTED PROPERTY: Filters all users by search term on their sports or location/name for Tab 1
     filteredUsers() {
@@ -2137,7 +2168,7 @@ export default {
 /* 3. Style the Active Tab */
 .v-tab--active {
   background-color: rgba(25, 118, 210, 0.1) !important; /* Light blue pill background */
-  color: #1976D2 !important;
+  color: #1976d2 !important;
   font-weight: 600 !important;
 }
 
