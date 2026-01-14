@@ -523,14 +523,6 @@ export default {
                             class="rounded-lg grey lighten-3"
                             cover
                           >
-                            <v-chip
-                              x-small
-                              :color="getStatusColor(booking.status)"
-                              dark
-                              class="ma-1 mt-1 ml-3 font-weight-bold justify-center text-center"
-                            >
-                              {{ booking.status.toUpperCase() }}
-                            </v-chip>
                           </v-img>
                         </div>
 
@@ -623,7 +615,7 @@ export default {
     </v-main>
 
     <!-- Rating Dialog -->
-    <v-dialog v-model="ratingDialog.visible" max-width="400">
+    <v-dialog v-model="ratingDialog.visible" max-width="500">
       <v-card rounded="xl">
         <v-card-title class="font-weight-bold">
           Rate {{ ratingDialog.booking?.facility_name }}

@@ -195,6 +195,16 @@
                   </v-col>
 
                   <v-col
+                    v-if="request.match_type === 'team'"
+                    cols="6"
+                    sm="auto"
+                    class="d-flex align-center justify-center justify-sm-start pr-sm-4"
+                  >
+                    <v-icon small class="mr-1">mdi-account-multiple</v-icon>
+                    {{ request.max_joins }}v{{ request.max_joins }} Match
+                  </v-col>
+
+                  <v-col
                     cols="6"
                     sm="auto"
                     class="d-flex align-center justify-center justify-sm-start pr-sm-4"
@@ -1010,11 +1020,10 @@ export default {
     profileRatings: [],
     statusCheckTimer: null,
 
-    // NEW & UPDATED DATA PROPERTIES FOR DIRECT INVITE
+    // DATA PROPERTIES FOR DIRECT INVITE
     allUsers: [],
     isDirectInvite: false, // New flag to control dialog behavior
     selectedUserToMatch: { id: null, full_name: '', sports: '', city: '' }, // Full user data
-    // END NEW DATA PROPERTIES
   }),
   computed: {
     // Calculates the average rating for the viewed user
@@ -1072,7 +1081,7 @@ export default {
           (request.creator_name || '').toLowerCase().includes(searchTerm),
       )
     },
-    // NEW COMPUTED PROPERTY: Filters all users by search term on their sports or location/name for Tab 1
+    // COMPUTED PROPERTY: Filters all users by search term on their sports or location/name for Tab 1
     filteredUsers() {
       const searchTerm = this.search ? this.search.toLowerCase() : ''
       if (!searchTerm) return []
