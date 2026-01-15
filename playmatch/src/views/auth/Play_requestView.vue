@@ -959,19 +959,8 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-<<<<<<< HEAD
           <v-btn text @click="ratingDialog = false" class="text-none">Cancel</v-btn>
           <v-btn color="blue" dark @click="submitRating" :disabled="newRating.rating === 0" class="text-none">
-=======
-          <v-btn text @click="ratingDialog = false">Cancel</v-btn>
-          <v-btn
-            color="blue"
-            dark
-            @click="submitRating"
-            :disabled="newRating.rating === 0"
-            class="text-none"
-          >
->>>>>>> 6bcd8143523f3022735e5f960800a415cc184f6d
             Submit
           </v-btn>
         </v-card-actions>
