@@ -15,31 +15,32 @@ export default {
     loading: true,
     error: null,
 
-    scrollThumbWidth: 20, // Initial width of the thumb
-    scrollThumbLeft: 0,   // Position of the thumb
-    trackWidth: 80, // Must match the width in your CSS
+    scrollThumbWidth: 20,
+    scrollThumbLeft: 0,
+    trackWidth: 80,
+
+    // Rating dialog state
+    ratingDialog: {
+      visible: false,
+      booking: null,
+      value: 0,
+      comment: '',
+    },
   }),
 
   computed: {
-    // 🔑 FIX: Implement Sorting Function to be used by all lists
     sortedByDateTime() {
-      // Create a copy to sort and ensure both date and time are used
       return [...this.bookings].sort((a, b) => {
         const dateA = new Date(a.full_start_timestamp).getTime()
         const dateB = new Date(b.full_start_timestamp).getTime()
-
-        // Sort ascending (nearest date/time first)
         return dateA - dateB
       })
     },
 
     filteredBookings() {
       const selectedTabIndex = this.tab
-
-      // Use the globally sorted array as the base
       const list = this.sortedByDateTime
 
-      // 0 = Accepted, 1 = Pending, 2 = Cancelled, 3 = Rejected
       if (selectedTabIndex === 0) {
         return list.filter((b) => b.status === 'accepted').reverse()
       }
@@ -50,10 +51,8 @@ export default {
         return list.filter((b) => b.status === 'cancelled').reverse()
       }
       if (selectedTabIndex === 3) {
-        // Accept both 'rejected' and 'declined' DB values if present
         return list.filter((b) => ['rejected', 'declined'].includes(b.status))
       }
-
       if (selectedTabIndex === 4) {
         return list
           .filter((b) => b.status === 'completed')
@@ -80,39 +79,35 @@ export default {
       this.tab = parseInt(this.$route.query.tab)
     }
 
-    // Set up the scroll listener
     this.$nextTick(() => {
-      const scrollEl = this.$el.querySelector('.v-slide-group__wrapper');
+      const scrollEl = this.$el.querySelector('.v-slide-group__wrapper')
       if (scrollEl) {
         scrollEl.addEventListener('scroll', () => {
-          const maxScroll = scrollEl.scrollWidth - scrollEl.clientWidth;
+          const maxScroll = scrollEl.scrollWidth - scrollEl.clientWidth
           if (maxScroll > 0) {
-            const scrollFraction = scrollEl.scrollLeft / maxScroll;
-            const availableSpace = this.trackWidth - this.scrollThumbWidth;
-            this.scrollThumbLeft = scrollFraction * availableSpace;
+            const scrollFraction = scrollEl.scrollLeft / maxScroll
+            const availableSpace = this.trackWidth - this.scrollThumbWidth
+            this.scrollThumbLeft = scrollFraction * availableSpace
           }
-        });
+        })
       }
-    });
+    })
   },
 
   beforeUnmount() {
     if (this.bookingSubscription) this.bookingSubscription.unsubscribe()
   },
 
-  // ADD THIS WATCHER to move the bar when tabs are clicked
   watch: {
     tab(newVal) {
-      // Calculate position based on which tab index is active (0 to 4)
-      const totalTabs = this.tabs.length;
-      const scrollFraction = newVal / (totalTabs - 1);
-      const availableSpace = this.trackWidth - this.scrollThumbWidth;
-      this.scrollThumbLeft = scrollFraction * availableSpace;
-    }
+      const totalTabs = this.tabs.length
+      const scrollFraction = newVal / (totalTabs - 1)
+      const availableSpace = this.trackWidth - this.scrollThumbWidth
+      this.scrollThumbLeft = scrollFraction * availableSpace
+    },
   },
 
   methods: {
-    // 🧍 Get logged-in user
     async getCurrentUser() {
       try {
         const { data, error } = await supabase.auth.getUser()
@@ -159,7 +154,7 @@ export default {
       const historyCutoffIds = this.bookings
         .filter((b) => {
           const endTime = new Date(b.full_end_timestamp).getTime()
-          const historyCutoff = endTime + 24 * 60 * 60 * 1000 // 1 day later
+          const historyCutoff = endTime + 24 * 60 * 60 * 1000
           return now.getTime() > historyCutoff && ['accepted', 'completed'].includes(b.status)
         })
         .map((b) => b.id)
@@ -180,7 +175,6 @@ export default {
       }
     },
 
-    // 📅 Fetch all customer bookings
     async fetchBookings() {
       if (!this.currentUserId) return
       this.loading = true
@@ -191,23 +185,20 @@ export default {
           .from('bookings')
           .select(
             `
-                  id,
-                  facility_id,
-                  booking_date,
-                  start_time,
-                  end_time,
-                  status,
-                  facilities (facility_name, address, price_per_hour, image_url)
-              `,
+              id,
+              facility_id,
+              booking_date,
+              start_time,
+              end_time,
+              status,
+              facilities (facility_name, address, price_per_hour, image_url)
+            `,
           )
           .eq('user_id', this.currentUserId)
-        // ❌ REMOVED .order() CALLS. We let the computed property handle all sorting.
 
         if (error) throw error
 
-        // Map data to a cleaner format and create the required full timestamps
         this.bookings = data.map((b) => {
-          // This mapping is crucial for client-side date comparison
           const startTimestamp = `${b.booking_date}T${b.start_time}`
           const endTimestamp = `${b.booking_date}T${b.end_time}`
 
@@ -223,11 +214,44 @@ export default {
             full_end_timestamp: endTimestamp,
           }
         })
+
+        // Fetch existing ratings for completed bookings
+        await this.fetchExistingRatings()
       } catch (err) {
         this.error = 'Failed to load bookings.'
         console.error('Error fetching bookings:', err.message)
       } finally {
         this.loading = false
+      }
+    },
+
+    async fetchExistingRatings() {
+      if (!this.currentUserId) return
+
+      try {
+        const facilityIds = this.bookings.map((b) => b.facility_id)
+
+        const { data, error } = await supabase
+          .from('ratings')
+          .select('facility_id, rating_value, comment')
+          .eq('user_id', this.currentUserId)
+          .in('facility_id', facilityIds)
+
+        if (error) throw error
+
+        // Map ratings to bookings
+        if (data) {
+          this.bookings = this.bookings.map((booking) => {
+            const existingRating = data.find((r) => r.facility_id === booking.facility_id)
+            return {
+              ...booking,
+              myRating: existingRating ? existingRating.rating_value : 0,
+              myComment: existingRating ? existingRating.comment : '',
+            }
+          })
+        }
+      } catch (err) {
+        console.error('Error fetching existing ratings:', err.message)
       }
     },
 
@@ -242,9 +266,7 @@ export default {
 
         if (error) throw error
 
-        // Refresh list so the booking moves to Completed tab
         await this.fetchBookings()
-
         alert('Booking marked as completed.')
       } catch (err) {
         console.error('Error marking booking as completed:', err.message)
@@ -254,7 +276,6 @@ export default {
       }
     },
 
-    // 🔁 Subscribe to real-time changes
     async subscribeBookingsRealtime() {
       if (!this.currentUserId) return
       this.bookingSubscription = supabase
@@ -275,7 +296,76 @@ export default {
         .subscribe()
     },
 
-    // 📅 Utility function for date formatting
+    // Rating dialog methods
+    async openRatingDialog(booking) {
+      if (!this.currentUserId) {
+        alert('Please log in to rate facilities.')
+        return
+      }
+
+      this.ratingDialog.booking = booking
+      this.ratingDialog.value = booking.myRating || 0
+      this.ratingDialog.comment = booking.myComment || ''
+      this.ratingDialog.visible = true
+    },
+
+    closeRatingDialog() {
+      this.ratingDialog.visible = false
+      this.ratingDialog.booking = null
+      this.ratingDialog.value = 0
+      this.ratingDialog.comment = ''
+    },
+
+    async submitRating() {
+      if (!this.ratingDialog.value) {
+        alert('Please select a star rating first.')
+        return
+      }
+
+      try {
+        const { booking, value, comment } = this.ratingDialog
+
+        const { data: existing, error: fetchError } = await supabase
+          .from('ratings')
+          .select('id')
+          .eq('user_id', this.currentUserId)
+          .eq('facility_id', booking.facility_id)
+          .limit(1)
+
+        if (fetchError) throw fetchError
+
+        const existingRatingId = existing && existing.length > 0 ? existing[0].id : null
+
+        if (existingRatingId) {
+          const { error: updateError } = await supabase
+            .from('ratings')
+            .update({
+              rating_value: value,
+              comment: comment || null,
+            })
+            .eq('id', existingRatingId)
+          if (updateError) throw updateError
+        } else {
+          const { error: insertError } = await supabase.from('ratings').insert([
+            {
+              user_id: this.currentUserId,
+              facility_id: booking.facility_id,
+              rating_value: value,
+              comment: comment || null,
+            },
+          ])
+          if (insertError) throw insertError
+        }
+
+        alert('Rating submitted successfully!')
+        await this.fetchBookings()
+        this.closeRatingDialog()
+      } catch (err) {
+        console.error('Error submitting rating:', err.message)
+        alert('Failed to submit rating. Please try again.')
+      }
+    },
+
     formatDate(fullTimestamp) {
       if (!fullTimestamp) return ''
       const date = new Date(fullTimestamp)
@@ -288,7 +378,6 @@ export default {
       })
     },
 
-    // ⌚ Utility function for time formatting
     formatTime(fullTimestamp) {
       if (!fullTimestamp) return ''
 
@@ -299,7 +388,6 @@ export default {
           return 'Invalid Time'
         }
 
-        // Format the time (e.g., 03:00 PM)
         return dateTime.toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit',
@@ -310,7 +398,6 @@ export default {
       }
     },
 
-    // 🏷 Get color based on status (Confirmed correct)
     getStatusColor(status) {
       switch (status) {
         case 'accepted':
@@ -327,7 +414,6 @@ export default {
       }
     },
 
-    // 🗑 Handle cancellation logic
     async cancelBooking(bookingId) {
       if (!confirm('Are you sure you want to cancel this booking?')) return
 
@@ -341,11 +427,7 @@ export default {
 
         if (error) throw error
 
-        // refresh local list
         await this.fetchBookings()
-
-        // NOTE: facility details page frees the slot because it excludes 'cancelled' bookings
-        // when building reservedSlots (your facility page already uses .neq('status','cancelled'))
         alert('Booking cancelled successfully.')
       } catch (err) {
         console.error('Error cancelling booking:', err.message)
@@ -398,15 +480,14 @@ export default {
           next-icon="mdi-arrow-right"
           prev-icon="mdi-arrow-left"
           show-arrows="false"
-          @native-scroll="syncScroll"
         >
           <v-tab v-for="item in tabs" :key="item">{{ item }}</v-tab>
         </v-tabs>
 
         <div class="custom-scrollbar-container d-sm-none">
           <div class="scroll-track">
-            <div 
-              class="scroll-thumb" 
+            <div
+              class="scroll-thumb"
               :style="{ width: scrollThumbWidth + 'px', left: scrollThumbLeft + 'px' }"
             ></div>
           </div>
@@ -492,7 +573,6 @@ export default {
                               Cancel
                             </v-btn>
 
-                            <!-- ✅ New Completed Button -->
                             <v-btn
                               v-if="booking.status === 'accepted'"
                               small
@@ -519,19 +599,13 @@ export default {
                               v-else-if="booking.status === 'completed'"
                               small
                               text
-                              color="amber"
+                              :color="booking.myRating > 0 ? 'orange darken-1' : 'amber'"
                               class="btn-rate text-none rounded-xl mb-2 mt-1"
-                              @click="
-                                $router.push({
-                                  name: 'facility-details',
-                                  params: { id: booking.facility_id },
-                                })
-                              "
+                              @click="openRatingDialog(booking)"
                             >
-                              Rate
+                              {{ booking.myRating > 0 ? 'Edit Rate' : 'Rate' }}
                             </v-btn>
 
-                            <!-- Cancelled or Rejected: show static chip -->
                             <v-chip
                               v-else-if="
                                 ['cancelled', 'rejected', 'declined'].includes(booking.status)
@@ -541,9 +615,7 @@ export default {
                               color="grey"
                               class="text-none rounded-lg mb-2 mt-1"
                             >
-                              {{
-                                booking.status.charAt(0).toUpperCase() + booking.status.slice(1)
-                              }}
+                              {{ booking.status.charAt(0).toUpperCase() + booking.status.slice(1) }}
                             </v-chip>
                           </div>
                         </div>
@@ -557,6 +629,51 @@ export default {
         </v-window>
       </v-container>
     </v-main>
+
+    <!-- Rating Dialog -->
+    <v-dialog v-model="ratingDialog.visible" max-width="500">
+      <v-card rounded="xl">
+        <v-card-title class="font-weight-bold">
+          Rate {{ ratingDialog.booking?.facility_name }}
+        </v-card-title>
+        <v-card-text>
+          <p class="text-caption grey--text mb-2">How was your experience?</p>
+          <div class="d-flex justify-center my-4">
+            <v-icon
+              v-for="n in 5"
+              :key="n"
+              large
+              :color="n <= ratingDialog.value ? 'amber' : 'grey'"
+              class="mx-1 rating-star"
+              @click="ratingDialog.value = n"
+            >
+              {{ n <= ratingDialog.value ? 'mdi-star' : 'mdi-star-outline' }}
+            </v-icon>
+          </div>
+          <p v-if="ratingDialog.value > 0" class="text-center text-body-2 mt-2 mb-4">
+            {{ ratingDialog.value }} star{{ ratingDialog.value > 1 ? 's' : '' }}
+          </p>
+
+          <!-- Comment Section -->
+          <v-textarea
+            v-model="ratingDialog.comment"
+            label="Write your review (optional)"
+            placeholder="Share your experience with this facility..."
+            outlined
+            rows="4"
+            counter="500"
+            maxlength="500"
+            class="mt-2"
+            hide-details="auto"
+          ></v-textarea>
+        </v-card-text>
+        <v-card-actions class="justify-end px-4 pb-4">
+          <v-btn text @click="closeRatingDialog" class="text-none">Cancel</v-btn>
+          <v-btn color="blue" dark @click="submitRating" class="text-none">Submit Rating</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
     <v-bottom-navigation app fixed color="white" light v-model="activeNav">
       <v-btn class="mx-1" value="home" @click="$router.push({ name: 'customer-dashboard' })">
         <v-icon size="31" :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
@@ -577,14 +694,13 @@ export default {
 </template>
 
 <style scoped>
-/* --- Layout & List Styles --- */
 .transparent-list {
   background-color: transparent !important;
 }
 
 .v-list-item-title {
-  white-space: normal !important; 
-  word-break: break-word !important; 
+  white-space: normal !important;
+  word-break: break-word !important;
 }
 
 .btn-cancel:hover {
@@ -599,24 +715,28 @@ export default {
   transform: scale(1.05);
 }
 
-.v-bottom-navigation .v-btn{
-  /* Make the button shape a circle */
+.rating-star {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.rating-star:hover {
+  transform: scale(1.2);
+}
+
+.v-bottom-navigation .v-btn {
   border-radius: 27% !important;
 }
 
-/* --- Tabs Styling Fix --- */
-
-/* 1. Reset all tabs: Remove default backgrounds and overlays */
 .v-tab {
   background-color: transparent !important;
   border-radius: 15px !important;
   margin: 0 4px;
   transition: none !important;
-  text-transform: none !important; /* Makes it look less "boxy" */
+  text-transform: none !important;
 }
 
-/* 2. Remove the "overlay" pseudo-element (the primary cause of the solid box) */
-.v-tab::before, 
+.v-tab::before,
 .v-tab--active::before,
 .v-tab:hover::before,
 .v-tab:focus::before {
@@ -624,37 +744,31 @@ export default {
   opacity: 0 !important;
 }
 
-/* 3. Style the Active Tab: No background, just blue text and an underline */
 .v-tab--active {
-  background-color: transparent !important; /* Removed the rgba blue background */
-  color: #1976D2 !important; 
+  background-color: transparent !important;
+  color: #1976d2 !important;
   font-weight: bold !important;
-  /* Optional: Add a subtle underline instead of a background box */
-  border-bottom: 2px solid #1976D2 !important;
+  border-bottom: 2px solid #1976d2 !important;
 }
 
-/* 4. Hide the default Vuetify slider/line */
 ::v-deep .v-tabs-slider-wrapper {
   display: none !important;
 }
 
-/* 5. Clean up Ripple effect */
 .v-tab .v-ripple__container {
   color: rgba(26, 101, 162, 0.1) !important;
 }
 
-/* Container for the separate scrollbar */
 .custom-scrollbar-container {
   width: 100%;
   display: flex;
   justify-content: center;
   padding: 10px 0;
-  margin-top: -10px; /* Pull it closer to the tabs */
+  margin-top: -10px;
 }
 
-/* The light gray track */
 .scroll-track {
-  width: 80px; /* Total width of the mini-scrollbar */
+  width: 80px;
   height: 7px;
   background: rgba(0, 0, 0, 0.1);
   border-radius: 10px;
@@ -662,33 +776,29 @@ export default {
   overflow: hidden;
 }
 
-/* The moving pill/thumb */
 .scroll-thumb {
   position: absolute;
   height: 100%;
-  background: #A0A0A0; /* Gray color from your image */
+  background: #a0a0a0;
   border-radius: 10px;
-  transition: left 0.1s ease-out; /* Smooth movement */
+  transition: left 0.1s ease-out;
 }
 
-/* Hide the default browser scrollbar so only our custom one shows */
 @media (max-width: 600px) {
-  /* Force the tabs to be slightly wider than the screen to enable scrolling */
   ::v-deep .v-slide-group__content {
     display: flex !important;
-    justify-content: center !important; /* This keeps them centered */
-    min-width: 120vw !important; /* Forces the container to be wider than the phone */
+    justify-content: center !important;
+    min-width: 120vw !important;
   }
 
   ::v-deep .v-slide-group__wrapper {
     overflow-x: auto !important;
   }
 
-  /* Hide the ugly default scrollbar */
   ::v-deep .v-slide-group__wrapper::-webkit-scrollbar {
     display: none !important;
   }
-  
+
   .v-tab {
     min-width: 100px !important;
     flex: 0 0 auto !important;

@@ -57,7 +57,7 @@ export default {
         // Only the first 3 items for the display
         display: this.playmateRequests.slice(0, 3),
         // The total number of requests
-        totalCount: this.playmateRequests.length
+        totalCount: this.playmateRequests.length,
       }
     },
   },
@@ -189,13 +189,31 @@ export default {
       }
     },
 
+    // Replace the existing handleNotificationClick method in ReservoSportBookingHome.vue
+
     async handleNotificationClick(notification) {
       // Mark as read first
       await this.markNotificationAsRead(notification.id)
 
       // Route based on notification type
       if (notification.type === 'booking_status') {
-        this.$router.push({ name: 'customer-bookings' })
+        // Parse the notification message to determine booking status
+        const message = notification.message.toLowerCase()
+
+        let tabIndex = 0 // Default to 'Accepted' tab
+
+        // Determine which tab to open based on the message content
+        if (message.includes('accepted') || message.includes('approved')) {
+          tabIndex = 0 // Accepted tab
+        } else if (message.includes('rejected') || message.includes('declined')) {
+          tabIndex = 3 // Rejected tab
+        }
+
+        // Navigate to customer-bookings with the tab query parameter
+        this.$router.push({
+          name: 'customer-bookings',
+          query: { tab: tabIndex },
+        })
       }
 
       if (notification.type === 'playmate_join' || notification.type === 'playmate_withdraw') {
@@ -898,7 +916,6 @@ export default {
         </v-card>
       </v-menu>
 
-
       <v-dialog v-model="showNotificationDialog" max-width="500">
         <v-card v-if="selectedNotification" class="rounded-xl">
           <!-- Header -->
@@ -986,8 +1003,8 @@ export default {
               text
               small
               color="blue"
-              class="rounded-lg text-none px-2"  
-              min-width="70"                   
+              class="rounded-lg text-none px-2"
+              min-width="70"
               @click="goToPlaymateRequests"
             >
               View All <v-icon right small>mdi-chevron-right</v-icon>
@@ -1003,7 +1020,13 @@ export default {
               No playmate requests found.
             </div>
 
-            <v-col v-else cols="12" v-for="req in limitedPlaymateRequests.display" :key="req.id" class="mb-3 pa-0">
+            <v-col
+              v-else
+              cols="12"
+              v-for="req in limitedPlaymateRequests.display"
+              :key="req.id"
+              class="mb-3 pa-0"
+            >
               <v-card class="pa-6 d-flex align-center" rounded="xl" elevation="1">
                 <v-avatar color="blue lighten-4" size="44" class="mr-4">
                   <span class="white--text font-weight-bold">{{ req.creator_name[0] }}</span>
