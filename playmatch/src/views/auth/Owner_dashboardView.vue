@@ -157,7 +157,11 @@
                       :class="{ 'bg-blue-lighten-5': !notif.read }"
                       class="notification-item pa-3"
                     >
-                      <div class="d-flex align-start">
+                      <div
+                        class="d-flex align-start notification-clickable"
+                        @click="handleNotificationClick(notif)"
+                        style="cursor: pointer"
+                      >
                         <v-avatar color="primary" size="39" class="mr-3 flex-shrink-0">
                           <v-icon color="white" class="ml-2" size="25">mdi-bell</v-icon>
                         </v-avatar>
@@ -183,7 +187,7 @@
                             }}
                           </div>
 
-                          <div class="d-flex align-center justify-end">
+                          <div class="d-flex align-center justify-end" @click.stop>
                             <div class="d-flex" style="gap: 8px">
                               <v-btn
                                 size="small"
@@ -1258,6 +1262,32 @@ const viewNotification = async (notif) => {
   if (!notif.read) {
     await markAsRead(notif)
   }
+}
+
+const handleNotificationClick = async (notif) => {
+  // Mark as read
+  if (!notif.read) {
+    await markAsRead(notif)
+  }
+
+  // Close notifications dropdown
+  showNotifications.value = false
+
+  // Navigate to bookings page
+  navigate('bookings')
+
+  // Wait for the page to update
+  await new Promise((resolve) => setTimeout(resolve, 100))
+
+  // Determine which filter to apply based on notification type
+  if (notif.title === 'New Booking Request' || notif.message.includes('requested to book')) {
+    filterType.value = 'Pending Requests'
+  } else if (notif.title === 'Booking Cancelled' || notif.message.includes('cancelled')) {
+    filterType.value = 'Cancelled/Rejected Bookings'
+  }
+
+  // Scroll to bookings section
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 // Function to mark notification as read
