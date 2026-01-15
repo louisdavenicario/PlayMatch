@@ -358,7 +358,7 @@
             v-for="play in finishedPlaymates"
             :key="play.id"
             class="mb-3 pa-4"
-            rounded="lg"
+            rounded="xl"
             elevation="2"
             color="blue-grey lighten-5"
           >
@@ -384,7 +384,7 @@
                 :disabled="isRatingWindowExpired(play.end_time_ts)"
               >
                 {{ p.full_name }}
-                <v-icon right x-small>{{
+                <v-icon right x-small class="ml-1">{{
                   isRatingWindowExpired(play.end_time_ts) ? 'mdi-close-octagon' : 'mdi-star-face'
                 }}</v-icon>
               </v-chip>
@@ -867,6 +867,27 @@
 
               <v-list-item>
                 <v-list-item-content>
+                  <v-list-item-title class="grey--text text-caption">Account Created</v-list-item-title>
+                  <v-list-item-subtitle class="d-flex align-center">
+                    {{ profile.created_at ? new Date(profile.created_at).toLocaleString() : '—' }}
+                    
+                    <v-chip
+                      v-if="isNewUser(profile.created_at)"
+                      x-small
+                      color="green lighten-4"
+                      class="green--text text--darken-3 ml-2 font-weight-bold"
+                      label
+                    >
+                      NEW USER
+                    </v-chip>
+                  </v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+
+              <v-divider class="my-2"></v-divider>
+
+              <v-list-item>
+                <v-list-item-content>
                   <v-list-item-title class="grey--text text-caption"
                     >Last Updated</v-list-item-title
                   >
@@ -887,7 +908,7 @@
     </v-dialog>
 
     <v-dialog v-model="ratingDialog" max-width="400px">
-      <v-card rounded="lg">
+      <v-card rounded="xl">
         <v-card-title class="blue darken-1 white--text">Rate Player</v-card-title>
         <v-card-text class="pt-4">
           <p class="text-subtitle-1 mb-2 font-weight-medium">
@@ -903,7 +924,7 @@
         </v-card-text>
         <v-card-actions>
           <v-spacer></v-spacer>
-          <v-btn text @click="ratingDialog = false">Cancel</v-btn>
+          <v-btn text @click="ratingDialog = false" class="text-none">Cancel</v-btn>
           <v-btn color="blue" dark @click="submitRating" :disabled="newRating.rating === 0" class="text-none">
             Submit
           </v-btn>
@@ -974,6 +995,7 @@ export default {
       zip_code: null,
       phone_number: null,
       updated_at: null,
+      created_at: null,
       sports: null,
     },
     profileRatings: [],
@@ -1115,6 +1137,22 @@ export default {
     this.stopStatusCheckTimer()
   },
   methods: {
+    isNewUser(createdAt) {
+      if (!createdAt) return false;
+
+      const createdDate = new Date(createdAt);
+      const today = new Date();
+      
+      // Calculate difference in milliseconds
+      const diffTime = Math.abs(today - createdDate);
+      
+      // Convert milliseconds to days (1000ms * 60s * 60m * 24h)
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+      // Return true if the account is less than 3 days old
+      return diffDays <= 3;
+    },
+
     // UTILITY TO CHECK IF REQUEST IS PAST END_TIME
     isPastEndTime(date, endTime) {
       if (!date || !endTime) return false // Combines date and time to create a full datetime object
@@ -2044,6 +2082,7 @@ export default {
         zip_code: null,
         phone_number: null,
         updated_at: null,
+        created_at: null,
         sports: null,
       }
 
@@ -2051,7 +2090,7 @@ export default {
         // 1. Fetch basic profile data
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, full_name, role, address, city, zip_code, phone_number, updated_at, sports')
+          .select('id, full_name, role, address, city, zip_code, phone_number, updated_at, created_at, sports')
           .eq('id', userId)
           .single()
 
@@ -2090,6 +2129,7 @@ export default {
           zip_code: null,
           phone_number: null,
           updated_at: null,
+          created_at: null,
           sports: null,
         }
         this.profileRatings = []
