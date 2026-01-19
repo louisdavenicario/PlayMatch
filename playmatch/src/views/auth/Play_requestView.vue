@@ -934,11 +934,6 @@
             </v-list>
           </div>
         </v-card-text>
-
-        <v-card-actions>
-          <v-spacer></v-spacer>
-          <v-btn text color="grey" @click="closeProfileDialog" class="text-none">Close</v-btn>
-        </v-card-actions>
       </v-card>
     </v-dialog>
 
