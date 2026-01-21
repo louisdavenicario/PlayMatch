@@ -175,11 +175,11 @@ const logout = async () => {
   try {
     const { error: signOutError } = await supabase.auth.signOut()
     if (signOutError) throw signOutError
-    
+
     // Clear local data
     localStorage.clear()
     currentUserId.value = null
-    
+
     // Redirect to signin
     router.push({ name: 'signin' })
   } catch (err) {
@@ -213,8 +213,9 @@ onMounted(() => {
       </v-toolbar-title>
       <v-spacer></v-spacer>
 
-      <v-btn v-if="!isViewingOther" icon @click="logout">
-        <v-icon color="red">mdi-logout</v-icon>
+      <v-btn v-if="!isViewingOther" text @click="logout" class="text-none">
+        <v-icon color="red" class="mr-1">mdi-logout</v-icon>
+        <span style="color: red">Logout</span>
       </v-btn>
     </v-app-bar>
 
@@ -574,7 +575,7 @@ onMounted(() => {
   border-radius: 8px;
 }
 
-.v-bottom-navigation .v-btn{
+.v-bottom-navigation .v-btn {
   /* Make the button shape a circle */
   border-radius: 27% !important;
 }

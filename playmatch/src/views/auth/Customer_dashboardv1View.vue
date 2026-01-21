@@ -216,8 +216,50 @@ export default {
         })
       }
 
+      // Handle playmate-related notifications with specific tabs
       if (notification.type === 'playmate_join' || notification.type === 'playmate_withdraw') {
-        this.$router.push({ name: 'playmate-requests' })
+        const message = notification.message.toLowerCase()
+        let filter = 'all' // Default filter
+
+        // Determine which filter/tab to show based on notification content
+        if (message.includes('joined') || message.includes('accepted your challenge')) {
+          // Someone joined your request - show all or individual based on type
+          filter = 'all'
+        } else if (message.includes('withdrawn') || message.includes('left')) {
+          // Someone withdrew - show all to see updated status
+          filter = 'all'
+        }
+
+        // Navigate to playmate-requests with the filter query parameter
+        this.$router.push({
+          name: 'playmate-requests',
+          query: { filter: filter },
+        })
+      }
+
+      // Handle direct invite notifications
+      if (notification.type === 'playmate_invite') {
+        const message = notification.message.toLowerCase()
+
+        if (message.includes('invited you') || message.includes('sent you')) {
+          // New invite received - show direct_invite tab
+          this.$router.push({
+            name: 'playmate-requests',
+            query: { filter: 'direct_invite' },
+          })
+        } else if (message.includes('accepted') || message.includes('confirmed')) {
+          // Invite was accepted - show direct_invite tab
+          this.$router.push({
+            name: 'playmate-requests',
+            query: { filter: 'direct_invite' },
+          })
+        } else if (message.includes('rejected') || message.includes('declined')) {
+          // Invite was rejected - show direct_invite tab
+          this.$router.push({
+            name: 'playmate-requests',
+            query: { filter: 'direct_invite' },
+          })
+        }
       }
 
       // Close dropdown after click

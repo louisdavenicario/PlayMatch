@@ -902,10 +902,12 @@
 
               <v-list-item>
                 <v-list-item-content>
-                  <v-list-item-title class="grey--text text-caption">Account Created</v-list-item-title>
+                  <v-list-item-title class="grey--text text-caption"
+                    >Account Created</v-list-item-title
+                  >
                   <v-list-item-subtitle class="d-flex align-center">
                     {{ profile.created_at ? new Date(profile.created_at).toLocaleString() : '—' }}
-                    
+
                     <v-chip
                       v-if="isNewUser(profile.created_at)"
                       x-small
@@ -960,7 +962,13 @@
         <v-card-actions>
           <v-spacer></v-spacer>
           <v-btn text @click="ratingDialog = false" class="text-none">Cancel</v-btn>
-          <v-btn color="blue" dark @click="submitRating" :disabled="newRating.rating === 0" class="text-none">
+          <v-btn
+            color="blue"
+            dark
+            @click="submitRating"
+            :disabled="newRating.rating === 0"
+            class="text-none"
+          >
             Submit
           </v-btn>
         </v-card-actions>
@@ -1172,19 +1180,19 @@ export default {
   },
   methods: {
     isNewUser(createdAt) {
-      if (!createdAt) return false;
+      if (!createdAt) return false
 
-      const createdDate = new Date(createdAt);
-      const today = new Date();
-      
+      const createdDate = new Date(createdAt)
+      const today = new Date()
+
       // Calculate difference in milliseconds
-      const diffTime = Math.abs(today - createdDate);
-      
+      const diffTime = Math.abs(today - createdDate)
+
       // Convert milliseconds to days (1000ms * 60s * 60m * 24h)
-      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      const diffDays = diffTime / (1000 * 60 * 60 * 24)
 
       // Return true if the account is less than 3 days old
-      return diffDays <= 3;
+      return diffDays <= 3
     },
 
     // UTILITY TO CHECK IF REQUEST IS PAST END_TIME
@@ -1787,18 +1795,9 @@ export default {
         // The invited user can continue to accept/reject normally
       }
 
-      // Determine max allowed participants
-      const maxAllowed = isTeamMatch
-        ? 2 // creator + 1 team
-        : request.max_joins + 1 // creator + max_joins
-
-      if (request.joins_count >= maxAllowed) {
-        alert('This play request is currently full and cannot be joined.')
-        return
-      }
-
       // Handle join/withdraw
       if (this.isJoined(requestId)) {
+        // User is already joined - allow withdrawal regardless of full status
         const msg = isTeamMatch
           ? 'Successfully withdrawn the opponent team from the challenge.'
           : 'Successfully withdrawn from the request.'
@@ -1813,6 +1812,16 @@ export default {
           'Failed to withdraw from request.',
         )
       } else {
+        // User is trying to join - check if there's space
+        const maxAllowed = isTeamMatch
+          ? 2 // creator + 1 team
+          : request.max_joins + 1 // creator + max_joins
+
+        if (request.joins_count >= maxAllowed) {
+          alert('This play request is currently full and cannot be joined.')
+          return
+        }
+
         const msg = isTeamMatch
           ? 'You have successfully accepted the team challenge!'
           : 'Successfully joined the request!'
@@ -2124,7 +2133,9 @@ export default {
         // 1. Fetch basic profile data
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, full_name, role, address, city, zip_code, phone_number, updated_at, created_at, sports')
+          .select(
+            'id, full_name, role, address, city, zip_code, phone_number, updated_at, created_at, sports',
+          )
           .eq('id', userId)
           .single()
 

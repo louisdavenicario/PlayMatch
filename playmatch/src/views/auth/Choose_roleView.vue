@@ -135,7 +135,15 @@ function continueAction() {
         </v-card-text>
       </v-card>
 
-      <v-btn block color="primary" size="large" :disabled="!selectedRole" @click="continueAction" rounded="lg" class="text-none">
+      <v-btn
+        block
+        color="primary"
+        size="large"
+        :disabled="!selectedRole"
+        @click="continueAction"
+        rounded="lg"
+        class="text-none"
+      >
         Continue as
         {{
           selectedRole === 'customer'
