@@ -327,7 +327,9 @@ const goToSignIn = () => {
                   </v-list-item>
 
                   <v-list-item class="mb-4">
-                    <v-list-item-title class="font-weight-bold mb-3">Facility Details</v-list-item-title>
+                    <v-list-item-title class="font-weight-bold mb-3"
+                      >Facility Details</v-list-item-title
+                    >
                     <v-row>
                       <v-col cols="12" sm="6">
                         <v-text-field
@@ -446,11 +448,20 @@ const goToSignIn = () => {
                     <div v-else class="uploaded-photo-container">
                       <img :src="previewUrl" alt="Uploaded Facility" class="preview-image" />
                       <div class="d-flex justify-center mt-2 gap-2">
-                        <v-btn color="primary" size="small" @click="triggerFileSelect" class="text-none mr-2 rounded-lg">
+                        <v-btn
+                          color="primary"
+                          size="small"
+                          @click="triggerFileSelect"
+                          class="text-none mr-2 rounded-lg"
+                        >
                           Replace
                         </v-btn>
 
-                        <v-btn color="error" size="small" @click="removePhoto" class="text-none rounded-lg"
+                        <v-btn
+                          color="error"
+                          size="small"
+                          @click="removePhoto"
+                          class="text-none rounded-lg"
                           >Remove</v-btn
                         >
                       </div>

@@ -323,7 +323,7 @@
             <v-col cols="12" sm="6" lg="3">
               <v-card class="pa-4 dashboard-card fill-height" rounded="xl">
                 <div class="d-flex justify-space-between align-center mb-2">
-                  <div class="text-subtitle-1 font-weight-medium">Facility Rating</div>
+                  <div class="text-subtitle-1 font-weight-medium">Ratings and Comments</div>
                   <v-icon size="30" color="amber-darken-2">mdi-star</v-icon>
                 </div>
 
@@ -336,8 +336,177 @@
                         ({{ facilityRating.totalReviews }} reviews)
                       </span>
                     </div>
+                    <v-btn
+                      color="primary"
+                      variant="text"
+                      size="small"
+                      class="text-none mt-2"
+                      @click="openCommentsModal"
+                    >
+                      <v-icon size="18" class="mr-1">mdi-comment-text-multiple</v-icon>
+                      See Comments
+                    </v-btn>
                   </template>
                   <template v-else> No ratings yet </template>
+                  <v-dialog v-model="showNotificationDialog" max-width="500">
+                    <v-card v-if="selectedNotification" class="rounded-xl">
+                      <v-card-title
+                        class="d-flex align-center justify-space-between text-white notification-gradient"
+                      >
+                        <span>{{ selectedNotification.title }}</span>
+                        <v-btn
+                          icon
+                          size="small"
+                          variant="text"
+                          @click="showNotificationDialog = false"
+                        >
+                          <v-icon color="white ml-3" size="25">mdi-close</v-icon>
+                        </v-btn>
+                      </v-card-title>
+
+                      <v-divider></v-divider>
+
+                      <v-card-text class="pa-4">
+                        <div class="d-flex align-center mb-3">
+                          <div>
+                            <div class="text-caption text-grey">
+                              {{ formatNotificationDate(selectedNotification.created_at) }}
+                            </div>
+                            <v-chip
+                              v-if="!selectedNotification.read"
+                              color="primary"
+                              size="x-small"
+                              class="mt-1"
+                            >
+                              Unread
+                            </v-chip>
+                          </div>
+                        </div>
+
+                        <div class="text-body-1" style="line-height: 1.6">
+                          {{ selectedNotification.message }}
+                        </div>
+                      </v-card-text>
+
+                      <v-divider></v-divider>
+
+                      <v-card-actions class="pa-3">
+                        <v-spacer></v-spacer>
+                        <v-btn
+                          color="error"
+                          variant="text"
+                          class="text-none"
+                          @click="deleteNotification(selectedNotification.id)"
+                        >
+                          <v-icon left size="23">mdi-delete</v-icon>
+                          Delete
+                        </v-btn>
+                      </v-card-actions>
+                    </v-card>
+                  </v-dialog>
+
+                  <!-- Comments/Reviews Modal -->
+                  <v-dialog v-model="showCommentsModal" max-width="700" scrollable>
+                    <v-card class="rounded-xl">
+                      <v-card-title
+                        class="d-flex align-center justify-space-between text-white notification-gradient"
+                      >
+                        <div class="d-flex align-center">
+                          <v-icon size="28" class="mr-2">mdi-star</v-icon>
+                          <span>Customer Reviews</span>
+                        </div>
+                        <v-btn icon size="small" variant="text" @click="showCommentsModal = false">
+                          <v-icon color="white" size="25">mdi-close</v-icon>
+                        </v-btn>
+                      </v-card-title>
+
+                      <v-divider></v-divider>
+
+                      <!-- Rating Summary -->
+                      <v-card-text class="pa-4">
+                        <div
+                          class="d-flex align-center justify-center mb-4 pa-4 bg-blue-grey-lighten-5 rounded-lg"
+                        >
+                          <div class="text-center">
+                            <div
+                              class="text-h2 font-weight-bold d-flex align-center justify-center"
+                            >
+                              <v-icon size="40" color="amber-darken-2" class="mr-2"
+                                >mdi-star</v-icon
+                              >
+                              {{ facilityRating.average.toFixed(1) }}
+                            </div>
+                            <div class="text-subtitle-1 text-grey-darken-1">
+                              Based on {{ facilityRating.totalReviews }} review{{
+                                facilityRating.totalReviews !== 1 ? 's' : ''
+                              }}
+                            </div>
+                          </div>
+                        </div>
+
+                        <v-divider class="mb-4"></v-divider>
+
+                        <!-- Reviews List -->
+                        <div v-if="loadingReviews" class="text-center py-8">
+                          <v-progress-circular indeterminate color="primary"></v-progress-circular>
+                          <p class="mt-2 text-grey">Loading reviews...</p>
+                        </div>
+
+                        <div v-else-if="reviews.length === 0" class="text-center py-8">
+                          <v-icon size="64" color="grey-lighten-1">mdi-comment-off-outline</v-icon>
+                          <p class="text-h6 text-grey mt-2">No reviews yet</p>
+                          <p class="text-caption text-grey">Be the first to receive a review!</p>
+                        </div>
+
+                        <v-list-item
+                          v-for="(review, index) in reviews"
+                          :key="review.id"
+                          class="pa-4 mb-3 rounded-lg border"
+                        >
+                          <div class="w-100">
+                            <!-- User Info and Rating -->
+                            <div class="d-flex justify-space-between align-start mb-2">
+                              <div class="d-flex align-center">
+                                <v-avatar color="primary" size="40" class="mr-3">
+                                  <span class="text-white font-weight-bold">
+                                    {{
+                                      review.user_name
+                                        ? review.user_name.charAt(0).toUpperCase()
+                                        : '?'
+                                    }}
+                                  </span>
+                                </v-avatar>
+                                <div>
+                                  <div class="font-weight-bold">
+                                    {{ review.user_name || 'Anonymous' }}
+                                  </div>
+                                  <div class="text-caption text-grey">
+                                    {{ formatReviewDate(review.created_at) }}
+                                  </div>
+                                </div>
+                              </div>
+                              <div class="d-flex align-center">
+                                <v-icon size="20" color="amber-darken-2">mdi-star</v-icon>
+                                <span class="font-weight-bold ml-1">{{ review.rating_value }}</span>
+                              </div>
+                            </div>
+
+                            <!-- Comment Text -->
+                            <div
+                              v-if="review.comment"
+                              class="text-body-2 mt-2"
+                              style="line-height: 1.5"
+                            >
+                              {{ review.comment }}
+                            </div>
+                            <div v-else class="text-body-2 text-grey-darken-1 font-italic mt-2">
+                              No comment submitted
+                            </div>
+                          </div>
+                        </v-list-item>
+                      </v-card-text>
+                    </v-card>
+                  </v-dialog>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -348,9 +517,6 @@
               <v-card class="pa-4" rounded="xl">
                 <v-card-title class="font-weight-bold d-flex justify-space-between align-center">
                   <span>My Facility</span>
-                  <v-btn icon size="small" @click="openEditModal" color="primary">
-                    <v-icon>mdi-pencil</v-icon>
-                  </v-btn>
                 </v-card-title>
 
                 <v-card-text>
@@ -786,10 +952,14 @@
         </div>
         <div v-if="currentPage === 'settings'">
           <v-card class="pa-4" rounded="xl">
-            <v-card-title class="font-weight-bold">Account Settings</v-card-title>
+            <v-card-title class="font-weight-bold d-flex justify-space-between align-center">
+              <span>Edit Facility Details</span>
+              <v-btn icon size="small" @click="openEditModal" color="primary">
+                <v-icon>mdi-pencil</v-icon>
+              </v-btn>
+            </v-card-title>
             <v-card-text>
-              <p>User ID: {{ userId }}</p>
-              <p>You can manage your account and profile settings here.</p>
+              <p>You can manage and edit your facility details here.</p>
             </v-card-text>
           </v-card>
         </div>
@@ -805,7 +975,6 @@
         "
         rounded="xl"
       >
-        <v-card-title class="text-h5">Edit Facility Details</v-card-title>
         <v-card-text>
           <v-container>
             <v-text-field
@@ -1011,6 +1180,9 @@ const customSchedules = ref([])
 const showDeleteConfirmModal = ref(false)
 const scheduleToDeleteId = ref(null)
 const scheduleToDeleteDate = ref('')
+const showCommentsModal = ref(false)
+const reviews = ref([])
+const loadingReviews = ref(false)
 
 const notifications = ref([])
 const unreadCount = ref(0)
@@ -1192,6 +1364,69 @@ const sortedAllBookings = computed(() => {
 
   return sortedList
 })
+
+// Function to open the comments modal
+const openCommentsModal = async () => {
+  showCommentsModal.value = true
+  await fetchReviews()
+}
+
+// Function to fetch reviews from database
+const fetchReviews = async () => {
+  if (!facilityDetails.value?.id) return
+
+  loadingReviews.value = true
+  try {
+    const { data, error } = await supabase
+      .from('ratings')
+      .select(
+        `
+        id,
+        rating_value,
+        comment,
+        created_at,
+        user_id,
+        profiles:user_id (full_name)
+      `,
+      )
+      .eq('facility_id', facilityDetails.value.id)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    reviews.value = data.map((review) => ({
+      id: review.id,
+      rating_value: review.rating_value,
+      comment: review.comment,
+      created_at: review.created_at,
+      user_id: review.user_id,
+      user_name: review.profiles?.full_name || 'Anonymous User',
+    }))
+  } catch (error) {
+    console.error('Error fetching reviews:', error.message)
+    alertMessage('Failed to load reviews', 'error')
+  } finally {
+    loadingReviews.value = false
+  }
+}
+
+// Function to format review dates
+const formatReviewDate = (dateString) => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInDays = Math.floor((now - date) / (1000 * 60 * 60 * 24))
+
+  if (diffInDays === 0) return 'Today'
+  if (diffInDays === 1) return 'Yesterday'
+  if (diffInDays < 7) return `${diffInDays} days ago`
+  if (diffInDays < 30) return `${Math.floor(diffInDays / 7)} weeks ago`
+
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+}
 
 // Function to fetch notifications from Supabase
 const fetchNotifications = async () => {
