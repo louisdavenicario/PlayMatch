@@ -182,6 +182,15 @@ const handleLogin = async () => {
             </v-alert>
 
             <p class="text-center text-body-2 mt-4">
+              <router-link
+                :to="{ path: '/forgot-password' }"
+                class="text-primary font-weight-bold text-decoration-none"
+              >
+                Forgot your password?
+              </router-link>
+            </p>
+
+            <p class="text-center text-body-2 mt-4">
               Don't have an account?
               <router-link
                 :to="{ path: '/choose-role' }"

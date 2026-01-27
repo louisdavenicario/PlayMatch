@@ -15,6 +15,8 @@ import FavoritesView from '@/views/auth/FavoritesView.vue'
 import CustomerBookingsView from '@/views/auth/CustomerBookingsView.vue'
 import PrivacyView from '@/views/auth/PrivacyView.vue'
 import TermsView from '@/views/auth/TermsView.vue'
+import ForgotPasswordView from '@/views/auth/ForgotPasswordView.vue'
+import UpdatePasswordView from '@/views/auth/UpdatePasswordView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -89,6 +91,16 @@ const router = createRouter({
       path: '/privacy',
       name: 'privacy',
       component: PrivacyView
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgot-password',
+      component: ForgotPasswordView
+    },
+    {
+      path: '/update-password',
+      name: 'update-password',
+      component: UpdatePasswordView
     },
   ],
 })
