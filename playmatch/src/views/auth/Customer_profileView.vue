@@ -21,6 +21,19 @@ const receivedRatingsLoading = ref(false)
 // State for managing the active tab within the profile card
 const activeProfileTab = ref('details')
 
+// --- NEW: PASSWORD CHANGE STATE ---
+const showChangePasswordModal = ref(false)
+const loadingPassword = ref(false)
+const showCurrentPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+const passwordForm = ref({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+// ---------------------------------
+
 const targetUserId = computed(() => route.params.userId || null)
 const isViewingOther = computed(
   () => targetUserId.value && targetUserId.value !== currentUserId.value,
@@ -106,7 +119,7 @@ const fetchProfile = async () => {
 
     const { data, error: fetchError } = await supabase
       .from('profiles')
-      .select('full_name, phone_number, address, city, zip_code, role, sports') // ✅ added sports
+      .select('full_name, phone_number, address, city, zip_code, role, sports')
       .eq('id', idToFetch)
       .single()
 
@@ -148,7 +161,7 @@ const saveProfile = async () => {
       address: formData.value.address,
       city: formData.value.city,
       zip_code: formData.value.zip_code,
-      sports: formData.value.sports, // ✅ include sports
+      sports: formData.value.sports,
       updated_at: new Date().toISOString(),
     }
 
@@ -169,6 +182,110 @@ const saveProfile = async () => {
     saving.value = false
   }
 }
+
+// --- NEW FUNCTIONS: PASSWORD CHANGE ---
+const openChangePasswordModal = () => {
+  showChangePasswordModal.value = true
+  // Reset form when opening
+  passwordForm.value = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  }
+  showCurrentPassword.value = false
+  showNewPassword.value = false
+  showConfirmPassword.value = false
+}
+
+const closeChangePasswordModal = () => {
+  showChangePasswordModal.value = false
+  passwordForm.value = {
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  }
+  showCurrentPassword.value = false
+  showNewPassword.value = false
+  showConfirmPassword.value = false
+}
+
+const showSuccessMessage = (message) => {
+  // You can replace this with your preferred notification method
+  alert(message)
+}
+
+const showErrorMessage = (message) => {
+  // You can replace this with your preferred notification method
+  alert(message)
+}
+
+const handleChangePassword = async () => {
+  // Validate current password is filled
+  if (!passwordForm.value.currentPassword) {
+    showErrorMessage('Please enter your current password')
+    return
+  }
+
+  // Validate new passwords match
+  if (passwordForm.value.newPassword !== passwordForm.value.confirmPassword) {
+    showErrorMessage('New passwords do not match')
+    return
+  }
+
+  // Validate password length
+  if (passwordForm.value.newPassword.length < 6) {
+    showErrorMessage('Password must be at least 6 characters long')
+    return
+  }
+
+  // Check if new password is different from current
+  if (passwordForm.value.currentPassword === passwordForm.value.newPassword) {
+    showErrorMessage('New password must be different from current password')
+    return
+  }
+
+  loadingPassword.value = true
+  try {
+    // First, verify the current password by attempting to sign in
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user?.email) {
+      throw new Error('User email not found')
+    }
+
+    // Verify current password
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: passwordForm.value.currentPassword,
+    })
+
+    if (signInError) {
+      throw new Error('Current password is incorrect')
+    }
+
+    // If verification successful, update to new password
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: passwordForm.value.newPassword,
+    })
+
+    if (updateError) throw updateError
+
+    showSuccessMessage('Password updated successfully!')
+    closeChangePasswordModal()
+  } catch (error) {
+    console.error('Error updating password:', error.message)
+    if (error.message === 'Current password is incorrect') {
+      showErrorMessage('Current password is incorrect')
+    } else {
+      showErrorMessage('Failed to update password: ' + error.message)
+    }
+  } finally {
+    loadingPassword.value = false
+  }
+}
+// --- END NEW FUNCTIONS ---
 
 //Logout function
 const logout = async () => {
@@ -268,6 +385,10 @@ onMounted(() => {
                   <v-tab value="ratings" class="text-none">
                     <v-icon start>mdi-star-face</v-icon>
                     Ratings ({{ receivedRatings.length }})
+                  </v-tab>
+                  <v-tab v-if="!isViewingOther" value="security" class="text-none">
+                    <v-icon start>mdi-shield-lock-outline</v-icon>
+                    Security
                   </v-tab>
                 </v-tabs>
 
@@ -436,6 +557,43 @@ onMounted(() => {
                         class="mb-3"
                       ></v-text-field>
                     </v-form>
+                    <v-card-actions class="pt-4 px-4 justify-end" v-if="!isViewingOther">
+                      <v-btn
+                        v-if="isEditing"
+                        color="secondary"
+                        rounded
+                        large
+                        @click="toggleEdit"
+                        :disabled="saving"
+                        class="text-none"
+                      >
+                        <v-icon left>mdi-cancel</v-icon> Cancel
+                      </v-btn>
+                      <v-btn
+                        v-if="!isEditing"
+                        color="primary"
+                        rounded
+                        large
+                        @click="toggleEdit"
+                        :disabled="loading"
+                        class="text-none"
+                      >
+                        <v-icon left>mdi-pencil-outline</v-icon> Edit Profile
+                      </v-btn>
+                      <v-btn
+                        v-else
+                        color="success"
+                        rounded
+                        large
+                        @click="saveProfile"
+                        :loading="saving"
+                        :disabled="saving"
+                        type="submit"
+                        class="text-none"
+                      >
+                        <v-icon left>mdi-content-save-outline</v-icon> Save Changes
+                      </v-btn>
+                    </v-card-actions>
                   </v-window-item>
 
                   <!-- RATINGS TAB -->
@@ -494,46 +652,29 @@ onMounted(() => {
                       <p class="text-medium-emphasis text-center py-8">No ratings received yet.</p>
                     </div>
                   </v-window-item>
+
+                  <!-- SECURITY TAB -->
+                  <v-window-item value="security" v-if="!isViewingOther">
+                    <div class="pa-4">
+                      <h3 class="text-h6 font-weight-bold mb-2">Security Settings</h3>
+                      <p class="text-body-2 text-medium-emphasis mb-6">
+                        Update your account password to keep your profile secure.
+                      </p>
+                      <v-btn
+                        color="primary"
+                        variant="elevated"
+                        @click="openChangePasswordModal"
+                        size="large"
+                        height="48"
+                        class="px-8 text-none font-weight-medium"
+                      >
+                        <v-icon size="20" class="mr-2">mdi-lock-reset</v-icon>
+                        Change Password
+                      </v-btn>
+                    </div>
+                  </v-window-item>
                 </v-window>
               </v-card-text>
-
-              <v-card-actions class="pt-4 px-4 justify-end" v-if="!isViewingOther">
-                <v-btn
-                  v-if="isEditing"
-                  color="secondary"
-                  rounded
-                  large
-                  @click="toggleEdit"
-                  :disabled="saving"
-                  class="text-none"
-                >
-                  <v-icon left>mdi-cancel</v-icon> Cancel
-                </v-btn>
-                <v-btn
-                  v-if="!isEditing"
-                  color="primary"
-                  rounded
-                  large
-                  @click="toggleEdit"
-                  :disabled="loading"
-                  class="text-none"
-                >
-                  <v-icon left>mdi-pencil-outline</v-icon> Edit Profile
-                </v-btn>
-                <v-btn
-                  v-else
-                  color="success"
-                  rounded
-                  large
-                  @click="saveProfile"
-                  :loading="saving"
-                  :disabled="saving"
-                  type="submit"
-                  class="text-none"
-                >
-                  <v-icon left>mdi-content-save-outline</v-icon> Save Changes
-                </v-btn>
-              </v-card-actions>
             </v-card>
           </v-col>
         </v-row>
@@ -557,6 +698,124 @@ onMounted(() => {
         <v-icon size="33" :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
       </v-btn>
     </v-bottom-navigation>
+
+    <!-- Change Password Modal -->
+    <v-dialog v-model="showChangePasswordModal" max-width="500">
+      <v-card rounded="xl">
+        <v-card-title class="text-h6 font-weight-bold mt-2"> Change Password </v-card-title>
+        <v-card-text>
+          <v-form @submit.prevent="handleChangePassword">
+            <!-- Current Password Field -->
+            <v-text-field
+              v-model="passwordForm.currentPassword"
+              label="Current Password"
+              :type="showCurrentPassword ? 'text' : 'password'"
+              variant="outlined"
+              density="compact"
+              class="mb-3"
+              :disabled="loadingPassword"
+              :append-inner-icon="showCurrentPassword ? 'mdi-eye-off' : 'mdi-eye'"
+              @click:append-inner="showCurrentPassword = !showCurrentPassword"
+            />
+
+            <v-divider class="my-4"></v-divider>
+
+            <!-- New Password Field -->
+            <v-text-field
+              v-model="passwordForm.newPassword"
+              label="New Password"
+              :type="showNewPassword ? 'text' : 'password'"
+              variant="outlined"
+              density="compact"
+              class="mb-3"
+              :disabled="loadingPassword"
+              :append-inner-icon="showNewPassword ? 'mdi-eye-off' : 'mdi-eye'"
+              @click:append-inner="showNewPassword = !showNewPassword"
+            />
+
+            <!-- Confirm New Password Field -->
+            <v-text-field
+              v-model="passwordForm.confirmPassword"
+              label="Confirm New Password"
+              :type="showConfirmPassword ? 'text' : 'password'"
+              variant="outlined"
+              density="compact"
+              class="mb-3"
+              :disabled="loadingPassword"
+              :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
+              @click:append-inner="showConfirmPassword = !showConfirmPassword"
+            />
+
+            <!-- Validation Alerts -->
+            <v-alert
+              v-if="passwordForm.newPassword && passwordForm.newPassword.length < 6"
+              type="warning"
+              variant="tonal"
+              density="compact"
+              class="mb-3"
+            >
+              Password must be at least 6 characters long
+            </v-alert>
+
+            <v-alert
+              v-if="
+                passwordForm.newPassword &&
+                passwordForm.confirmPassword &&
+                passwordForm.newPassword !== passwordForm.confirmPassword
+              "
+              type="error"
+              variant="tonal"
+              density="compact"
+              class="mb-3"
+            >
+              Passwords do not match
+            </v-alert>
+
+            <v-alert
+              v-if="
+                passwordForm.currentPassword &&
+                passwordForm.newPassword &&
+                passwordForm.currentPassword === passwordForm.newPassword
+              "
+              type="warning"
+              variant="tonal"
+              density="compact"
+              class="mb-3"
+            >
+              New password must be different from current password
+            </v-alert>
+          </v-form>
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn
+            text
+            @click="closeChangePasswordModal"
+            :disabled="loadingPassword"
+            class="mb-3 mr-2"
+          >
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="elevated"
+            @click="handleChangePassword"
+            class="mb-3 mr-2"
+            :loading="loadingPassword"
+            :disabled="
+              !passwordForm.currentPassword ||
+              !passwordForm.newPassword ||
+              !passwordForm.confirmPassword ||
+              passwordForm.newPassword !== passwordForm.confirmPassword ||
+              passwordForm.newPassword.length < 6 ||
+              passwordForm.currentPassword === passwordForm.newPassword
+            "
+          >
+            Update Password
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-app>
 </template>
 

@@ -951,7 +951,7 @@
           </v-row>
         </div>
         <div v-if="currentPage === 'settings'">
-          <v-card class="pa-4" rounded="xl">
+          <v-card class="pa-4 mb-4" rounded="xl">
             <v-card-title class="font-weight-bold d-flex justify-space-between align-center">
               <span>Edit Facility Details</span>
               <v-btn icon size="small" @click="openEditModal" color="primary">
@@ -962,7 +962,144 @@
               <p>You can manage and edit your facility details here.</p>
             </v-card-text>
           </v-card>
+
+          <!-- Change Password Section -->
+          <v-card class="pa-4" rounded="xl">
+            <v-card-title class="font-weight-bold"> Security Settings </v-card-title>
+            <v-card-text>
+              <p class="mb-4">Update your account password to keep your facility secure.</p>
+              <v-btn
+                color="primary"
+                variant="elevated"
+                @click="openChangePasswordModal"
+                size="large"
+                class="px-6"
+              >
+                <v-icon class="mr-2">mdi-lock-reset</v-icon>
+                Change Password
+              </v-btn>
+            </v-card-text>
+          </v-card>
         </div>
+
+        <!-- Change Password Modal -->
+        <!-- Change Password Modal -->
+        <v-dialog v-model="showChangePasswordModal" max-width="500">
+          <v-card rounded="xl">
+            <v-card-title class="text-h6 font-weight-bold mt-2"> Change Password </v-card-title>
+            <v-card-text>
+              <v-form @submit.prevent="handleChangePassword">
+                <!-- Current Password Field -->
+                <v-text-field
+                  v-model="passwordForm.currentPassword"
+                  label="Current Password"
+                  :type="showCurrentPassword ? 'text' : 'password'"
+                  variant="outlined"
+                  density="compact"
+                  class="mb-3"
+                  :disabled="loadingPassword"
+                  :append-inner-icon="showCurrentPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                  @click:append-inner="showCurrentPassword = !showCurrentPassword"
+                />
+
+                <v-divider class="my-4"></v-divider>
+
+                <!-- New Password Field -->
+                <v-text-field
+                  v-model="passwordForm.newPassword"
+                  label="New Password"
+                  :type="showNewPassword ? 'text' : 'password'"
+                  variant="outlined"
+                  density="compact"
+                  class="mb-3"
+                  :disabled="loadingPassword"
+                  :append-inner-icon="showNewPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                  @click:append-inner="showNewPassword = !showNewPassword"
+                />
+
+                <!-- Confirm New Password Field -->
+                <v-text-field
+                  v-model="passwordForm.confirmPassword"
+                  label="Confirm New Password"
+                  :type="showConfirmPassword ? 'text' : 'password'"
+                  variant="outlined"
+                  density="compact"
+                  class="mb-3"
+                  :disabled="loadingPassword"
+                  :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
+                  @click:append-inner="showConfirmPassword = !showConfirmPassword"
+                />
+
+                <!-- Validation Alerts -->
+                <v-alert
+                  v-if="passwordForm.newPassword && passwordForm.newPassword.length < 6"
+                  type="warning"
+                  variant="tonal"
+                  density="compact"
+                  class="mb-3"
+                >
+                  Password must be at least 6 characters long
+                </v-alert>
+
+                <v-alert
+                  v-if="
+                    passwordForm.newPassword &&
+                    passwordForm.confirmPassword &&
+                    passwordForm.newPassword !== passwordForm.confirmPassword
+                  "
+                  type="error"
+                  variant="tonal"
+                  density="compact"
+                  class="mb-3"
+                >
+                  Passwords do not match
+                </v-alert>
+
+                <v-alert
+                  v-if="
+                    passwordForm.currentPassword &&
+                    passwordForm.newPassword &&
+                    passwordForm.currentPassword === passwordForm.newPassword
+                  "
+                  type="warning"
+                  variant="tonal"
+                  density="compact"
+                  class="mb-3"
+                >
+                  New password must be different from current password
+                </v-alert>
+              </v-form>
+            </v-card-text>
+            <v-card-actions>
+              <v-spacer />
+              <v-btn
+                text
+                @click="closeChangePasswordModal"
+                :disabled="loadingPassword"
+                class="mb-3 mr-2"
+              >
+                Cancel
+              </v-btn>
+              <v-btn
+                color="primary"
+                variant="elevated"
+                @click="handleChangePassword"
+                class="mb-3 mr-2"
+                :loading="loadingPassword"
+                :disabled="
+                  !passwordForm.currentPassword ||
+                  !passwordForm.newPassword ||
+                  !passwordForm.confirmPassword ||
+                  passwordForm.newPassword !== passwordForm.confirmPassword ||
+                  passwordForm.newPassword.length < 6 ||
+                  passwordForm.currentPassword === passwordForm.newPassword
+                "
+              >
+                Update Password
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
       </v-container>
     </v-main>
 
@@ -1218,6 +1355,20 @@ const filterOptions = ref([
 // --- PAGINATION STATE ---
 const currentPageAllBookings = ref(1) // Tracks current page number
 const itemsPerPageAllBookings = ref(10) // User-adjustable items per page
+// ---------------------------------
+
+// --- NEW: PASSWORD CHANGE STATE ---
+const showChangePasswordModal = ref(false)
+const loadingPassword = ref(false)
+const showNewPassword = ref(false)
+const showConfirmPassword = ref(false)
+const passwordForm = reactive({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+const showCurrentPassword = ref(false)
+
 // ---------------------------------
 
 const bookingDates = computed(() => {
@@ -2459,6 +2610,98 @@ const saveFacilityDetails = async () => {
     alertMessage('Failed to update facility.', 'error')
   }
 }
+
+// --- NEW FUNCTIONS: PASSWORD CHANGE WITH MODAL ---
+
+const openChangePasswordModal = () => {
+  showChangePasswordModal.value = true
+  // Reset form when opening
+  passwordForm.currentPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  showCurrentPassword.value = false
+  showNewPassword.value = false
+  showConfirmPassword.value = false
+}
+
+const closeChangePasswordModal = () => {
+  showChangePasswordModal.value = false
+  passwordForm.currentPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+  showCurrentPassword.value = false
+  showNewPassword.value = false
+  showConfirmPassword.value = false
+}
+
+const handleChangePassword = async () => {
+  // Validate current password is filled
+  if (!passwordForm.currentPassword) {
+    alertMessage('Please enter your current password', 'error')
+    return
+  }
+
+  // Validate new passwords match
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+    alertMessage('New passwords do not match', 'error')
+    return
+  }
+
+  // Validate password length
+  if (passwordForm.newPassword.length < 6) {
+    alertMessage('Password must be at least 6 characters long', 'error')
+    return
+  }
+
+  // Check if new password is different from current
+  if (passwordForm.currentPassword === passwordForm.newPassword) {
+    alertMessage('New password must be different from current password', 'error')
+    return
+  }
+
+  loadingPassword.value = true
+  try {
+    // First, verify the current password by attempting to sign in
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user?.email) {
+      throw new Error('User email not found')
+    }
+
+    // Verify current password
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: passwordForm.currentPassword,
+    })
+
+    if (signInError) {
+      throw new Error('Current password is incorrect')
+    }
+
+    // If verification successful, update to new password
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: passwordForm.newPassword,
+    })
+
+    if (updateError) throw updateError
+
+    alertMessage('Password updated successfully!', 'success')
+    closeChangePasswordModal()
+  } catch (error) {
+    console.error('Error updating password:', error.message)
+    if (error.message === 'Current password is incorrect') {
+      alertMessage('Current password is incorrect', 'error')
+    } else {
+      alertMessage('Failed to update password: ' + error.message, 'error')
+    }
+  } finally {
+    loadingPassword.value = false
+  }
+}
+
+// --- END NEW FUNCTIONS ---
 
 const alertMessage = (message, color) => {
   alertMessageText.value = message
