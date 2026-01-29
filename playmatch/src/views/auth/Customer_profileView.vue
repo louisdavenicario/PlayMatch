@@ -666,6 +666,7 @@ onMounted(() => {
                         @click="openChangePasswordModal"
                         size="large"
                         height="48"
+                        rounded="xl"
                         class="px-8 text-none font-weight-medium"
                       >
                         <v-icon size="20" class="mr-2">mdi-lock-reset</v-icon>
@@ -713,6 +714,7 @@ onMounted(() => {
               variant="outlined"
               density="compact"
               class="mb-3"
+              rounded="lg"
               :disabled="loadingPassword"
               :append-inner-icon="showCurrentPassword ? 'mdi-eye-off' : 'mdi-eye'"
               @click:append-inner="showCurrentPassword = !showCurrentPassword"
@@ -728,6 +730,7 @@ onMounted(() => {
               variant="outlined"
               density="compact"
               class="mb-3"
+              rounded="lg"
               :disabled="loadingPassword"
               :append-inner-icon="showNewPassword ? 'mdi-eye-off' : 'mdi-eye'"
               @click:append-inner="showNewPassword = !showNewPassword"
@@ -741,6 +744,7 @@ onMounted(() => {
               variant="outlined"
               density="compact"
               class="mb-3"
+              rounded="lg"
               :disabled="loadingPassword"
               :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
               @click:append-inner="showConfirmPassword = !showConfirmPassword"
@@ -792,7 +796,7 @@ onMounted(() => {
             text
             @click="closeChangePasswordModal"
             :disabled="loadingPassword"
-            class="mb-3 mr-2"
+            class="mb-3 mr-2 text-none"
           >
             Cancel
           </v-btn>
@@ -800,7 +804,8 @@ onMounted(() => {
             color="primary"
             variant="elevated"
             @click="handleChangePassword"
-            class="mb-3 mr-2"
+            class="mb-3 mr-2 text-none"
+            rounded="xl"
             :loading="loadingPassword"
             :disabled="
               !passwordForm.currentPassword ||

@@ -973,9 +973,10 @@
                 variant="elevated"
                 @click="openChangePasswordModal"
                 size="large"
-                class="px-6"
+                class="px-6 text-none"
+                rounded="xl"
               >
-                <v-icon class="mr-2">mdi-lock-reset</v-icon>
+                <v-icon class="mr-2 text-h5">mdi-lock-reset</v-icon>
                 Change Password
               </v-btn>
             </v-card-text>
@@ -997,6 +998,7 @@
                   variant="outlined"
                   density="compact"
                   class="mb-3"
+                  rounded="lg"
                   :disabled="loadingPassword"
                   :append-inner-icon="showCurrentPassword ? 'mdi-eye-off' : 'mdi-eye'"
                   @click:append-inner="showCurrentPassword = !showCurrentPassword"
@@ -1012,6 +1014,7 @@
                   variant="outlined"
                   density="compact"
                   class="mb-3"
+                  rounded="lg"
                   :disabled="loadingPassword"
                   :append-inner-icon="showNewPassword ? 'mdi-eye-off' : 'mdi-eye'"
                   @click:append-inner="showNewPassword = !showNewPassword"
@@ -1025,6 +1028,7 @@
                   variant="outlined"
                   density="compact"
                   class="mb-3"
+                  rounded="lg"
                   :disabled="loadingPassword"
                   :append-inner-icon="showConfirmPassword ? 'mdi-eye-off' : 'mdi-eye'"
                   @click:append-inner="showConfirmPassword = !showConfirmPassword"
@@ -1076,7 +1080,7 @@
                 text
                 @click="closeChangePasswordModal"
                 :disabled="loadingPassword"
-                class="mb-3 mr-2"
+                class="mb-3 mr-2 text-none"
               >
                 Cancel
               </v-btn>
@@ -1084,7 +1088,8 @@
                 color="primary"
                 variant="elevated"
                 @click="handleChangePassword"
-                class="mb-3 mr-2"
+                class="mb-3 mr-2 text-none"
+                rounded="xl"
                 :loading="loadingPassword"
                 :disabled="
                   !passwordForm.currentPassword ||
