@@ -61,9 +61,9 @@ const handleLogin = async () => {
 
     // 4. Redirect based on role
     if (role.value.toLowerCase() === 'owner') {
-      router.push('/owner-dashboard')
+      router.push({ name: 'owner-dashboard' })
     } else if (role.value.toLowerCase() === 'customer') {
-      router.push('/customer_dashboardv1')
+      router.push({ name: 'customer-dashboard' })
     }
   } catch (error) {
     console.error('Login failed:', error)

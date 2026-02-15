@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { supabase } from '@/supabaseClient' // 1. Import your supabase client
 
 // Views
 import LandingView from '@/views/auth/LandingView.vue'
@@ -50,37 +51,44 @@ const router = createRouter({
       path: '/owner-dashboard',
       name: 'owner-dashboard',
       component: Owner_dashboardView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/customer_dashboardv1',
       name: 'customer-dashboard',
       component: Customer_dashboardv1View,
+      meta: { requiresAuth: true }
     },
     {
       path: '/facility_details/:id',
       name: 'facility-details',
       component: Facility_detailsView,
       props: true,
+      meta: { requiresAuth: true }
     },
     {
       path: '/customer_profile',
       name: 'customer-profile',
       component: Customer_profileView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/playmate-requests',
       name: 'playmate-requests',
       component: Play_requestView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/favorites',
       name: 'favorites',
       component: FavoritesView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/customer-bookings',
       name: 'customer-bookings',
       component: CustomerBookingsView,
+      meta: { requiresAuth: true }
     },
     {
       path: '/terms',
@@ -100,9 +108,29 @@ const router = createRouter({
     {
       path: '/update-password',
       name: 'update-password',
-      component: UpdatePasswordView
+      component: UpdatePasswordView,
+      meta: { requiresAuth: true }
     },
   ],
+})
+
+// 3. THE NAVIGATION GUARD
+router.beforeEach(async (to, from, next) => {
+  // Check storage for an existing session
+  const { data: { session } } = await supabase.auth.getSession()
+  const isLoggedIn = !!session
+
+  // If page requires auth and user is NOT logged in -> Go to Landing
+  if (to.meta.requiresAuth && !isLoggedIn) {
+    next({ name: 'home' })
+  } 
+  // If user is ALREADY logged in and tries to go to Landing or Signin -> Go to Dashboard
+  else if (isLoggedIn && (to.name === 'home' || to.name === 'signin')) {
+    next({ name: 'customer-dashboard' })
+  } 
+  else {
+    next() // Proceed as normal
+  }
 })
 
 export default router
