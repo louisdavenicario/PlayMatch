@@ -760,12 +760,33 @@
 
                     <template v-slot:item.price="{ item }"> ₱{{ item.price.toFixed(2) }} </template>
 
+                    <template v-slot:item.payment_proof="{ item }">
+                      <v-btn
+                        v-if="item.payment_proof_url"
+                        color="primary"
+                        size="small"
+                        variant="outlined"
+                        class="text-none rounded-xl"
+                        @click="viewPaymentProof(item)"
+                      >
+                        <v-icon size="16" class="mr-1">mdi-image</v-icon>
+                        View Proof
+                      </v-btn>
+                      <v-chip v-else color="grey" size="small" variant="outlined">
+                        No Proof
+                      </v-chip>
+                    </template>
+
                     <template v-slot:item.actions="{ item }">
-                      <div v-if="item.status === 'pending'">
+                      <div
+                        v-if="item.status === 'pending'"
+                        class="d-flex align-center"
+                        style="gap: 8px"
+                      >
                         <v-btn
                           color="success"
                           size="small"
-                          class="mr-2 rounded-xl text-none"
+                          class="rounded-xl text-none"
                           @click="handleBookingStatus(item.id, 'accepted')"
                         >
                           Accept
@@ -800,6 +821,192 @@
                       </div>
                     </template>
                   </v-data-table>
+
+                  <!-- Payment Proof Viewer Dialog -->
+                  <v-dialog v-model="showPaymentProofDialog" max-width="800">
+                    <v-card v-if="selectedBookingForProof" rounded="xl">
+                      <v-card-title
+                        class="d-flex align-center justify-space-between text-white bg-primary"
+                      >
+                        <div class="d-flex align-center">
+                          <v-icon class="mr-2">mdi-receipt-text-check</v-icon>
+                          <span>Payment Proof - Booking Details</span>
+                        </div>
+                        <v-btn icon size="small" variant="text" @click="closePaymentProofDialog">
+                          <v-icon color="white">mdi-close</v-icon>
+                        </v-btn>
+                      </v-card-title>
+
+                      <v-divider></v-divider>
+
+                      <v-card-text class="pa-4">
+                        <!-- Booking Information -->
+                        <div class="mb-4 pa-3 bg-blue-grey-lighten-5 rounded-lg">
+                          <h3 class="text-h6 font-weight-bold mb-3">Booking Information</h3>
+                          <v-row dense>
+                            <v-col cols="12" sm="6">
+                              <div class="d-flex align-center mb-2">
+                                <v-icon size="20" class="mr-2">mdi-account</v-icon>
+                                <span class="text-subtitle-2 font-weight-bold mr-2">Customer:</span>
+                                <span>{{ selectedBookingForProof.customer_name }}</span>
+                              </div>
+                            </v-col>
+                            <v-col cols="12" sm="6">
+                              <div class="d-flex align-center mb-2">
+                                <v-icon size="20" class="mr-2">mdi-calendar</v-icon>
+                                <span class="text-subtitle-2 font-weight-bold mr-2">Date:</span>
+                                <span>{{ selectedBookingForProof.date_booked }}</span>
+                              </div>
+                            </v-col>
+                            <v-col cols="12" sm="6">
+                              <div class="d-flex align-center mb-2">
+                                <v-icon size="20" class="mr-2">mdi-clock-outline</v-icon>
+                                <span class="text-subtitle-2 font-weight-bold mr-2">Time:</span>
+                                <span>{{ selectedBookingForProof.time_range }}</span>
+                              </div>
+                            </v-col>
+                            <v-col cols="12" sm="6">
+                              <div class="d-flex align-center mb-2">
+                                <v-icon size="20" class="mr-2">mdi-currency-php</v-icon>
+                                <span class="text-subtitle-2 font-weight-bold mr-2">Amount:</span>
+                                <span class="font-weight-bold text-primary"
+                                  >₱{{ selectedBookingForProof.price.toFixed(2) }}</span
+                                >
+                              </div>
+                            </v-col>
+                          </v-row>
+                        </div>
+
+                        <v-divider class="my-4"></v-divider>
+
+                        <!-- Payment Proof Image -->
+                        <div>
+                          <div class="d-flex align-center justify-space-between mb-3">
+                            <h3 class="text-h6 font-weight-bold">Payment Proof</h3>
+                            <div>
+                              <v-chip
+                                v-if="selectedBookingForProof.payment_proof_uploaded_at"
+                                color="blue"
+                                size="small"
+                                variant="outlined"
+                              >
+                                <v-icon size="16" class="mr-1">mdi-clock-outline</v-icon>
+                                {{
+                                  formatUploadDate(
+                                    selectedBookingForProof.payment_proof_uploaded_at,
+                                  )
+                                }}
+                              </v-chip>
+                            </div>
+                          </div>
+
+                          <!-- Image Display -->
+                          <v-card outlined rounded="lg" class="overflow-hidden">
+                            <v-img
+                              v-if="selectedBookingForProof.payment_proof_url"
+                              :src="selectedBookingForProof.payment_proof_url"
+                              max-height="500"
+                              contain
+                              class="grey lighten-4"
+                              @click="openImageZoom(selectedBookingForProof.payment_proof_url)"
+                              style="cursor: zoom-in"
+                            >
+                              <template v-slot:placeholder>
+                                <v-row class="fill-height ma-0" align="center" justify="center">
+                                  <v-progress-circular
+                                    indeterminate
+                                    color="primary"
+                                  ></v-progress-circular>
+                                </v-row>
+                              </template>
+
+                              <!-- Zoom overlay hint -->
+                              <div class="d-flex align-end justify-end fill-height pa-2">
+                                <v-chip color="white" size="small" class="ma-2">
+                                  <v-icon size="16" class="mr-1">mdi-magnify-plus</v-icon>
+                                  Click to enlarge
+                                </v-chip>
+                              </div>
+                            </v-img>
+
+                            <div v-else class="pa-8 text-center">
+                              <v-icon size="64" color="grey">mdi-image-off</v-icon>
+                              <p class="text-h6 text-grey mt-2">No payment proof uploaded</p>
+                            </div>
+                          </v-card>
+
+                          <!-- Download Button -->
+                          <div class="mt-3 text-center">
+                            <v-btn
+                              v-if="selectedBookingForProof.payment_proof_url"
+                              color="primary"
+                              variant="outlined"
+                              @click="
+                                downloadPaymentProof(selectedBookingForProof.payment_proof_url)
+                              "
+                              class="text-none"
+                              rounded="xl"
+                            >
+                              <v-icon class="mr-2">mdi-download</v-icon>
+                              Download Proof
+                            </v-btn>
+                          </div>
+                        </div>
+                      </v-card-text>
+
+                      <v-divider></v-divider>
+
+                      <!-- Action Buttons for Pending Bookings -->
+                      <v-card-actions
+                        class="pa-4"
+                        v-if="selectedBookingForProof.status === 'pending'"
+                      >
+                        <v-spacer></v-spacer>
+                        <v-btn
+                          color="error"
+                          variant="outlined"
+                          @click="handleBookingStatusFromProof('rejected')"
+                          class="text-none mr-2"
+                          rounded="xl"
+                        >
+                          <v-icon class="mr-2">mdi-close-circle</v-icon>
+                          Reject Booking
+                        </v-btn>
+                        <v-btn
+                          color="success"
+                          variant="elevated"
+                          @click="handleBookingStatusFromProof('accepted')"
+                          class="text-none"
+                          rounded="xl"
+                        >
+                          <v-icon class="mr-2">mdi-check-circle</v-icon>
+                          Accept Booking
+                        </v-btn>
+                      </v-card-actions>
+                    </v-card>
+                  </v-dialog>
+
+                  <!-- IMAGE ZOOM FULLSCREEN DIALOG -->
+                  <v-dialog
+                    v-model="showImageZoomDialog"
+                    fullscreen
+                    transition="dialog-bottom-transition"
+                  >
+                    <v-card class="bg-black">
+                      <v-btn
+                        icon
+                        class="position-absolute d-flex align-center justify-center"
+                        style="top: 20px; right: 20px; z-index: 10; width: 48px; height: 48px"
+                        @click="closeImageZoom"
+                      >
+                        <v-icon size="28" color="black">mdi-close</v-icon>
+                      </v-btn>
+
+                      <div class="d-flex justify-center align-center" style="height: 100vh">
+                        <v-img :src="zoomImageUrl" contain max-height="90vh"></v-img>
+                      </div>
+                    </v-card>
+                  </v-dialog>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -1399,6 +1606,21 @@ watch(currentPage, (newVal) => {
 })
 const showEditModal = ref(false)
 
+const showPaymentProofDialog = ref(false)
+const selectedBookingForProof = ref(null)
+const showImageZoomDialog = ref(false)
+const zoomImageUrl = ref(null)
+
+const openImageZoom = (url) => {
+  zoomImageUrl.value = url
+  showImageZoomDialog.value = true
+}
+
+const closeImageZoom = () => {
+  showImageZoomDialog.value = false
+  zoomImageUrl.value = null
+}
+
 const dashboardData = reactive({
   todayBookings: 0,
   monthlyRevenue: 0,
@@ -1459,6 +1681,7 @@ const allBookingsHeaders = ref([
   { title: 'Price', key: 'price' },
   { title: 'Status', key: 'status' },
   { title: 'Actions', key: 'actions', sortable: false },
+  { title: 'Payment Proof', key: 'payment_proof' },
 ])
 
 // Computed property to apply comprehensive filtering first, then sorting.
@@ -1997,25 +2220,25 @@ async function fetchAllBookings() {
       .from('bookings')
       .select(
         `
-                *,
-                profiles (full_name),
-                facilities (facility_name)
-            `,
+        *,
+        profiles (full_name),
+        facilities (facility_name)
+      `,
       )
       .eq('facility_id', facilityDetails.value.id)
-      .order('start_time', { ascending: false }) // Fetches all, newest first (initial order)
+      .order('start_time', { ascending: false })
 
-    if (error) throw error // Transform data for display in the table
+    if (error) throw error
 
     allBookings.value = data.map((booking) => {
       const start = new Date(booking.start_time)
-      const end = new Date(booking.end_time) // Format date
+      const end = new Date(booking.end_time)
 
       const dateFormatted = start.toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric',
-      }) // Format time range
+      })
 
       const timeFormatted = `${start.toLocaleTimeString('en-US', {
         hour: '2-digit',
@@ -2032,10 +2255,11 @@ async function fetchAllBookings() {
         customer_name: booking.profiles?.full_name || 'N/A',
         date_booked: dateFormatted,
         time_range: timeFormatted,
-        // Map total_cost (from Supabase schema) to 'price' for the table template
         price: booking.total_cost || 0,
-        start_time: booking.start_time, // Keep start_time for date filtering/sorting
-        end_time: booking.end_time, // Keep end_time for 'Completed' filtering
+        start_time: booking.start_time,
+        end_time: booking.end_time,
+        payment_proof_url: booking.payment_proof_url, // NEW
+        payment_proof_uploaded_at: booking.payment_proof_uploaded_at, // NEW
       }
     })
   } catch (error) {
@@ -2044,6 +2268,89 @@ async function fetchAllBookings() {
   } finally {
     loadingBookings.value = false
   }
+}
+
+// ===== NEW FUNCTIONS FOR PAYMENT PROOF =====
+
+// View payment proof dialog
+const viewPaymentProof = (booking) => {
+  selectedBookingForProof.value = booking
+  showPaymentProofDialog.value = true
+}
+
+// Close payment proof dialog
+const closePaymentProofDialog = () => {
+  showPaymentProofDialog.value = false
+  selectedBookingForProof.value = null
+}
+
+// Open image in new tab for better viewing
+const openImageInNewTab = (imageUrl) => {
+  if (imageUrl) {
+    window.open(imageUrl, '_blank')
+  }
+}
+
+// Download payment proof image
+const downloadPaymentProof = async (imageUrl) => {
+  if (!imageUrl) return
+
+  try {
+    const response = await fetch(imageUrl)
+    const blob = await response.blob()
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+
+    // Extract filename from URL or use default
+    const urlParts = imageUrl.split('/')
+    const filename = urlParts[urlParts.length - 1] || 'payment-proof.jpg'
+    link.download = filename
+
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+
+    alertMessage('Payment proof downloaded successfully', 'success')
+  } catch (error) {
+    console.error('Error downloading payment proof:', error)
+    alertMessage('Failed to download payment proof', 'error')
+  }
+}
+
+// Format upload date
+const formatUploadDate = (dateString) => {
+  if (!dateString) return 'Unknown'
+
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffInMinutes = Math.floor((now - date) / 60000)
+
+  if (diffInMinutes < 1) return 'Just now'
+  if (diffInMinutes < 60) return `${diffInMinutes}m ago`
+
+  const diffInHours = Math.floor(diffInMinutes / 60)
+  if (diffInHours < 24) return `${diffInHours}h ago`
+
+  const diffInDays = Math.floor(diffInHours / 24)
+  if (diffInDays < 7) return `${diffInDays}d ago`
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+// Handle booking status change from proof dialog
+const handleBookingStatusFromProof = async (status) => {
+  if (!selectedBookingForProof.value) return
+
+  await handleBookingStatus(selectedBookingForProof.value.id, status)
+  closePaymentProofDialog()
 }
 
 // Helper function for alerts

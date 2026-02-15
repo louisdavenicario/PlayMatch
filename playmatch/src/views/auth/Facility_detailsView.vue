@@ -380,46 +380,136 @@
               dark
               rounded
               class="mt-4 text-none"
-              @click="bookFacility"
+              @click="openPaymentDialog"
               :loading="loading"
               :disabled="!selectedStartSlot || !isDurationValid(selectedDuration)"
             >
-              Book Now
+              Proceed to Payment
             </v-btn>
           </div>
         </v-card>
 
-        <v-dialog v-model="zoomDialog" fullscreen transition="dialog-bottom-transition">
-          <v-card dark color="black">
-            <v-toolbar dense flat color="white">
+        <!-- Payment Proof Upload Dialog -->
+        <v-dialog v-model="paymentDialog" max-width="600" persistent>
+          <v-card rounded="xl" elevation="4">
+            <v-toolbar color="blue" dark flat class="px-4">
+              <v-icon left>mdi-cash-multiple</v-icon>
+              <v-toolbar-title class="font-weight-bold">Upload Proof of Payment</v-toolbar-title>
               <v-spacer></v-spacer>
-              <v-btn icon @click="zoomDialog = false">
-                <v-icon color="#1a65a2">mdi-close</v-icon>
+              <v-btn icon @click="closePaymentDialog">
+                <v-icon>mdi-close</v-icon>
               </v-btn>
             </v-toolbar>
 
-            <v-container fluid fill-height>
-              <v-row align="center" justify="center">
-                <v-col cols="12" class="text-center">
-                  <v-carousel
-                    v-model="zoomCarouselIndex"
-                    hide-delimiter-background
-                    height="90vh"
-                    show-arrows-on-hover
-                    delimiter-icon="mdi-circle-small"
-                    delimiter-size="12"
-                    cycle
-                  >
-                    <v-carousel-item v-for="(photoUrl, index) in allPhotos" :key="index">
-                      <v-img :src="photoUrl" contain max-height="90vh" class="mx-auto"></v-img>
-                    </v-carousel-item>
-                  </v-carousel>
-                </v-col>
-              </v-row>
-            </v-container>
+            <v-card-text class="pt-6">
+              <v-alert
+                type="info"
+                color="blue-lighten-4"
+                border="start"
+                border-color="blue-darken-2"
+                icon="mdi-information"
+                class="mb-4"
+                rounded="xl"
+              >
+                <div class="font-weight-bold mb-2">Payment Instructions:</div>
+                <div class="text-body-2">
+                  1. Transfer ₱{{ totalBookingCost }} to the facility's payment account<br />
+                  2. Take a screenshot or photo of your payment confirmation<br />
+                  3. Upload the proof of payment below<br />
+                  4. Your booking will be reviewed once payment is verified
+                </div>
+              </v-alert>
+
+              <div class="mb-4">
+                <h4 class="text-subtitle-1 font-weight-bold mb-2">Booking Summary:</h4>
+                <div class="grey--text text-body-2">
+                  <div class="d-flex justify-space-between mb-1">
+                    <span>Facility:</span>
+                    <span class="font-weight-medium black--text">{{ facility.facility_name }}</span>
+                  </div>
+                  <div class="d-flex justify-space-between mb-1">
+                    <span>Date:</span>
+                    <span class="font-weight-medium black--text">{{ selectedDate }}</span>
+                  </div>
+                  <div class="d-flex justify-space-between mb-1">
+                    <span>Time:</span>
+                    <span class="font-weight-medium black--text"
+                      >{{ formattedSelectedTime }} - {{ formattedEndTime }}</span
+                    >
+                  </div>
+                  <div class="d-flex justify-space-between mb-1">
+                    <span>Duration:</span>
+                    <span class="font-weight-medium black--text"
+                      >{{ selectedDuration }} hour(s)</span
+                    >
+                  </div>
+                  <v-divider class="my-2"></v-divider>
+                  <div class="d-flex justify-space-between">
+                    <span class="font-weight-bold">Total Amount:</span>
+                    <span class="font-weight-bold blue--text text-h6">₱{{ totalBookingCost }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <v-divider class="my-4"></v-divider>
+
+              <div>
+                <h4 class="text-subtitle-1 font-weight-bold mb-3">
+                  <v-icon color="red" small>mdi-asterisk</v-icon>
+                  Upload Proof of Payment:
+                </h4>
+
+                <v-file-input
+                  v-model="paymentProofFile"
+                  accept=".jpg,.jpeg,.png,.webp"
+                  label="Select payment proof image"
+                  prepend-icon="mdi-camera"
+                  outlined
+                  rounded="lg"
+                  show-size
+                  :error-messages="paymentProofError"
+                  @change="handleFileSelect"
+                  :multiple="false"
+                />
+
+                <!-- Preview of uploaded image -->
+                <v-card v-if="paymentProofPreview" class="mt-3" outlined rounded="lg" elevation="0">
+                  <v-card-title class="text-subtitle-2 py-2">
+                    <v-icon small left color="green">mdi-check-circle</v-icon>
+                    Payment Proof Preview:
+                  </v-card-title>
+                  <v-card-text class="pa-2">
+                    <v-img
+                      :src="paymentProofPreview"
+                      max-height="300"
+                      contain
+                      class="rounded-lg"
+                    ></v-img>
+                  </v-card-text>
+                </v-card>
+              </div>
+            </v-card-text>
+
+            <v-card-actions class="px-6 pb-4">
+              <v-btn text rounded @click="closePaymentDialog" class="text-none"> Cancel </v-btn>
+              <v-spacer></v-spacer>
+              <v-btn
+                color="blue"
+                dark
+                rounded
+                class="text-none px-6"
+                @click="submitBookingWithPayment"
+                :loading="loading"
+                :disabled="!paymentProofFile"
+              >
+                <v-icon left>mdi-check</v-icon>
+                Submit Booking
+              </v-btn>
+            </v-card-actions>
           </v-card>
         </v-dialog>
 
+        <!-- Receipt Dialog (Enhanced with Payment Proof) -->
         <v-dialog v-model="receiptDialog" max-width="500">
           <v-card rounded="xl" elevation="4">
             <v-toolbar color="blue" dark flat class="px-4">
@@ -458,6 +548,37 @@
                 <span>Total Cost:</span>
                 <span class="blue--text font-weight-bold">₱{{ receiptDetails.cost }}</span>
               </div>
+
+              <!-- Payment Proof Display -->
+              <v-card
+                v-if="receiptDetails.paymentProofUrl"
+                class="mt-4"
+                outlined
+                rounded="lg"
+                elevation="0"
+              >
+                <v-card-title class="text-subtitle-2 py-2">
+                  <v-icon small left color="green">mdi-check-circle</v-icon>
+                  Payment Proof Submitted:
+                </v-card-title>
+                <v-card-text class="pa-2">
+                  <v-img
+                    :src="receiptDetails.paymentProofUrl"
+                    max-height="200"
+                    contain
+                    class="rounded-lg"
+                    @click="openPaymentProofZoom"
+                    style="cursor: pointer"
+                  ></v-img>
+                  <div class="text-center mt-2">
+                    <v-btn x-small text color="blue" @click="openPaymentProofZoom">
+                      <v-icon small left>mdi-magnify</v-icon>
+                      View Full Size
+                    </v-btn>
+                  </div>
+                </v-card-text>
+              </v-card>
+
               <v-alert
                 type="warning"
                 color="orange-lighten-4"
@@ -473,8 +594,8 @@
                 </div>
               </v-alert>
               <p class="caption grey--text text-center mt-4">
-                The facility manager will review your request. You will be notified once the status
-                changes.
+                The facility manager will review your payment and booking request. You will be
+                notified once the status changes.
               </p>
             </v-card-text>
 
@@ -484,6 +605,58 @@
                 Close
               </v-btn>
             </v-card-actions>
+          </v-card>
+        </v-dialog>
+
+        <!-- Payment Proof Zoom Dialog -->
+        <v-dialog v-model="paymentProofZoomDialog" max-width="90vw">
+          <v-card dark color="black">
+            <v-toolbar dense flat color="transparent">
+              <v-spacer></v-spacer>
+              <v-btn icon @click="paymentProofZoomDialog = false">
+                <v-icon color="white">mdi-close</v-icon>
+              </v-btn>
+            </v-toolbar>
+            <v-card-text class="pa-0">
+              <v-img
+                :src="receiptDetails.paymentProofUrl"
+                max-height="90vh"
+                contain
+                class="mx-auto"
+              ></v-img>
+            </v-card-text>
+          </v-card>
+        </v-dialog>
+
+        <!-- Facility Photos Zoom Dialog -->
+        <v-dialog v-model="zoomDialog" fullscreen transition="dialog-bottom-transition">
+          <v-card dark color="black">
+            <v-toolbar dense flat color="white">
+              <v-spacer></v-spacer>
+              <v-btn icon @click="zoomDialog = false">
+                <v-icon color="#1a65a2">mdi-close</v-icon>
+              </v-btn>
+            </v-toolbar>
+
+            <v-container fluid fill-height>
+              <v-row align="center" justify="center">
+                <v-col cols="12" class="text-center">
+                  <v-carousel
+                    v-model="zoomCarouselIndex"
+                    hide-delimiter-background
+                    height="90vh"
+                    show-arrows-on-hover
+                    delimiter-icon="mdi-circle-small"
+                    delimiter-size="12"
+                    cycle
+                  >
+                    <v-carousel-item v-for="(photoUrl, index) in allPhotos" :key="index">
+                      <v-img :src="photoUrl" contain max-height="90vh" class="mx-auto"></v-img>
+                    </v-carousel-item>
+                  </v-carousel>
+                </v-col>
+              </v-row>
+            </v-container>
           </v-card>
         </v-dialog>
       </v-container>
@@ -521,6 +694,14 @@ export default {
     MAX_BOOKING_HOURS: 4,
     durationError: '',
 
+    // Payment Proof Data
+    paymentDialog: false,
+    paymentProofFile: null,
+    paymentProofPreview: null,
+    paymentProofError: '',
+    uploadingPaymentProof: false,
+    paymentProofZoomDialog: false,
+
     // General State
     loading: false,
     loadingSchedules: false,
@@ -545,6 +726,7 @@ export default {
       endTime: '',
       duration: 0,
       cost: '0.00',
+      paymentProofUrl: '',
     },
   }),
 
@@ -624,7 +806,6 @@ export default {
   watch: {
     selectedDate(newDate) {
       if (newDate && newDate instanceof Date) {
-        // Convert Date object to 'YYYY-MM-DD' string
         const year = newDate.getFullYear()
         const month = String(newDate.getMonth() + 1).padStart(2, '0')
         const day = String(newDate.getDate()).padStart(2, '0')
@@ -667,7 +848,6 @@ export default {
 
       if (!error) {
         this.facility = data
-        // Logic to parse stringified JSON photos
         if (typeof this.facility.additional_photos === 'string') {
           try {
             this.facility.additional_photos = JSON.parse(this.facility.additional_photos)
@@ -912,12 +1092,9 @@ export default {
       const grouped = {}
       this.availableSchedules.forEach((slot) => {
         const dateObj = new Date(slot.start_time)
-
-        // Extract components based on the LOCAL time
         const year = dateObj.getFullYear()
         const month = String(dateObj.getMonth() + 1).padStart(2, '0')
         const day = String(dateObj.getDate()).padStart(2, '0')
-
         const dateKey = `${year}-${month}-${day}`
 
         if (!grouped[dateKey]) grouped[dateKey] = []
@@ -1034,13 +1211,105 @@ export default {
       }
       return true
     },
-    async bookFacility() {
-      this.validateDuration(this.selectedDuration)
 
-      if (!this.selectedStartSlot || !this.isDurationValid(this.selectedDuration)) {
-        alert('Please select a valid start time and available duration.')
+    // --- Payment Proof Methods ---
+    openPaymentDialog() {
+      this.paymentDialog = true
+      this.paymentProofFile = null
+      this.paymentProofPreview = null
+      this.paymentProofError = ''
+    },
+    closePaymentDialog() {
+      this.paymentDialog = false
+      this.paymentProofFile = null
+      this.paymentProofPreview = null
+      this.paymentProofError = ''
+    },
+    handleFileSelect(files) {
+      this.paymentProofError = ''
+
+      const file = Array.isArray(files) ? files[0] : files
+
+      if (!file) {
+        this.paymentProofFile = null
+        this.paymentProofPreview = null
         return
       }
+
+      console.log('Selected file:', file)
+      console.log('File type:', file.type)
+
+      // Validate by extension instead of mime type (more reliable)
+      const allowedExtensions = ['jpg', 'jpeg', 'png', 'webp']
+      const fileExtension = file.name.split('.').pop().toLowerCase()
+
+      if (!allowedExtensions.includes(fileExtension)) {
+        this.paymentProofError = 'Only JPG, JPEG, PNG, or WEBP images are allowed'
+        this.paymentProofFile = null
+        return
+      }
+
+      // Size limit (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        this.paymentProofError = 'File must be less than 5MB'
+        this.paymentProofFile = null
+        return
+      }
+
+      this.paymentProofFile = file
+
+      // Preview
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        this.paymentProofPreview = e.target.result
+      }
+      reader.readAsDataURL(file)
+    },
+    async uploadPaymentProof(userId, bookingId) {
+      if (!this.paymentProofFile) {
+        console.error('No file selected')
+        return null
+      }
+
+      try {
+        this.uploadingPaymentProof = true
+
+        console.log('Uploading file:', this.paymentProofFile)
+
+        const file = this.paymentProofFile
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}.${fileExt}`
+        const filePath = `${userId}/${fileName}`
+
+        const { error } = await supabase.storage.from('booking-documents').upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true,
+        })
+
+        if (error) {
+          console.error('Upload error:', error)
+          throw error
+        }
+
+        const { data } = supabase.storage.from('booking-documents').getPublicUrl(filePath)
+
+        console.log('Uploaded successfully:', data.publicUrl)
+
+        return data.publicUrl
+      } catch (error) {
+        console.error('Storage Upload Failed:', error.message)
+        alert('Upload failed: ' + error.message)
+        return null
+      } finally {
+        this.uploadingPaymentProof = false
+      }
+    },
+    async submitBookingWithPayment() {
+      if (!this.paymentProofFile) {
+        this.paymentProofError = 'Please upload proof of payment before submitting'
+        return
+      }
+
       this.loading = true
 
       const start = new Date(this.selectedStartSlot)
@@ -1059,19 +1328,41 @@ export default {
           return
         }
 
-        const { error } = await supabase.from('bookings').insert([
-          {
-            facility_id: this.facility.id,
-            booking_date: this.selectedDate,
-            start_time: calculatedStartTime,
-            end_time: calculatedEndTime,
-            duration_hours: this.selectedDuration,
-            total_cost: this.totalBookingCost,
-            status: 'pending',
-            user_id: user.id,
-          },
-        ])
-        if (error) throw error
+        // Create booking first to get booking ID
+        const { data: bookingData, error: bookingError } = await supabase
+          .from('bookings')
+          .insert([
+            {
+              facility_id: this.facility.id,
+              booking_date: this.selectedDate,
+              start_time: calculatedStartTime,
+              end_time: calculatedEndTime,
+              duration_hours: this.selectedDuration,
+              total_cost: this.totalBookingCost,
+              status: 'pending',
+              user_id: user.id,
+            },
+          ])
+          .select()
+          .single()
+
+        if (bookingError) throw bookingError
+
+        // Upload payment proof
+        const paymentProofUrl = await this.uploadPaymentProof(user.id, bookingData.id)
+
+        // Update booking with payment proof URL
+        if (paymentProofUrl) {
+          const { error: updateError } = await supabase
+            .from('bookings')
+            .update({ payment_proof_url: paymentProofUrl })
+            .eq('id', bookingData.id)
+
+          if (updateError) console.error('Error updating payment proof:', updateError)
+        }
+
+        // Close payment dialog
+        this.paymentDialog = false
 
         // Populate and Show Receipt Dialog
         this.receiptDetails = {
@@ -1080,6 +1371,7 @@ export default {
           endTime: this.formattedEndTime,
           duration: this.selectedDuration,
           cost: this.totalBookingCost,
+          paymentProofUrl: paymentProofUrl,
         }
         this.receiptDialog = true
 
@@ -1087,6 +1379,8 @@ export default {
         this.selectedStartSlot = null
         this.selectedDuration = 1
         this.durationError = ''
+        this.paymentProofFile = null
+        this.paymentProofPreview = null
         await this.fetchSchedulesAndBookings()
         this.autoSelectFirstAvailableDate()
       } catch (err) {
@@ -1095,6 +1389,9 @@ export default {
       } finally {
         this.loading = false
       }
+    },
+    openPaymentProofZoom() {
+      this.paymentProofZoomDialog = true
     },
 
     // --- Zoom/Carousel ---
@@ -1111,53 +1408,44 @@ export default {
 .calendar-border {
   border: 1px solid #e0e0e0 !important;
   overflow: hidden !important;
-  width: 100% !important; /* Forces it to span the whole card */
+  width: 100% !important;
 }
 
-/* This targets the internal Vuetify picker table to ensure it stretches */
 .calendar-border >>> .v-picker__body {
   width: 100% !important;
 }
 
-/* Optional: If you want the border to be slightly darker when active */
 .calendar-border:focus-within {
   border-color: #2196f3 !important;
 }
 
-/* Specific styling for the container */
 .calendar-container {
   width: 100%;
   display: flex;
-  justify-content: center; /* Keeps it centered if it hits max-width */
+  justify-content: center;
   margin-bottom: 16px;
 }
 
-/* --- Responsive Rules --- */
-
-/* 1. Cellphones (Small screens) */
 @media (max-width: 600px) {
   .calendar-container {
-    max-width: 100%; /* Spans full width of the card on mobile */
+    max-width: 100%;
   }
 }
 
-/* 2. Tablets & iPads (Medium screens) */
 @media (min-width: 601px) and (max-width: 959px) {
   .calendar-container {
-    max-width: 400px; /* Comfortable size for iPad portrait/landscape */
+    max-width: 400px;
     margin: 0 auto 20px auto;
   }
 }
 
-/* 3. Laptops & Desktops (Large screens) */
 @media (min-width: 960px) {
   .calendar-container {
-    max-width: 450px; /* Prevents the "too big" look on laptops */
+    max-width: 450px;
     margin: 0 auto 24px auto;
   }
 }
 
-/* Optional: Make the calendar font slightly more compact on large screens */
 .calendar-border >>> .v-date-picker-table {
   height: auto !important;
   padding: 12px !important;
