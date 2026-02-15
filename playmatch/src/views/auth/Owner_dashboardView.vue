@@ -534,7 +534,7 @@
                       </p>
                       <p class="mt-5"><strong>Address:</strong> {{ facilityDetails?.address }}</p>
                       <p class="mt-5">
-                        <strong>Contact Number:</strong> {{ facilityDetails?.phone_number }}
+                        <strong>Contact/G-Cash Number:</strong> {{ facilityDetails?.phone_number }}
                       </p>
                       <p class="mt-5">
                         <strong>Description:</strong> {{ facilityDetails?.briefdescription }}
@@ -833,7 +833,7 @@
                           <span>Payment Proof - Booking Details</span>
                         </div>
                         <v-btn icon size="small" variant="text" @click="closePaymentProofDialog">
-                          <v-icon color="white">mdi-close</v-icon>
+                          <v-icon size="30" color="white">mdi-close</v-icon>
                         </v-btn>
                       </v-card-title>
 
@@ -947,7 +947,7 @@
                               class="text-none"
                               rounded="xl"
                             >
-                              <v-icon class="mr-2">mdi-download</v-icon>
+                              <v-icon size="20"class="mr-2 text-none">mdi-download</v-icon>
                               Download Proof
                             </v-btn>
                           </div>
@@ -969,7 +969,7 @@
                           class="text-none mr-2"
                           rounded="xl"
                         >
-                          <v-icon class="mr-2">mdi-close-circle</v-icon>
+                          <v-icon size="20" class="mr-2">mdi-close-circle</v-icon>
                           Reject Booking
                         </v-btn>
                         <v-btn
@@ -979,7 +979,7 @@
                           class="text-none"
                           rounded="xl"
                         >
-                          <v-icon class="mr-2">mdi-check-circle</v-icon>
+                          <v-icon size="20" class="mr-2">mdi-check-circle</v-icon>
                           Accept Booking
                         </v-btn>
                       </v-card-actions>
@@ -1356,7 +1356,7 @@
 
             <v-text-field
               v-model="editedFacility.phone_number"
-              label="Contact Number"
+              label="Contact/G-Cash Number"
               variant="outlined"
               rounded="lg"
             ></v-text-field>

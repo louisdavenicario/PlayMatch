@@ -682,23 +682,31 @@ onMounted(() => {
       </v-container>
     </v-main>
 
-    <!-- Bottom navigation -->
-    <v-bottom-navigation app fixed color="white" light v-model="activeNav">
-      <v-btn class="mx-1" value="home" @click="$router.push({ name: 'customer-dashboard' })">
-        <v-icon size="31" :color="activeNav === 'home' ? 'blue' : 'black'">mdi-home</v-icon>
-      </v-btn>
-      <v-btn class="mx-2" value="bookings" @click="$router.push({ name: 'customer-bookings' })">
-        <v-icon size="28" :color="activeNav === 'bookings' ? 'blue' : 'black'"
-          >mdi-calendar-check</v-icon
-        >
-      </v-btn>
-      <v-btn class="mx-2" value="favorites" @click="$router.push({ name: 'favorites' })">
-        <v-icon size="28" :color="activeNav === 'favorites' ? 'blue' : 'black'">mdi-heart</v-icon>
-      </v-btn>
-      <v-btn class="mx-1" value="profile" @click="$router.push({ name: 'customer-profile' })">
-        <v-icon size="33" :color="activeNav === 'profile' ? 'blue' : 'black'">mdi-account</v-icon>
-      </v-btn>
-    </v-bottom-navigation>
+    <div class="nav-container">
+      <v-bottom-navigation
+        v-model="activeNav"
+        class="floating-nav"
+        grow
+        height="55"
+        elevation="10"
+      >
+        <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
+          <v-icon size="30">mdi-home</v-icon>
+        </v-btn>
+
+        <v-btn value="bookings" @click="$router.push({ name: 'customer-bookings' })">
+          <v-icon size="28">mdi-calendar-check</v-icon>
+        </v-btn>
+
+        <v-btn value="favorites" @click="$router.push({ name: 'favorites' })">
+          <v-icon size="26">mdi-heart</v-icon>
+        </v-btn>
+
+        <v-btn value="profile" @click="$router.push({ name: 'customer-profile' })">
+          <v-icon size="31">mdi-account</v-icon>
+        </v-btn>
+      </v-bottom-navigation>
+    </div>
 
     <!-- Change Password Modal -->
     <v-dialog v-model="showChangePasswordModal" max-width="500">
@@ -839,8 +847,62 @@ onMounted(() => {
   border-radius: 8px;
 }
 
-.v-bottom-navigation .v-btn {
-  /* Make the button shape a circle */
-  border-radius: 27% !important;
+/* 1. The Container - Forces the entire bar to the absolute center */
+.nav-container {
+  position: fixed;
+  bottom: 10px; /* Floating distance from bottom */
+  left: 50%; /* Start at the center */
+  transform: translateX(-50%); /* Pull back by half its width to perfectly center */
+  width: 90%; 
+  max-width: 420px;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+}
+
+/* 2. The Main Floating Pill */
+.floating-nav {
+  width: 100% !important;
+  border-radius: 40px !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.4) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1) !important;
+  display: flex;
+  align-items: center;
+  overflow: visible !important; /* Important for the indicator to show correctly */
+}
+
+/* 3. REMOVE THE GREY SQUARE & OVERLAYS */
+/* This targets the internal Vuetify layers that cause the grey background */
+:deep(.v-btn__overlay),
+:deep(.v-btn__underlay),
+:deep(.v-ripple__container) {
+  display: none !important;
+}
+
+/* 4. Individual Button Settings */
+.floating-nav .v-btn {
+  background: transparent !important;
+  flex: 1;
+  height: 65px !important;
+  min-width: 0 !important;
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+/* 5. Icon Colors and Transitions */
+.floating-nav .v-icon {
+  color: #444 !important;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.floating-nav .v-btn--active .v-icon {
+  color: #1a65a2 !important; /* Deep blue when active */
+  transform: scale(1.1);
 }
 </style>

@@ -242,7 +242,7 @@ const goToSignIn = () => {
                       <v-col cols="12">
                         <v-text-field
                           v-model="formData.phone_number"
-                          label="Phone Number"
+                          label="Contact/G-Cash Number"
                           :rules="phoneRules"
                           variant="outlined"
                           rounded="lg"

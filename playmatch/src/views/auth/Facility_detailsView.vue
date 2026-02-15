@@ -132,7 +132,7 @@
           <h2 class="font-weight-bold">{{ facility.facility_name }}</h2>
           <p class="grey--text mb-2">Address: {{ facility.address }}</p>
           <p class="grey--text mb-2">Operating Hours (Today): {{ currentDayOperatingHours }}</p>
-          <p class="grey--text mb-2">Contact Number: {{ facility.phone_number }}</p>
+          <p class="grey--text mb-2">Contact/G-Cash Number: {{ facility.phone_number }}</p>
           <p class="grey--text mb-2">Amenities: {{ facility.amenities }}</p>
           <p class="grey--text mb-2">
             Price:
@@ -503,7 +503,7 @@
                 :disabled="!paymentProofFile"
               >
                 <v-icon left>mdi-check</v-icon>
-                Submit Booking
+                Submit Payment
               </v-btn>
             </v-card-actions>
           </v-card>
@@ -571,7 +571,7 @@
                     style="cursor: pointer"
                   ></v-img>
                   <div class="text-center mt-2">
-                    <v-btn x-small text color="blue" @click="openPaymentProofZoom">
+                    <v-btn class="text-none rounded-xl" small text color="blue" @click="openPaymentProofZoom">
                       <v-icon small left>mdi-magnify</v-icon>
                       View Full Size
                     </v-btn>
