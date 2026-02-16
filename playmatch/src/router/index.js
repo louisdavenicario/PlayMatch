@@ -116,20 +116,31 @@ const router = createRouter({
 
 // 3. THE NAVIGATION GUARD
 router.beforeEach(async (to, from, next) => {
-  // Check storage for an existing session
+  //Get the current session to check if the user is logged in
   const { data: { session } } = await supabase.auth.getSession()
   const isLoggedIn = !!session
-
-  // If page requires auth and user is NOT logged in -> Go to Landing
+  //Check if the route requires authentication and if the user is not logged in
   if (to.meta.requiresAuth && !isLoggedIn) {
     next({ name: 'home' })
   } 
-  // If user is ALREADY logged in and tries to go to Landing or Signin -> Go to Dashboard
+  //If the user is logged in and tries to access the home or signin page, redirect them based on their role
   else if (isLoggedIn && (to.name === 'home' || to.name === 'signin')) {
-    next({ name: 'customer-dashboard' })
+    // 1. Fetch the role from the session or database
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', session.user.id)
+      .single()
+
+    // 2. Redirect based on their ACTUAL role
+    if (profile?.role?.toLowerCase() === 'owner') {
+      next({ name: 'owner-dashboard' })
+    } else {
+      next({ name: 'customer-dashboard' })
+    }
   } 
   else {
-    next() // Proceed as normal
+    next()
   }
 })
 
