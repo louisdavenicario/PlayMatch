@@ -100,7 +100,7 @@
         v-model="activeNav"
         class="floating-nav"
         grow
-        height="55"
+        height="60"
         elevation="10"
       >
         <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
@@ -150,7 +150,7 @@
   left: 50%; /* Start at the center */
   transform: translateX(-50%); /* Pull back by half its width to perfectly center */
   width: 90%; 
-  max-width: 420px;
+  max-width: 390px;
   z-index: 1000;
   display: flex;
   justify-content: center;
@@ -189,7 +189,7 @@
 
 /* 5. Icon Colors and Transitions */
 .floating-nav .v-icon {
-  color: #444 !important;
+  color: #000000 !important;
   z-index: 1;
   display: flex;
   align-items: center;
