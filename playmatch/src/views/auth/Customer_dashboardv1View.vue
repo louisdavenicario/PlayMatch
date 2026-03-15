@@ -1414,13 +1414,7 @@ export default {
     </v-dialog>
 
     <div class="nav-container">
-      <v-bottom-navigation
-        v-model="activeNav"
-        class="floating-nav"
-        grow
-        height="60"
-        elevation="10"
-      >
+      <v-bottom-navigation v-model="activeNav" class="floating-nav" grow height="60" elevation="10">
         <v-btn value="home" @click="$router.push({ name: 'customer-dashboard' })">
           <v-icon size="30">mdi-home</v-icon>
         </v-btn>
@@ -1480,7 +1474,7 @@ export default {
   bottom: 10px; /* Floating distance from bottom */
   left: 50%; /* Start at the center */
   transform: translateX(-50%); /* Pull back by half its width to perfectly center */
-  width: 90%; 
+  width: 90%;
   max-width: 390px;
   z-index: 1000;
   display: flex;

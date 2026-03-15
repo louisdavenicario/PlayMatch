@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@supabase/supabase-js": "^2.57.2",
+    "nodemailer": "^8.0.2",
     "vuetify": "^3.10.11"
   },
   "devDependencies": {

@@ -59,7 +59,13 @@ const handleLogin = async () => {
       return
     }
 
-    // 4. Redirect based on role
+    // 4. Update last seen
+    await supabase
+      .from('profiles')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('id', user.id)
+
+    // 5. Redirect based on role
     if (role.value.toLowerCase() === 'owner') {
       router.push({ name: 'owner-dashboard' })
     } else if (role.value.toLowerCase() === 'customer') {

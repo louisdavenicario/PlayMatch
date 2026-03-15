@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { supabase } from '@/supabaseClient' // 1. Import your supabase client
+import { supabase } from '@/supabaseClient'
 
 // Views
 import LandingView from '@/views/auth/LandingView.vue'
@@ -18,6 +18,8 @@ import PrivacyView from '@/views/auth/PrivacyView.vue'
 import TermsView from '@/views/auth/TermsView.vue'
 import ForgotPasswordView from '@/views/auth/ForgotPasswordView.vue'
 import UpdatePasswordView from '@/views/auth/UpdatePasswordView.vue'
+import DevLoginView from '@/views/auth/DevloginView.vue'
+import DeveloperDashboardView from '@/views/auth/DeveloperdashboardView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -51,44 +53,44 @@ const router = createRouter({
       path: '/owner-dashboard',
       name: 'owner-dashboard',
       component: Owner_dashboardView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/customer_dashboardv1',
       name: 'customer-dashboard',
       component: Customer_dashboardv1View,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/facility_details/:id',
       name: 'facility-details',
       component: Facility_detailsView,
       props: true,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/customer_profile',
       name: 'customer-profile',
       component: Customer_profileView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/playmate-requests',
       name: 'playmate-requests',
       component: Play_requestView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/favorites',
       name: 'favorites',
       component: FavoritesView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/customer-bookings',
       name: 'customer-bookings',
       component: CustomerBookingsView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
     },
     {
       path: '/terms',
@@ -98,50 +100,71 @@ const router = createRouter({
     {
       path: '/privacy',
       name: 'privacy',
-      component: PrivacyView
+      component: PrivacyView,
     },
     {
       path: '/forgot-password',
       name: 'forgot-password',
-      component: ForgotPasswordView
+      component: ForgotPasswordView,
     },
     {
       path: '/update-password',
       name: 'update-password',
       component: UpdatePasswordView,
-      meta: { requiresAuth: true }
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/dev',
+      name: 'dev-login',
+      component: DevLoginView,
+    },
+    {
+      path: '/dev/dashboard',
+      name: 'developer-dashboard',
+      component: DeveloperDashboardView,
+      meta: { requiresAuth: true, role: 'developer' },
     },
   ],
 })
 
-// 3. THE NAVIGATION GUARD
 router.beforeEach(async (to, from, next) => {
-  //Get the current session to check if the user is logged in
-  const { data: { session } } = await supabase.auth.getSession()
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
   const isLoggedIn = !!session
-  //Check if the route requires authentication and if the user is not logged in
+
+  // 1. Route requires auth but user is not logged in
   if (to.meta.requiresAuth && !isLoggedIn) {
-    next({ name: 'home' })
-  } 
-  //If the user is logged in and tries to access the home or signin page, redirect them based on their role
-  else if (isLoggedIn && (to.name === 'home' || to.name === 'signin')) {
-    // 1. Fetch the role from the session or database
+    if (to.meta.role === 'developer') {
+      return next({ name: 'dev-login' })
+    }
+    return next({ name: 'home' })
+  }
+
+  // 2. If logged in, fetch profile role
+  if (isLoggedIn) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', session.user.id)
       .single()
 
-    // 2. Redirect based on their ACTUAL role
-    if (profile?.role?.toLowerCase() === 'owner') {
-      next({ name: 'owner-dashboard' })
-    } else {
-      next({ name: 'customer-dashboard' })
+    const userRole = profile?.role?.toLowerCase()
+
+    // 3. Block non-developers from /dev/dashboard
+    if (to.meta.role === 'developer' && userRole !== 'developer') {
+      return next({ name: 'dev-login' })
     }
-  } 
-  else {
-    next()
+
+    // 4. Redirect logged-in users away from home/signin to their dashboard
+    if (to.name === 'home' || to.name === 'signin') {
+      if (userRole === 'owner') return next({ name: 'owner-dashboard' })
+      if (userRole === 'developer') return next({ name: 'developer-dashboard' })
+      return next({ name: 'customer-dashboard' })
+    }
   }
+
+  next()
 })
 
 export default router
