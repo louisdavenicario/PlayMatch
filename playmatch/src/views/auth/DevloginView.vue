@@ -56,25 +56,33 @@ const handleDevLogin = async () => {
 
 <template>
   <div class="dev-login-root">
-    <!-- Scanline overlay -->
-    <div class="scanlines" />
-    <!-- Grid background -->
+    <!-- Subtle grid background -->
     <div class="grid-bg" />
+    <!-- Blue accent blob -->
+    <div class="blob blob-1" />
+    <div class="blob blob-2" />
 
     <div class="login-wrapper">
-      <!-- Terminal-style header -->
+      <!-- Header bar -->
       <div class="terminal-header">
-        <span class="dot red" />
-        <span class="dot yellow" />
-        <span class="dot green" />
-        <span class="terminal-title">playmatch_devportal — bash</span>
+        <div class="header-left">
+          <span class="dot red" />
+          <span class="dot yellow" />
+          <span class="dot green" />
+        </div>
+        <span class="terminal-title">PlayMatch_devportal</span>
+        <div class="header-right" />
       </div>
 
       <div class="terminal-body">
         <div class="boot-text">
-          <p class="line">PlayMatch DevPortal v1.0.0</p>
+          <div class="logo-mark">
+            <span class="logo-icon">⬡</span>
+            <span class="logo-text">DevPortal</span>
+          </div>
+          <p class="line">PlayMatch DevPortal</p>
           <p class="line dim">System initialized. Authentication required.</p>
-          <p class="line dim">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</p>
+          <div class="divider-line" />
         </div>
 
         <div class="form-section">
@@ -108,11 +116,15 @@ const handleDevLogin = async () => {
           </div>
 
           <div v-if="errorMessage" class="error-line">
-            <span class="prompt err">✗</span> {{ errorMessage }}
+            <span class="err-icon">✗</span> {{ errorMessage }}
           </div>
 
           <button class="execute-btn" :disabled="loading" @click="handleDevLogin">
-            <span v-if="loading" class="blink">_</span>
+            <span v-if="loading" class="loading-dots">
+              <span />
+              <span />
+              <span />
+            </span>
             <span v-else>▶ authenticate</span>
           </button>
         </div>
@@ -132,7 +144,7 @@ const handleDevLogin = async () => {
 
 .dev-login-root {
   min-height: 100dvh;
-  background: #0a0e14;
+  background: #f0f4ff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -141,30 +153,38 @@ const handleDevLogin = async () => {
   overflow: hidden;
 }
 
-/* Scanlines */
-.scanlines {
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 3px,
-    rgba(0, 255, 136, 0.015) 3px,
-    rgba(0, 255, 136, 0.015) 4px
-  );
-  pointer-events: none;
-  z-index: 10;
-}
-
-/* Grid bg */
+/* Grid background */
 .grid-bg {
   position: fixed;
   inset: 0;
   background-image:
-    linear-gradient(rgba(0, 255, 136, 0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 136, 0.04) 1px, transparent 1px);
+    linear-gradient(rgba(37, 99, 235, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.06) 1px, transparent 1px);
   background-size: 40px 40px;
   pointer-events: none;
+}
+
+/* Decorative blobs */
+.blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.5;
+}
+.blob-1 {
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, #bfdbfe, #3b82f6);
+  top: -100px;
+  right: -100px;
+}
+.blob-2 {
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, #dbeafe, #1d4ed8);
+  bottom: -80px;
+  left: -80px;
 }
 
 /* Login wrapper */
@@ -172,13 +192,13 @@ const handleDevLogin = async () => {
   width: 100%;
   max-width: 520px;
   margin: 24px;
-  border: 1px solid #1e3a2f;
-  border-radius: 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
   overflow: hidden;
   box-shadow:
-    0 0 0 1px rgba(0, 255, 136, 0.08),
-    0 0 40px rgba(0, 255, 136, 0.06),
-    0 24px 80px rgba(0, 0, 0, 0.8);
+    0 0 0 1px rgba(59, 130, 246, 0.1),
+    0 4px 24px rgba(59, 130, 246, 0.12),
+    0 24px 80px rgba(37, 99, 235, 0.08);
   position: relative;
   z-index: 2;
   animation: fadeUp 0.5s ease both;
@@ -197,12 +217,23 @@ const handleDevLogin = async () => {
 
 /* Terminal header bar */
 .terminal-header {
-  background: #111820;
+  background: #1d4ed8;
   padding: 10px 16px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.header-left,
+.header-right {
+  display: flex;
+  align-items: center;
   gap: 8px;
-  border-bottom: 1px solid #1a2e24;
+  width: 60px;
+}
+
+.header-right {
+  justify-content: flex-end;
 }
 
 .dot {
@@ -221,16 +252,38 @@ const handleDevLogin = async () => {
 }
 
 .terminal-title {
-  color: #4a6a58;
+  color: rgba(255, 255, 255, 0.75);
   font-size: 11px;
-  margin-left: 8px;
   letter-spacing: 0.05em;
+  text-align: center;
+  flex: 1;
 }
 
 /* Terminal body */
 .terminal-body {
-  background: #0d1117;
-  padding: 28px 32px 24px;
+  background: #ffffff;
+  padding: 32px 36px 28px;
+}
+
+/* Logo */
+.logo-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.logo-icon {
+  font-size: 28px;
+  color: #2563eb;
+  line-height: 1;
+}
+
+.logo-text {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e3a8a;
+  letter-spacing: -0.02em;
 }
 
 .boot-text {
@@ -239,13 +292,33 @@ const handleDevLogin = async () => {
 
 .line {
   font-size: 13px;
-  color: #00ff88;
+  color: #1e40af;
   margin: 0 0 4px 0;
   line-height: 1.6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.version-badge {
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
 }
 
 .line.dim {
-  color: #2a4a38;
+  color: #93c5fd;
+  font-size: 12px;
+}
+
+.divider-line {
+  height: 1px;
+  background: linear-gradient(to right, #bfdbfe, transparent);
+  margin-top: 12px;
 }
 
 /* Form */
@@ -263,20 +336,18 @@ const handleDevLogin = async () => {
 
 .field-label {
   font-size: 12px;
-  color: #4a9a6a;
+  color: #3b82f6;
   letter-spacing: 0.08em;
   display: flex;
   align-items: center;
   gap: 8px;
+  font-weight: 500;
 }
 
 .prompt {
-  color: #00ff88;
+  color: #2563eb;
   font-weight: 700;
-}
-
-.prompt.err {
-  color: #ff4444;
+  font-size: 14px;
 }
 
 .input-row {
@@ -287,83 +358,97 @@ const handleDevLogin = async () => {
 
 .terminal-input {
   flex: 1;
-  background: #0a0e14;
-  border: 1px solid #1a3a2a;
-  border-radius: 4px;
-  color: #00ff88;
+  background: #f8faff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  color: #1e3a8a;
   font-family: 'JetBrains Mono', monospace;
   font-size: 14px;
   padding: 10px 14px;
   outline: none;
   transition:
     border-color 0.2s,
-    box-shadow 0.2s;
+    box-shadow 0.2s,
+    background 0.2s;
   width: 100%;
 }
 
 .terminal-input::placeholder {
-  color: #1e3a2a;
+  color: #bfdbfe;
 }
 
 .terminal-input:focus {
-  border-color: #00ff88;
-  box-shadow: 0 0 0 2px rgba(0, 255, 136, 0.08);
+  border-color: #3b82f6;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 .toggle-pw {
-  background: transparent;
-  border: 1px solid #1a3a2a;
-  border-radius: 4px;
-  color: #2a6a48;
+  background: #f0f7ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  color: #3b82f6;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  padding: 10px 10px;
+  padding: 10px 12px;
   cursor: pointer;
   transition:
     color 0.2s,
-    border-color 0.2s;
+    border-color 0.2s,
+    background 0.2s;
   white-space: nowrap;
 }
 
 .toggle-pw:hover {
-  color: #00ff88;
-  border-color: #00ff88;
+  color: #1d4ed8;
+  border-color: #3b82f6;
+  background: #dbeafe;
 }
 
 .error-line {
   font-size: 13px;
-  color: #ff4444;
+  color: #dc2626;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 68, 68, 0.06);
-  border: 1px solid rgba(255, 68, 68, 0.2);
-  border-radius: 4px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
   padding: 10px 14px;
 }
 
+.err-icon {
+  color: #dc2626;
+  font-weight: 700;
+}
+
 .execute-btn {
-  background: transparent;
-  border: 1px solid #00ff88;
-  border-radius: 4px;
-  color: #00ff88;
+  background: #2563eb;
+  border: none;
+  border-radius: 6px;
+  color: #ffffff;
   font-family: 'JetBrains Mono', monospace;
   font-size: 14px;
-  font-weight: 500;
-  padding: 12px 20px;
+  font-weight: 600;
+  padding: 13px 20px;
   cursor: pointer;
   letter-spacing: 0.08em;
   transition:
     background 0.2s,
     box-shadow 0.2s,
-    color 0.2s;
+    transform 0.1s;
   width: 100%;
   margin-top: 4px;
 }
 
 .execute-btn:hover:not(:disabled) {
-  background: rgba(0, 255, 136, 0.08);
-  box-shadow: 0 0 20px rgba(0, 255, 136, 0.15);
+  background: #1d4ed8;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.35);
+  transform: translateY(-1px);
+}
+
+.execute-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .execute-btn:disabled {
@@ -371,25 +456,46 @@ const handleDevLogin = async () => {
   cursor: not-allowed;
 }
 
-@keyframes blink {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0;
-  }
+/* Loading dots */
+.loading-dots {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  height: 20px;
 }
 
-.blink {
-  animation: blink 0.8s step-start infinite;
-  font-size: 18px;
-  line-height: 1;
+.loading-dots span {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+  animation: dotBounce 1.2s ease-in-out infinite;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotBounce {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .footer-note {
   font-size: 10px;
-  color: #1e3a2a;
+  color: #bfdbfe;
   text-align: center;
   margin: 28px 0 0;
   letter-spacing: 0.05em;

@@ -18,7 +18,6 @@ const activeUsers = ref([])
 const fetchStats = async () => {
   loading.value = true
   try {
-    // 1. All profiles
     const { data: profiles, error } = await supabase
       .from('profiles')
       .select('role, created_at, full_name, last_seen_at')
@@ -29,12 +28,10 @@ const fetchStats = async () => {
       totalCustomers.value = profiles.filter((p) => p.role?.toLowerCase() === 'customer').length
       totalOwners.value = profiles.filter((p) => p.role?.toLowerCase() === 'owner').length
 
-      // Recent 5 users by registration
       recentUsers.value = [...profiles]
         .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
         .slice(0, 5)
 
-      // Active users — last_seen_at within last 7 days
       const sevenDaysAgo = new Date()
       sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
@@ -42,7 +39,6 @@ const fetchStats = async () => {
         .filter((p) => p.last_seen_at && new Date(p.last_seen_at) >= sevenDaysAgo)
         .sort((a, b) => new Date(b.last_seen_at) - new Date(a.last_seen_at))
 
-      // New registrations — last 14 days
       const now = new Date()
       const days = Array.from({ length: 14 }, (_, i) => {
         const d = new Date(now)
@@ -104,12 +100,16 @@ onMounted(fetchStats)
 
 <template>
   <div class="dev-dash-root">
-    <div class="scanlines" />
+    <!-- Subtle grid background -->
     <div class="grid-bg" />
+    <!-- Decorative blobs -->
+    <div class="blob blob-1" />
+    <div class="blob blob-2" />
 
     <!-- Top bar -->
     <header class="topbar">
       <div class="topbar-left">
+        <span class="logo-icon">⬡</span>
         <span class="topbar-label">PlayMatch</span>
         <span class="topbar-sep">/</span>
         <span class="topbar-page">devportal</span>
@@ -124,7 +124,7 @@ onMounted(fetchStats)
     <main class="dash-main">
       <!-- Loading -->
       <div v-if="loading" class="loading-state">
-        <span class="blink-cursor">▌</span>
+        <div class="loading-dots"><span /><span /><span /></div>
         <span>Fetching system data…</span>
       </div>
 
@@ -133,24 +133,24 @@ onMounted(fetchStats)
         <div class="stat-grid">
           <div class="stat-card">
             <p class="stat-label">Total Customers</p>
-            <p class="stat-value">{{ totalCustomers.toLocaleString() }}</p>
+            <p class="stat-value blue">{{ totalCustomers.toLocaleString() }}</p>
             <p class="stat-sub">role: customer</p>
           </div>
           <div class="stat-card">
             <p class="stat-label">Total Owners</p>
-            <p class="stat-value accent-yellow">{{ totalOwners.toLocaleString() }}</p>
+            <p class="stat-value indigo">{{ totalOwners.toLocaleString() }}</p>
             <p class="stat-sub">role: owner</p>
           </div>
           <div class="stat-card">
             <p class="stat-label">Total Users</p>
-            <p class="stat-value accent-cyan">
+            <p class="stat-value sky">
               {{ (totalCustomers + totalOwners).toLocaleString() }}
             </p>
             <p class="stat-sub">all roles</p>
           </div>
           <div class="stat-card">
             <p class="stat-label">Active (7 days)</p>
-            <p class="stat-value accent-green">{{ activeUsers.length.toLocaleString() }}</p>
+            <p class="stat-value teal">{{ activeUsers.length.toLocaleString() }}</p>
             <p class="stat-sub">logged in recently</p>
           </div>
         </div>
@@ -219,6 +219,7 @@ onMounted(fetchStats)
               class="bar-chart"
               preserveAspectRatio="xMidYMid meet"
             >
+              <!-- Grid lines -->
               <line
                 v-for="n in 4"
                 :key="n"
@@ -226,7 +227,7 @@ onMounted(fetchStats)
                 :y1="(chartHeight / 4) * n"
                 x2="640"
                 :y2="(chartHeight / 4) * n"
-                stroke="rgba(0,255,136,0.07)"
+                stroke="rgba(37, 99, 235, 0.08)"
                 stroke-width="1"
               />
               <g v-for="(day, i) in registrationsByDay" :key="i">
@@ -235,9 +236,9 @@ onMounted(fetchStats)
                   :y="chartHeight - (day.count / maxCount) * chartHeight"
                   :width="barWidth"
                   :height="(day.count / maxCount) * chartHeight || 2"
-                  rx="2"
-                  :fill="day.count > 0 ? '#00ff88' : '#1a3a2a'"
-                  opacity="0.85"
+                  rx="3"
+                  :fill="day.count > 0 ? '#2563eb' : '#dbeafe'"
+                  opacity="0.9"
                 />
                 <text
                   v-if="day.count > 0"
@@ -245,8 +246,9 @@ onMounted(fetchStats)
                   :y="chartHeight - (day.count / maxCount) * chartHeight - 5"
                   text-anchor="middle"
                   font-size="9"
-                  fill="#00ff88"
+                  fill="#1d4ed8"
                   font-family="JetBrains Mono, monospace"
+                  font-weight="600"
                 >
                   {{ day.count }}
                 </text>
@@ -256,7 +258,7 @@ onMounted(fetchStats)
                   :y="chartHeight + 16"
                   text-anchor="middle"
                   font-size="8"
-                  fill="#2a5a40"
+                  fill="#93c5fd"
                   font-family="JetBrains Mono, monospace"
                 >
                   {{ day.date }}
@@ -329,47 +331,60 @@ onMounted(fetchStats)
 
 .dev-dash-root {
   min-height: 100dvh;
-  background: #0a0e14;
+  background: #f0f6ff;
   font-family: 'JetBrains Mono', monospace;
-  color: #00ff88;
+  color: #1e3a8a;
   position: relative;
+  overflow-x: hidden;
 }
 
-.scanlines {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 100;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 3px,
-    rgba(0, 255, 136, 0.012) 3px,
-    rgba(0, 255, 136, 0.012) 4px
-  );
-}
-
+/* Grid background */
 .grid-bg {
   position: fixed;
   inset: 0;
   pointer-events: none;
   background-image:
-    linear-gradient(rgba(0, 255, 136, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(0, 255, 136, 0.03) 1px, transparent 1px);
+    linear-gradient(rgba(37, 99, 235, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37, 99, 235, 0.05) 1px, transparent 1px);
   background-size: 40px 40px;
 }
 
+/* Decorative blobs */
+.blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(90px);
+  pointer-events: none;
+  opacity: 0.4;
+}
+.blob-1 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, #bfdbfe, #3b82f6);
+  top: -150px;
+  right: -150px;
+}
+.blob-2 {
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, #dbeafe, #1d4ed8);
+  bottom: -100px;
+  left: -100px;
+}
+
+/* Top bar */
 .topbar {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(10, 14, 20, 0.95);
-  border-bottom: 1px solid #0e2a1e;
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid #bfdbfe;
   padding: 12px 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 1px 12px rgba(37, 99, 235, 0.07);
 }
 
 .topbar-left {
@@ -378,15 +393,21 @@ onMounted(fetchStats)
   gap: 8px;
   font-size: 13px;
 }
+
+.logo-icon {
+  font-size: 18px;
+  color: #2563eb;
+}
+
 .topbar-label {
-  color: #00ff88;
+  color: #1d4ed8;
   font-weight: 700;
 }
 .topbar-sep {
-  color: #1e3a2a;
+  color: #bfdbfe;
 }
 .topbar-page {
-  color: #2a6a48;
+  color: #60a5fa;
 }
 .topbar-right {
   display: flex;
@@ -398,7 +419,7 @@ onMounted(fetchStats)
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #00ff88;
+  background: #2563eb;
   animation: pulse 2s ease infinite;
 }
 
@@ -406,24 +427,25 @@ onMounted(fetchStats)
   0%,
   100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 rgba(0, 255, 136, 0.4);
+    box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4);
   }
   50% {
     opacity: 0.7;
-    box-shadow: 0 0 0 5px rgba(0, 255, 136, 0);
+    box-shadow: 0 0 0 5px rgba(37, 99, 235, 0);
   }
 }
 
 .live-text {
   font-size: 11px;
-  color: #00ff88;
+  color: #2563eb;
   letter-spacing: 0.1em;
+  font-weight: 600;
 }
 
 .logout-btn {
   background: transparent;
-  border: 1px solid #1a3a2a;
-  color: #2a6a48;
+  border: 1px solid #bfdbfe;
+  color: #3b82f6;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   padding: 5px 12px;
@@ -432,13 +454,16 @@ onMounted(fetchStats)
   letter-spacing: 0.05em;
   transition:
     color 0.2s,
-    border-color 0.2s;
+    border-color 0.2s,
+    background 0.2s;
 }
 .logout-btn:hover {
-  color: #ff4444;
-  border-color: #ff4444;
+  color: #dc2626;
+  border-color: #fca5a5;
+  background: #fef2f2;
 }
 
+/* Main content */
 .dash-main {
   max-width: 900px;
   margin: 0 auto;
@@ -447,29 +472,51 @@ onMounted(fetchStats)
   z-index: 1;
 }
 
+/* Loading */
 .loading-state {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   padding: 80px 0;
   justify-content: center;
-  font-size: 14px;
-  color: #2a6a48;
+  font-size: 13px;
+  color: #60a5fa;
 }
 
-@keyframes blink {
+.loading-dots {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+}
+.loading-dots span {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2563eb;
+  animation: dotBounce 1.2s ease-in-out infinite;
+}
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotBounce {
   0%,
+  80%,
   100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1);
     opacity: 1;
   }
-  50% {
-    opacity: 0;
-  }
-}
-.blink-cursor {
-  animation: blink 0.8s step-start infinite;
 }
 
+/* Stat grid */
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -490,22 +537,24 @@ onMounted(fetchStats)
 }
 
 .stat-card {
-  background: #0d1117;
-  border: 1px solid #0e2a1e;
-  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
   padding: 20px;
   transition:
     border-color 0.2s,
-    box-shadow 0.2s;
+    box-shadow 0.2s,
+    transform 0.2s;
 }
 .stat-card:hover {
-  border-color: #00ff8855;
-  box-shadow: 0 0 20px rgba(0, 255, 136, 0.06);
+  border-color: #3b82f6;
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
+  transform: translateY(-2px);
 }
 
 .stat-label {
   font-size: 10px;
-  color: #2a5a40;
+  color: #509df6;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-bottom: 10px;
@@ -513,34 +562,36 @@ onMounted(fetchStats)
 .stat-value {
   font-size: 36px;
   font-weight: 700;
-  color: #00ff88;
   line-height: 1;
   margin-bottom: 6px;
 }
-.stat-value.accent-yellow {
-  color: #ffd700;
+.stat-value.blue {
+  color: #2563eb;
 }
-.stat-value.accent-cyan {
-  color: #00cfff;
+.stat-value.indigo {
+  color: #4f46e5;
 }
-.stat-value.accent-pink {
-  color: #ff6eb4;
+.stat-value.sky {
+  color: #0284c7;
 }
-.stat-value.accent-green {
-  color: #00ff88;
-}
-.stat-sub {
-  font-size: 10px;
-  color: #1e4a30;
+.stat-value.teal {
+  color: #0d9488;
 }
 
+.stat-sub {
+  font-size: 10px;
+  color: #72adf5;
+}
+
+/* Panel */
 .panel {
-  background: #0d1117;
-  border: 1px solid #0e2a1e;
-  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
   margin-bottom: 20px;
   overflow: hidden;
   animation: fadeUp 0.5s ease both;
+  box-shadow: 0 2px 12px rgba(37, 99, 235, 0.05);
 }
 
 .panel-header {
@@ -548,7 +599,8 @@ onMounted(fetchStats)
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
-  border-bottom: 1px solid #0e2a1e;
+  border-bottom: 1px solid #dbeafe;
+  background: #f8faff;
 }
 
 .panel-header-left {
@@ -561,29 +613,33 @@ onMounted(fetchStats)
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #00ff88;
+  background: #2563eb;
   animation: pulse 2s ease infinite;
   flex-shrink: 0;
 }
 
 .panel-title {
   font-size: 12px;
-  color: #4a9a6a;
+  color: #1e40af;
   letter-spacing: 0.06em;
+  font-weight: 500;
 }
+
 .panel-badge {
   font-size: 10px;
-  color: #1e4a30;
-  background: #0a1a10;
-  border: 1px solid #0e2a1e;
+  color: #3b82f6;
+  background: #dbeafe;
+  border: 1px solid #bfdbfe;
   border-radius: 999px;
   padding: 2px 10px;
   letter-spacing: 0.06em;
 }
 
+/* Chart */
 .chart-wrap {
   padding: 20px;
   overflow-x: auto;
+  background: #ffffff;
 }
 .bar-chart {
   width: 100%;
@@ -591,6 +647,7 @@ onMounted(fetchStats)
   display: block;
 }
 
+/* Table */
 .table-wrap {
   overflow-x: auto;
 }
@@ -603,78 +660,84 @@ onMounted(fetchStats)
 .dev-table th {
   text-align: left;
   padding: 10px 20px;
-  color: #2a5a40;
-  font-weight: 400;
+  color: #2678d5;
+  font-weight: 500;
   letter-spacing: 0.08em;
   font-size: 10px;
   text-transform: uppercase;
-  border-bottom: 1px solid #0e2a1e;
+  border-bottom: 1px solid #dbeafe;
+  background: #f8faff;
 }
 .dev-table td {
   padding: 12px 20px;
-  color: #5aaa78;
-  border-bottom: 1px solid #0a1a10;
+  color: #334155;
+  border-bottom: 1px solid #f0f6ff;
 }
 .dev-table tr:last-child td {
   border-bottom: none;
 }
 .dev-table tr:hover td {
-  background: rgba(0, 255, 136, 0.02);
+  background: #f8faff;
 }
 
 .dim {
-  color: #2a5a40 !important;
+  color: #94a3b8 !important;
 }
 
 .empty-row {
   text-align: center;
-  color: #1e3a2a !important;
+  color: #93c5fd !important;
   padding: 28px !important;
 }
 
+/* Role badges */
 .role-badge {
   font-size: 10px;
   padding: 3px 10px;
   border-radius: 999px;
   letter-spacing: 0.06em;
+  font-weight: 500;
 }
 .role-badge.customer {
-  background: rgba(0, 207, 255, 0.1);
-  color: #00cfff;
-  border: 1px solid rgba(0, 207, 255, 0.2);
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
 }
 .role-badge.owner {
-  background: rgba(255, 215, 0, 0.1);
-  color: #ffd700;
-  border: 1px solid rgba(255, 215, 0, 0.2);
+  background: #ede9fe;
+  color: #5b21b6;
+  border: 1px solid #c4b5fd;
 }
 .role-badge.developer {
-  background: rgba(255, 110, 180, 0.1);
-  color: #ff6eb4;
-  border: 1px solid rgba(255, 110, 180, 0.2);
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
 }
 
+/* Status badges */
 .status-badge {
   font-size: 10px;
   padding: 3px 10px;
   border-radius: 999px;
   letter-spacing: 0.06em;
+  font-weight: 500;
 }
 .status-badge.online {
-  background: rgba(0, 255, 136, 0.1);
-  color: #00ff88;
-  border: 1px solid rgba(0, 255, 136, 0.25);
+  background: #dbeafe;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
 }
 .status-badge.recent {
-  background: rgba(255, 215, 0, 0.08);
-  color: #ffd700;
-  border: 1px solid rgba(255, 215, 0, 0.2);
+  background: #fef9c3;
+  color: #a16207;
+  border: 1px solid #fde68a;
 }
 
+/* Footer */
 .dash-footer {
   text-align: center;
   font-size: 10px;
-  color: #1a3a28;
+  color: #bfdbfe;
   letter-spacing: 0.06em;
   margin-top: 40px;
 }

@@ -571,7 +571,13 @@
                     style="cursor: pointer"
                   ></v-img>
                   <div class="text-center mt-2">
-                    <v-btn class="text-none rounded-xl" small text color="blue" @click="openPaymentProofZoom">
+                    <v-btn
+                      class="text-none rounded-xl"
+                      small
+                      text
+                      color="blue"
+                      @click="openPaymentProofZoom"
+                    >
                       <v-icon small left>mdi-magnify</v-icon>
                       View Full Size
                     </v-btn>
