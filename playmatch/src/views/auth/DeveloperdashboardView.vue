@@ -13,6 +13,9 @@ const totalRegistered = ref(0)
 const registrationsByDay = ref([])
 const recentUsers = ref([])
 const activeUsers = ref([])
+const showUsersDialog = ref(false)
+const dialogTitle = ref('')
+const dialogUsers = ref([])
 
 // --- Fetch Data ---
 const fetchStats = async () => {
@@ -66,6 +69,33 @@ const fetchStats = async () => {
     console.error('Stats fetch error:', err)
   } finally {
     loading.value = false
+  }
+}
+
+const viewUsers = (role) => {
+  dialogTitle.value = role === 'customer' ? 'All Customers' : 'All Owners'
+  dialogUsers.value = []
+
+  if (role === 'owner') {
+    supabase
+      .from('profiles')
+      .select('full_name, role, created_at, last_seen_at, id, facilities(facility_name)')
+      .ilike('role', role)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        dialogUsers.value = data || []
+        showUsersDialog.value = true
+      })
+  } else {
+    supabase
+      .from('profiles')
+      .select('full_name, role, created_at, last_seen_at')
+      .ilike('role', role)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        dialogUsers.value = data || []
+        showUsersDialog.value = true
+      })
   }
 }
 
@@ -135,11 +165,13 @@ onMounted(fetchStats)
             <p class="stat-label">Total Customers</p>
             <p class="stat-value blue">{{ totalCustomers.toLocaleString() }}</p>
             <p class="stat-sub">role: customer</p>
+            <button class="view-all-btn" @click="viewUsers('customer')">view all →</button>
           </div>
           <div class="stat-card">
             <p class="stat-label">Total Owners</p>
             <p class="stat-value indigo">{{ totalOwners.toLocaleString() }}</p>
             <p class="stat-sub">role: owner</p>
+            <button class="view-all-btn" @click="viewUsers('owner')">view all →</button>
           </div>
           <div class="stat-card">
             <p class="stat-label">Total Users</p>
@@ -152,6 +184,67 @@ onMounted(fetchStats)
             <p class="stat-label">Active (7 days)</p>
             <p class="stat-value teal">{{ activeUsers.length.toLocaleString() }}</p>
             <p class="stat-sub">logged in recently</p>
+          </div>
+        </div>
+
+        <!-- Users Dialog -->
+        <div v-if="showUsersDialog" class="dialog-overlay" @click.self="showUsersDialog = false">
+          <div class="dialog-box">
+            <div class="dialog-header">
+              <span class="panel-title" style="font-size: 13px">{{ dialogTitle }}</span>
+              <div style="display: flex; align-items: center; gap: 12px">
+                <span class="panel-badge">{{ dialogUsers.length }} users</span>
+                <button class="dialog-close" @click="showUsersDialog = false">✕</button>
+              </div>
+            </div>
+
+            <div class="dialog-body">
+              <table class="dev-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Last Seen</th>
+                    <th>Joined</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="dialogUsers.length === 0">
+                    <td colspan="5" class="empty-row">No users found.</td>
+                  </tr>
+                  <tr v-for="(u, i) in dialogUsers" :key="i">
+                    <td class="dim">{{ i + 1 }}</td>
+                    <td>
+                      {{ u.full_name ?? '—' }}
+                      <span
+                        v-if="u.facilities && u.facilities.length > 0"
+                        style="display: block; font-size: 10px; color: #60a5fa; margin-top: 2px;"
+                      >
+                        {{ u.facilities.map(f => f.facility_name).join(', ') }}
+                      </span>
+                    </td>
+                    <td>
+                      <span class="role-badge" :class="u.role?.toLowerCase()">
+                        {{ u.role ?? '—' }}
+                      </span>
+                    </td>
+                    <td class="dim">{{ formatLastSeen(u.last_seen_at) }}</td>
+                    <td class="dim">
+                      {{
+                        u.created_at
+                          ? new Date(u.created_at).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          : '—'
+                      }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -740,5 +833,82 @@ onMounted(fetchStats)
   color: #bfdbfe;
   letter-spacing: 0.06em;
   margin-top: 40px;
+}
+
+.view-all-btn {
+  margin-top: 10px;
+  background: transparent;
+  border: none;
+  color: #3b82f6;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+.view-all-btn:hover {
+  color: #1d4ed8;
+}
+
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 58, 138, 0.25);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.dialog-box {
+  background: #ffffff;
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 860px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 40px rgba(37, 99, 235, 0.15);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #dbeafe;
+  background: #f8faff;
+  flex-shrink: 0;
+}
+
+.dialog-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.dialog-close {
+  background: transparent;
+  border: 1px solid #bfdbfe;
+  color: #3b82f6;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  width: 26px;
+  height: 26px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.dialog-close:hover {
+  color: #dc2626;
+  border-color: #fca5a5;
+  background: #fef2f2;
 }
 </style>

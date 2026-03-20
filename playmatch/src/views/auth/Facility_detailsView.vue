@@ -376,15 +376,30 @@
 
             <v-btn
               block
-              color="blue"
+              color="blue darken-1"
               dark
               rounded
               class="mt-4 text-none"
-              @click="openPaymentDialog"
-              :loading="loading"
-              :disabled="!selectedStartSlot || !isDurationValid(selectedDuration)"
+              @click="addToBucket"
+              :disabled="!selectedStartSlot || !!durationError"
             >
-              Proceed to Payment
+              <v-icon left>mdi-plus-box</v-icon>
+              Reserve Slot
+            </v-btn>
+
+            <v-btn
+              v-if="cart.length > 0"
+              block
+              color="blue"
+              dark
+              rounded
+              class="mt-2 text-none"
+              @click="cartDialog = true"
+            >
+              <v-badge color="red" :content="cart.length" overlap class="mr-2">
+                <v-icon>mdi-bucket</v-icon>
+              </v-badge>
+              View Reservation(s) (₱{{ cartTotal }})
             </v-btn>
           </div>
         </v-card>
@@ -392,9 +407,11 @@
         <!-- Payment Proof Upload Dialog -->
         <v-dialog v-model="paymentDialog" max-width="600" persistent>
           <v-card rounded="xl" elevation="4">
-            <v-toolbar color="blue" dark flat class="px-4">
+            <v-toolbar color="blue" dark flat class="px-4" height="auto" style="min-height: 56px;">
               <v-icon left>mdi-cash-multiple</v-icon>
-              <v-toolbar-title class="font-weight-bold">Upload Proof of Payment</v-toolbar-title>
+              <v-toolbar-title class="font-weight-bold" style="white-space: normal; font-size: 18px;">
+                Upload Proof of Payment
+              </v-toolbar-title>
               <v-spacer></v-spacer>
               <v-btn icon @click="closePaymentDialog">
                 <v-icon>mdi-close</v-icon>
@@ -420,34 +437,56 @@
                 </div>
               </v-alert>
 
+
               <div class="mb-4">
-                <h4 class="text-subtitle-1 font-weight-bold mb-2">Booking Summary:</h4>
-                <div class="grey--text text-body-2">
-                  <div class="d-flex justify-space-between mb-1">
-                    <span>Facility:</span>
-                    <span class="font-weight-medium black--text">{{ facility.facility_name }}</span>
+                <h4 class="text-subtitle-1 font-weight-bold mb-3">Booking Summary:</h4>
+
+                <div
+                  v-for="(item, index) in cart"
+                  :key="item.id"
+                  class="d-flex align-center pa-3 mb-2 rounded-lg"
+                  style="background: #f5f5f5; gap: 10px;"
+                >
+                  <!-- Date Badge -->
+                  <div
+                    class="rounded-lg text-center d-flex flex-column align-center justify-center"
+                    style="background: #E3F2FD; min-width: 44px; padding: 6px 8px;"
+                  >
+                    <span style="font-size: 10px; font-weight: 600; color: #1565C0; line-height: 1; text-transform: uppercase;">
+                      {{ formatBadgeMonth(item.date) }}
+                    </span>
+                    <span style="font-size: 18px; font-weight: 600; color: #0D47A1; line-height: 1.3;">
+                      {{ formatBadgeDay(item.date) }}
+                    </span>
                   </div>
-                  <div class="d-flex justify-space-between mb-1">
-                    <span>Date:</span>
-                    <span class="font-weight-medium black--text">{{ selectedDate }}</span>
+
+                  <!-- Booking Info -->
+                  <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="font-weight-medium" style="font-size: 13px; color: #212121;">
+                      {{ item.formattedTime }}
+                    </div>
+                    <div style="font-size: 12px; color: #757575;">
+                      {{ item.duration }} {{ item.duration === 1 ? 'hour' : 'hours' }} · ₱{{ item.cost }}
+                    </div>
                   </div>
-                  <div class="d-flex justify-space-between mb-1">
-                    <span>Time:</span>
-                    <span class="font-weight-medium black--text"
-                      >{{ formattedSelectedTime }} - {{ formattedEndTime }}</span
-                    >
+
+                  <!-- Booking number badge -->
+                  <div
+                    class="rounded-lg text-center"
+                    style="background: #E3F2FD; padding: 4px 8px;"
+                  >
+                    <span style="font-size: 11px; font-weight: 600; color: #1565C0;">#{{ index + 1 }}</span>
                   </div>
-                  <div class="d-flex justify-space-between mb-1">
-                    <span>Duration:</span>
-                    <span class="font-weight-medium black--text"
-                      >{{ selectedDuration }} hour(s)</span
-                    >
+                </div>
+
+                <v-divider class="my-3"></v-divider>
+
+                <div class="d-flex justify-space-between align-center">
+                  <div>
+                    <div class="text-caption grey--text">{{ cart.length }} {{ cart.length === 1 ? 'booking' : 'bookings' }}</div>
+                    <div class="font-weight-bold" style="font-size: 18px; color: #212121;">Total Amount</div>
                   </div>
-                  <v-divider class="my-2"></v-divider>
-                  <div class="d-flex justify-space-between">
-                    <span class="font-weight-bold">Total Amount:</span>
-                    <span class="font-weight-bold blue--text text-h6">₱{{ totalBookingCost }}</span>
-                  </div>
+                  <span class="font-weight-bold blue--text text-h6">₱{{ cartTotal }}</span>
                 </div>
               </div>
 
@@ -665,6 +704,84 @@
             </v-container>
           </v-card>
         </v-dialog>
+
+        <!-- Cart Review Dialog -->
+        <v-dialog v-model="cartDialog" max-width="500" scrollable>
+          <v-card rounded="xl">
+            <v-toolbar color="blue darken-2" dark flat>
+              <v-toolbar-title class="font-weight-bold">Selected Bookings</v-toolbar-title>
+              <v-spacer></v-spacer>
+              <v-btn icon @click="cartDialog = false"><v-icon>mdi-close</v-icon></v-btn>
+            </v-toolbar>
+
+            <v-card-text class="pa-3">
+              <v-list v-if="cart.length > 0" class="pa-0">
+                <div
+                  v-for="(item, index) in cart"
+                  :key="item.id"
+                  class="d-flex align-center pa-3 mb-2 rounded-lg"
+                  style="background: #f5f5f5; gap: 10px;"
+                >
+                  <!-- Date Badge -->
+                  <div
+                    class="rounded-lg text-center d-flex flex-column align-center justify-center"
+                    style="background: #E3F2FD; min-width: 44px; padding: 6px 8px;"
+                  >
+                    <span
+                      style="font-size: 10px; font-weight: 600; color: #1565C0; line-height: 1; text-transform: uppercase;"
+                    >
+                      {{ formatBadgeMonth(item.date) }}
+                    </span>
+                    <span style="font-size: 18px; font-weight: 600; color: #0D47A1; line-height: 1.3;">
+                      {{ formatBadgeDay(item.date) }}
+                    </span>
+                  </div>
+
+                  <!-- Booking Info -->
+                  <div class="flex-grow-1" style="min-width: 0;">
+                    <div class="font-weight-medium text-truncate" style="font-size: 13px; color: #212121;">
+                      {{ item.formattedTime }}
+                    </div>
+                    <div style="font-size: 12px; color: #757575;">
+                      {{ item.duration }} {{ item.duration === 1 ? 'hour' : 'hours' }} · ₱{{ item.cost }}
+                    </div>
+                  </div>
+
+                  <!-- Delete Button -->
+                  <v-btn
+                    icon
+                    small
+                    @click="removeFromBucket(index)"
+                    style="background: #FFEBEE; border-radius: 8px; width: 32px; height: 32px;"
+                  >
+                    <v-icon small color="red darken-3">mdi-delete-outline</v-icon>
+                  </v-btn>
+                </div>
+              </v-list>
+              <div v-else class="text-center grey--text pa-6">
+                No bookings added yet.
+              </div>
+            </v-card-text>
+
+            <v-divider></v-divider>
+
+            <v-card-actions class="pa-4 d-flex justify-space-between align-center">
+              <div>
+                <div class="text-caption grey--text">{{ cart.length }} {{ cart.length === 1 ? 'booking' : 'bookings' }}</div>
+                <div class="font-weight-bold" style="font-size: 18px; color: #212121;">₱{{ cartTotal }}</div>
+              </div>
+              <v-btn
+                color="blue darken-2"
+                dark
+                rounded
+                class="text-none px-5"
+                @click="cartDialog = false; openPaymentDialog()"
+              >
+                Pay all & submit
+              </v-btn>
+            </v-card-actions>
+          </v-card>
+        </v-dialog>
       </v-container>
     </v-main>
   </v-app>
@@ -724,6 +841,10 @@ export default {
     zoomDialog: false,
     zoomCarouselIndex: 0,
 
+    // Cart/Bucket Data
+    cart: [],
+    cartDialog: false,
+
     // Receipt Dialog
     receiptDialog: false,
     receiptDetails: {
@@ -742,6 +863,13 @@ export default {
       if (this.showAllReviews) return this.reviews
       return this.reviews.slice(0, 2)
     },
+
+    // Cart Computed Property
+    cartTotal() {
+      const total = this.cart.reduce((sum, item) => sum + parseFloat(item.cost), 0);
+      return total.toFixed(2);
+    },
+
     // Photos Computed Property
     allPhotos() {
       const photos = []
@@ -836,6 +964,48 @@ export default {
   methods: {
     goBack() {
       this.$router.push({ name: 'customer-dashboard' })
+    },
+
+    // --- Cart/Bucket Methods ---
+    addToBucket() {
+      if (!this.selectedStartSlot || this.durationError || !this.isDurationValid(this.selectedDuration)) {
+        alert('Please select a valid time slot and duration first.');
+        return;
+      }
+
+      const endTime = new Date(
+        new Date(this.selectedStartSlot).getTime() + this.selectedDuration * 60 * 60000
+      );
+
+      const bookingItem = {
+        id: Date.now(),
+        facility_id: this.facility.id,
+        date: this.selectedDate,
+        start_time: this.selectedStartSlot,
+        end_time: endTime.toISOString(),
+        duration: this.selectedDuration,
+        cost: this.totalBookingCost,
+        formattedTime: `${this.formattedSelectedTime} - ${this.formattedEndTime}`,
+      };
+
+      this.cart.push(bookingItem);
+
+      // Reset time selection — the slot chips will auto-update via isSlotDisabled()
+      this.selectedStartSlot = null;
+      this.selectedDuration = 1;
+      this.durationError = '';
+    },
+
+    formatBadgeMonth(dateStr) {
+      const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      return months[new Date(dateStr + 'T00:00:00').getMonth()];
+    },
+    formatBadgeDay(dateStr) {
+      return new Date(dateStr + 'T00:00:00').getDate();
+    },
+
+    removeFromBucket(index) {
+      this.cart.splice(index, 1);
     },
 
     // --- Authentication ---
@@ -1116,7 +1286,8 @@ export default {
       this.groupedSchedules = grouped
       this.availableDates = Object.keys(grouped)
     },
-    isSlotDisabled(slotStartTime) {
+    
+    /*isSlotDisabled(slotStartTime) {
       if (!this.selectedCustomSchedule) return false
 
       const slotTime = new Date(slotStartTime)
@@ -1133,7 +1304,33 @@ export default {
       customEnd.setHours(customEndHour, customEndMinute, 0, 0)
 
       return slotTime >= customStart && slotTime < customEnd
+    },*/
+
+    isSlotDisabled(slotStartTime) {
+      // Check against cart items for this date
+      const isInCart = this.cart.some(item => {
+        if (item.date !== this.selectedDate) return false;
+        const cartStart = new Date(item.start_time).getTime();
+        const cartEnd = new Date(item.end_time).getTime();
+        const slotTime = new Date(slotStartTime).getTime();
+        // Disable the slot if it falls within any cart item's time range
+        return slotTime >= cartStart && slotTime < cartEnd;
+      });
+
+      if (isInCart) return true;
+
+      // Check custom schedule restriction (your original logic)
+      if (!this.selectedCustomSchedule) return false;
+      const slotTime = new Date(slotStartTime);
+      const [customStartHour, customStartMinute] = this.selectedCustomSchedule.start_time.split(':').map(Number);
+      const [customEndHour, customEndMinute] = this.selectedCustomSchedule.end_time.split(':').map(Number);
+      const customStart = new Date(slotTime);
+      customStart.setHours(customStartHour, customStartMinute, 0, 0);
+      const customEnd = new Date(slotTime);
+      customEnd.setHours(customEndHour, customEndMinute, 0, 0);
+      return slotTime >= customStart && slotTime < customEnd;
     },
+
     allowedDates(date) {
       const today = new Date()
       today.setHours(0, 0, 0, 0)
@@ -1200,7 +1397,8 @@ export default {
         this.durationError = `A ${numDuration}-hour booking starting at ${this.formattedSelectedTime} is not fully available. Please choose a shorter duration.`
       }
     },
-    _checkSlotAvailability(duration) {
+
+    /*_checkSlotAvailability(duration) {
       const slotDurationMs = this.SLOT_DURATION_MINUTES * 60000
       const selectedStart = new Date(this.selectedStartSlot)
       const currentSlots = this.groupedSchedules[this.selectedDate] || []
@@ -1216,6 +1414,34 @@ export default {
         }
       }
       return true
+    },*/
+
+    _checkSlotAvailability(duration) {
+      const slotDurationMs = this.SLOT_DURATION_MINUTES * 60000;
+      const selectedStart = new Date(this.selectedStartSlot);
+      const currentSlots = this.groupedSchedules[this.selectedDate] || [];
+
+      // Build set of available times from schedule
+      const availableStartTimes = new Set(currentSlots.map(slot => slot.start_time));
+
+      // Remove times already occupied by cart items
+      this.cart.forEach(item => {
+        if (item.date !== this.selectedDate) return;
+        const cartStart = new Date(item.start_time).getTime();
+        const cartEnd = new Date(item.end_time).getTime();
+        for (const timeISO of availableStartTimes) {
+          const t = new Date(timeISO).getTime();
+          if (t >= cartStart && t < cartEnd) {
+            availableStartTimes.delete(timeISO);
+          }
+        }
+      });
+
+      for (let i = 0; i < duration; i++) {
+        const requiredTime = new Date(selectedStart.getTime() + i * slotDurationMs);
+        if (!availableStartTimes.has(requiredTime.toISOString())) return false;
+      }
+      return true;
     },
 
     // --- Payment Proof Methods ---
@@ -1310,7 +1536,8 @@ export default {
         this.uploadingPaymentProof = false
       }
     },
-    async submitBookingWithPayment() {
+
+    /*async submitBookingWithPayment() {
       if (!this.paymentProofFile) {
         this.paymentProofError = 'Please upload proof of payment before submitting'
         return
@@ -1395,7 +1622,88 @@ export default {
       } finally {
         this.loading = false
       }
+    },*/
+
+    // --- Updated Multi-Booking Submission with Single Payment Proof ---
+    async submitBookingWithPayment() {
+      if (!this.paymentProofFile) {
+        this.paymentProofError = 'Please upload proof of payment before submitting'
+        return
+      }
+
+      this.loading = true
+
+      try {
+        const user = (await supabase.auth.getUser()).data.user
+        if (!user) {
+          alert('Please log in to make a booking.')
+          this.loading = false
+          return
+        }
+
+        // 1. Upload the payment proof FIRST (since it's one receipt for all)
+        // We use 'bulk' as a temporary label for the ID during upload
+        const paymentProofUrl = await this.uploadPaymentProof(user.id, 'bulk-' + Date.now())
+
+        if (!paymentProofUrl) {
+          throw new Error('Payment proof upload failed.')
+        }
+
+        // 2. Loop through the CART and insert each booking
+        // This replaces the single ".insert()" you had before
+        for (const item of this.cart) {
+          const { error: bookingError } = await supabase
+            .from('bookings')
+            .insert([
+              {
+                facility_id: this.facility.id,
+                booking_date: item.date,
+                start_time: item.start_time,
+                end_time: item.end_time,
+                duration_hours: item.duration,
+                total_cost: item.cost,
+                status: 'pending',
+                user_id: user.id,
+                payment_proof_url: paymentProofUrl // Attach the same URL to all
+              },
+            ])
+
+          if (bookingError) throw bookingError
+        }
+
+        // 3. Close payment and cart dialogs
+        this.paymentDialog = false
+        this.cartDialog = false
+
+        // 4. Populate and Show Receipt Dialog 
+        // We use cartTotal here so the receipt shows the full amount paid
+        this.receiptDetails = {
+          date: 'Multiple Dates', 
+          startTime: 'Multiple Slots',
+          endTime: '',
+          duration: this.cart.reduce((sum, i) => sum + i.duration, 0),
+          cost: this.cartTotal, 
+          paymentProofUrl: paymentProofUrl,
+        }
+        this.receiptDialog = true
+
+        // 5. Reset state and refresh
+        this.cart = [] // Clear the bucket
+        this.selectedStartSlot = null
+        this.selectedDuration = 1
+        this.paymentProofFile = null
+        this.paymentProofPreview = null
+        
+        await this.fetchSchedulesAndBookings()
+        
+      } catch (err) {
+        console.error('Booking error:', err.message)
+        alert('Failed to book facility. Please try again.')
+      } finally {
+        this.loading = false
+      }
     },
+
     openPaymentProofZoom() {
       this.paymentProofZoomDialog = true
     },
