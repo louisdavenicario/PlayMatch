@@ -92,7 +92,7 @@ const handleDevLogin = async () => {
               v-model="email"
               type="email"
               class="terminal-input"
-              placeholder="dev@playmatch.io"
+              placeholder="username"
               autocomplete="username"
               @keyup.enter="handleDevLogin"
             />
