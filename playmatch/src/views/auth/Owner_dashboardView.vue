@@ -1522,6 +1522,7 @@
 import { ref, onMounted, reactive, watch, computed } from 'vue'
 import { supabase } from '@/supabaseClient'
 import { useRouter } from 'vue-router'
+import emailjs from '@emailjs/browser'
 
 const loading = ref(false)
 const customSchedules = ref([])
@@ -2651,7 +2652,7 @@ const fetchAllOwnerData = async () => {
   }
 }
 
-const handleBookingStatus = async (bookingId, status) => {
+/*const handleBookingStatus = async (bookingId, status) => {
   try {
     const { data, error } = await supabase
       .from('bookings')
@@ -2672,6 +2673,104 @@ const handleBookingStatus = async (bookingId, status) => {
       alertMessage('Booking accepted successfully!', 'success')
     } else if (status === 'rejected') {
       const rejected = pendingBookings.value.find((b) => b.id === bookingId)
+      pendingBookings.value = pendingBookings.value.filter((b) => b.id !== bookingId)
+      acceptedBookings.value = acceptedBookings.value.filter((b) => b.id !== bookingId)
+
+      const { error: deleteError } = await supabase.from('bookings').delete().eq('id', bookingId)
+
+      if (deleteError) {
+        console.error('Error deleting rejected booking:', deleteError.message)
+        alertMessage('Failed to remove rejected booking from availability.', 'error')
+      } else {
+        alertMessage('Booking rejected and time slot released!', 'success')
+      }
+
+      dashboardData.pendingRequests = pendingBookings.value.length
+
+      await fetchAllOwnerData()
+      await fetchAllBookings()
+
+      if (facilityDetails.value && selectedDay.value && typeof fetchAvailableSlots === 'function') {
+        await fetchAvailableSlots(facilityDetails.value.id, selectedDay.value)
+      }
+    }
+  } catch (err) {
+    console.error('Unexpected error:', err.message)
+    alertMessage('An unexpected error occurred while updating booking.', 'error')
+  }
+}*/
+
+const handleBookingStatus = async (bookingId, status) => {
+  try {
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ status })
+      .eq('id', bookingId)
+      .select()
+
+    if (error) {
+      console.error('Error updating booking status:', error.message)
+      alertMessage('Failed to update booking status.', 'error')
+      return
+    }
+
+    // ✅ Send email notification via EmailJS
+    if (status === 'accepted' || status === 'rejected') {
+      const updatedBooking = data[0]
+
+      // Get customer full_name and email from profiles
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', updatedBooking.user_id)
+        .single()
+
+      const customerEmail = profileData?.email
+
+      if (customerEmail) {
+        try {
+          await emailjs.send(
+            'playmatch-gmail',
+            'template_nt8bder',
+            {
+              to_email: customerEmail,
+              customer_name: profileData?.full_name ?? 'Customer',
+              facility_name: facilityDetails.value?.facility_name ?? 'N/A',
+              booking_date: updatedBooking.booking_date,
+              start_time: new Date(updatedBooking.start_time).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+              }),
+              end_time: new Date(updatedBooking.end_time).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+              }),
+              duration: updatedBooking.duration_hours ?? 'N/A',
+              status: status,
+              message: status === 'accepted'
+                ? 'Please be on time. Thank you for booking with PlayMatch!'
+                : 'You may try booking another available slot.',
+              email: 'team.playmatch@gmail.com',
+              name: 'PlayMatch',
+            },
+            'yZZ7qBnK679PREuvG'
+          )
+          console.log('Email notification sent!')
+        } catch (emailErr) {
+          console.error('Email notification failed:', emailErr)
+        }
+      }
+    }
+    // ✅ End email notification
+
+    if (status === 'accepted') {
+      const updatedBooking = data[0]
+      pendingBookings.value = pendingBookings.value.filter((b) => b.id !== bookingId)
+      acceptedBookings.value.push(updatedBooking)
+      alertMessage('Booking accepted successfully!', 'success')
+    } else if (status === 'rejected') {
       pendingBookings.value = pendingBookings.value.filter((b) => b.id !== bookingId)
       acceptedBookings.value = acceptedBookings.value.filter((b) => b.id !== bookingId)
 
