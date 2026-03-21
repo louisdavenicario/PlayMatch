@@ -564,22 +564,58 @@
                 <v-chip color="orange" dark small>Pending Approval</v-chip>
               </div>
 
-              <div class="d-flex justify-space-between mb-2">
-                <span class="grey--text">Date:</span>
-                <span class="font-weight-medium">{{ receiptDetails.date }}</span>
-              </div>
+              <!-- Single booking -->
+              <template v-if="receiptDetails.isSingle">
+                <div class="d-flex justify-space-between mb-2">
+                  <span class="grey--text">Date:</span>
+                  <span class="font-weight-medium">{{ receiptDetails.date }}</span>
+                </div>
+                <div class="d-flex justify-space-between mb-2">
+                  <span class="grey--text">Time:</span>
+                  <span class="font-weight-medium">
+                    {{ receiptDetails.startTime }} - {{ receiptDetails.endTime }}
+                  </span>
+                </div>
+                <div class="d-flex justify-space-between mb-2">
+                  <span class="grey--text">Duration:</span>
+                  <span class="font-weight-medium">{{ receiptDetails.duration }} hour(s)</span>
+                </div>
+              </template>
 
-              <div class="d-flex justify-space-between mb-2">
-                <span class="grey--text">Time:</span>
-                <span class="font-weight-medium">
-                  {{ receiptDetails.startTime }} - {{ receiptDetails.endTime }}
-                </span>
-              </div>
-
-              <div class="d-flex justify-space-between mb-2">
-                <span class="grey--text">Duration:</span>
-                <span class="font-weight-medium">{{ receiptDetails.duration }} hour(s)</span>
-              </div>
+              <!-- Bulk booking -->
+              <template v-else>
+                <div class="mb-2">
+                  <span class="grey--text font-weight-medium">Booked Slots:</span>
+                  <div
+                    v-for="(item, index) in receiptDetails.items"
+                    :key="index"
+                    class="d-flex align-center pa-2 mt-2 rounded-lg"
+                    style="background: #f5f5f5; gap: 10px;"
+                  >
+                    <div
+                      class="rounded-lg text-center d-flex flex-column align-center justify-center"
+                      style="background: #E3F2FD; min-width: 44px; padding: 6px 8px;"
+                    >
+                      <span style="font-size: 10px; font-weight: 600; color: #1565C0; line-height: 1; text-transform: uppercase;">
+                        {{ formatBadgeMonth(item.date) }}
+                      </span>
+                      <span style="font-size: 18px; font-weight: 600; color: #0D47A1; line-height: 1.3;">
+                        {{ formatBadgeDay(item.date) }}
+                      </span>
+                    </div>
+                    <div class="flex-grow-1">
+                      <div class="font-weight-medium" style="font-size: 13px;">{{ item.formattedTime }}</div>
+                      <div style="font-size: 12px; color: #757575;">
+                        {{ item.duration }} {{ item.duration === 1 ? 'hour' : 'hours' }} · ₱{{ item.cost }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="d-flex justify-space-between mb-2 mt-2">
+                  <span class="grey--text">Total Duration:</span>
+                  <span class="font-weight-medium">{{ receiptDetails.duration }} hour(s)</span>
+                </div>
+              </template>
 
               <v-divider class="my-2" style="border-style: dashed"></v-divider>
 
@@ -848,12 +884,14 @@ export default {
     // Receipt Dialog
     receiptDialog: false,
     receiptDetails: {
+      isSingle: true,
       date: '',
       startTime: '',
       endTime: '',
       duration: 0,
       cost: '0.00',
       paymentProofUrl: '',
+      items: [],
     },
   }),
 
@@ -1675,25 +1713,30 @@ export default {
         this.paymentDialog = false
         this.cartDialog = false
 
-        // 4. Populate and Show Receipt Dialog 
-        // We use cartTotal here so the receipt shows the full amount paid
+        // 4. Save snapshot BEFORE clearing cart
+        const cartSnapshot = [...this.cart]
+        const isSingle = cartSnapshot.length === 1
+        const savedTotal = this.cartTotal // save total before cart is cleared
+
         this.receiptDetails = {
-          date: 'Multiple Dates', 
-          startTime: 'Multiple Slots',
-          endTime: '',
-          duration: this.cart.reduce((sum, i) => sum + i.duration, 0),
-          cost: this.cartTotal, 
+          isSingle: isSingle,
+          date: isSingle ? cartSnapshot[0].date : '',
+          startTime: isSingle ? cartSnapshot[0].formattedTime.split(' - ')[0].trim() : '',
+          endTime: isSingle ? cartSnapshot[0].formattedTime.split(' - ')[1].trim() : '',
+          duration: cartSnapshot.reduce((sum, i) => sum + i.duration, 0),
+          cost: savedTotal, // use saved total
           paymentProofUrl: paymentProofUrl,
+          items: cartSnapshot,
         }
         this.receiptDialog = true
 
-        // 5. Reset state and refresh
-        this.cart = [] // Clear the bucket
+        // 5. Reset state AFTER receipt is populated
+        this.cart = []
         this.selectedStartSlot = null
         this.selectedDuration = 1
         this.paymentProofFile = null
         this.paymentProofPreview = null
-        
+
         await this.fetchSchedulesAndBookings()
         
       } catch (err) {
