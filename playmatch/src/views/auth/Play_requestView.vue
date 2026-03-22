@@ -974,6 +974,7 @@
 
 <script>
 import { supabase } from '@/supabaseClient'
+import emailjs from '@emailjs/browser'
 
 export default {
   name: 'Play_requestView',
@@ -1651,6 +1652,18 @@ export default {
 
         // --- FINAL CLIENT-SIDE VISIBILITY LOGIC (CRUCIAL FOR INVITES) ---
         // Filter the requests down to only those the current user should see:
+
+        // 👇 ADD THIS DEBUG HERE
+console.log('Current User ID:', this.currentUserId)
+console.log('All processed requests:', processedRequests.map(r => ({
+  id: r.id,
+  match_type: r.match_type,
+  invite_status: r.invite_status,
+  is_invited: r.is_invited,
+  invited_user_id: r.invite_id,
+  creator_id: r.creator_id,
+})))
+// 👆 END DEBUG
         this.playmateRequests = processedRequests.filter((r) => {
           const isCreator = r.creator_id === this.currentUserId
           const isJoined = this.userJoins.includes(r.id)
@@ -1765,7 +1778,7 @@ export default {
       }
     },
 
-    async handleJoinToggle(request) {
+    /*async handleJoinToggle(request) {
       const requestId = request.id
       const isTeamMatch = request.match_type === 'team'
       const isDirectInvite = request.match_type === 'direct_invite'
@@ -1832,7 +1845,147 @@ export default {
 
       await this.checkRequestStatus(requestId)
       await this.fetchRequestsAndJoins()
+    },*/
+
+    async handleJoinToggle(request) {
+      const requestId = request.id
+      const isTeamMatch = request.match_type === 'team'
+      const isDirectInvite = request.match_type === 'direct_invite'
+
+      if (!this.currentUserId) {
+        alert('Please log in to join or manage requests.')
+        return
+      }
+
+      if (this.isCreator(request.creator_id)) {
+        this.openManageDialog(request)
+        return
+      }
+
+      if (isDirectInvite && request.is_invited && request.invite_status === 'pending') {
+        if (request.invited_user_id !== this.currentUserId) {
+          alert('Only the invited user can join this request.')
+          return
+        }
+      }
+
+      if (this.isJoined(requestId)) {
+        const msg = isTeamMatch
+          ? 'Successfully withdrawn the opponent team from the challenge.'
+          : 'Successfully withdrawn from the request.'
+
+        await this.supabaseAction(
+          supabase
+            .from('playmate_joins')
+            .delete()
+            .eq('request_id', requestId)
+            .eq('user_id', this.currentUserId),
+          msg,
+          'Failed to withdraw from request.',
+        )
+
+        // ✅ Notify creator when someone withdraws
+        try {
+          const { data: creatorProfile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', request.creator_id)
+            .single()
+
+          const { data: withdrawerProfile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', this.currentUserId)
+            .single()
+
+          if (creatorProfile?.email) {
+            await emailjs.send(
+              'playmatch-gmail',
+              'template_8gfziro',
+              {
+                to_email: creatorProfile.email,
+                recipient_name: creatorProfile.full_name ?? 'there',
+                subject: 'Someone Withdrew from Your Playmate Request',
+                message: `${withdrawerProfile?.full_name ?? 'Someone'} has withdrawn from your ${request.sport} playmate request at ${request.location}. Your slot is now open again.`,
+                date: request.date,
+                start_time: this.formatTime(request.start_time),
+                end_time: this.formatTime(request.end_time),
+                sport: request.sport,
+                location: request.location,
+                email: 'team.playmatch@gmail.com',
+                name: 'PlayMatch',
+              },
+              'yZZ7qBnK679PREuvG'
+            )
+            console.log('Withdraw notification email sent!')
+          }
+        } catch (emailErr) {
+          console.error('Failed to send withdraw notification email:', emailErr)
+        }
+      } else {
+        const maxAllowed = isTeamMatch ? 2 : request.max_joins + 1
+
+        if (request.joins_count >= maxAllowed) {
+          alert('This play request is currently full and cannot be joined.')
+          return
+        }
+
+        const msg = isTeamMatch
+          ? 'You have successfully accepted the team challenge!'
+          : 'Successfully joined the request!'
+
+        await this.supabaseAction(
+          supabase
+            .from('playmate_joins')
+            .insert([{ request_id: requestId, user_id: this.currentUserId }]),
+          msg,
+          'Failed to join request. It may be full or closed.',
+        )
+
+        // ✅ Send email to creator when someone joins
+        try {
+          const { data: creatorProfile } = await supabase
+            .from('profiles')
+            .select('full_name, email')
+            .eq('id', request.creator_id)
+            .single()
+
+          const { data: joinerProfile } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', this.currentUserId)
+            .single()
+
+          if (creatorProfile?.email) {
+            await emailjs.send(
+              'playmatch-gmail',
+              'template_8gfziro',
+              {
+                to_email: creatorProfile.email,
+                recipient_name: creatorProfile.full_name ?? 'there',
+                subject: 'Someone Joined Your Playmate Request!',
+                message: `${joinerProfile?.full_name ?? 'Someone'} has joined your ${request.sport} playmate request! Head to PlayMatch to check it out.`,
+                date: request.date,
+                start_time: this.formatTime(request.start_time),
+                end_time: this.formatTime(request.end_time),
+                sport: request.sport,
+                location: request.location,
+                email: 'team.playmatch@gmail.com',
+                name: 'PlayMatch',
+              },
+              'yZZ7qBnK679PREuvG'
+            )
+            console.log('Join notification email sent!')
+          }
+        } catch (emailErr) {
+          console.error('Failed to send join notification email:', emailErr)
+        }
+      }
+
+      await this.checkRequestStatus(requestId)
+      await this.fetchRequestsAndJoins()
     },
+
     async editRequest() {
       if (this.$refs.editForm && !this.$refs.editForm.validate()) {
         alert('Please correct the validation errors before saving.')
@@ -1998,20 +2151,58 @@ export default {
             {
               request_id: newRequestId,
               invited_user_id: invitedUserId,
-              status: 'pending', // Initial status
+              status: 'pending',
             },
           ])
 
           if (inviteError) {
-            // If invite fails, still report the request creation but alert on the invite fail
             console.error('Failed to insert playmate_invites record:', inviteError.message)
             alert(
-              `Playmate Request created, but failed to send the direct invite: ${inviteError.message}. CRITICAL: Check your 'playmate_invites' table setup and RLS!`,
+              `Playmate Request created, but failed to send the direct invite: ${inviteError.message}.`,
             )
           } else {
             alert(
               `Direct Match Request created and sent successfully to ${this.selectedUserToMatch.full_name}! Waiting for acceptance.`,
             )
+
+            // ✅ Send email to invited user
+            try {
+              const { data: inviteeProfile } = await supabase
+                .from('profiles')
+                .select('full_name, email')
+                .eq('id', this.selectedUserToMatch.id)
+                .single()
+
+              const { data: creatorProfile } = await supabase
+                .from('profiles')
+                .select('full_name')
+                .eq('id', this.currentUserId)
+                .single()
+
+              if (inviteeProfile?.email) {
+                await emailjs.send(
+                  'playmatch-gmail',
+                  'template_8gfziro',
+                  {
+                    to_email: inviteeProfile.email,
+                    recipient_name: inviteeProfile.full_name ?? 'there',
+                    subject: 'You Have a New Playmate Invite on PlayMatch!',
+                    message: `${creatorProfile?.full_name ?? 'Someone'} has sent you a Direct Match Invite for ${finalSport} at ${finalLocation}! Open PlayMatch to accept or reject.`,
+                    date: this.newRequest.date,
+                    start_time: this.formatTime(this.newRequest.start_time),
+                    end_time: this.formatTime(this.newRequest.end_time),
+                    sport: finalSport,
+                    location: finalLocation,
+                    email: 'team.playmatch@gmail.com',
+                    name: 'PlayMatch',
+                  },
+                  'yZZ7qBnK679PREuvG'
+                )
+                console.log('Invite notification email sent!')
+              }
+            } catch (emailErr) {
+              console.error('Failed to send invite notification email:', emailErr)
+            }
           }
         } else {
           alert('Playmate request created successfully!')
